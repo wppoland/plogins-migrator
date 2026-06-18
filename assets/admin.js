@@ -18,10 +18,15 @@
 	var resultMsg = document.getElementById( 'migrator-export-result-msg' );
 	var download = document.getElementById( 'migrator-export-download' );
 
-	function post( action ) {
+	function post( action, extra ) {
 		var body = new URLSearchParams();
 		body.set( 'action', action );
 		body.set( 'nonce', data.nonce );
+		if ( extra ) {
+			Object.keys( extra ).forEach( function ( k ) {
+				body.set( k, extra[ k ] );
+			} );
+		}
 		return fetch( data.ajaxUrl, {
 			method: 'POST',
 			credentials: 'same-origin',
@@ -83,7 +88,12 @@
 		progress.hidden = false;
 		setProgress( 0, i18n.preparing || 'Preparing…' );
 
-		post( 'migrator_export_start' ).then( function ( res ) {
+		var opts = {};
+		document.querySelectorAll( '.migrator-export-opt:checked' ).forEach( function ( cb ) {
+			opts[ 'options[' + cb.value + ']' ] = '1';
+		} );
+
+		post( 'migrator_export_start', opts ).then( function ( res ) {
 			if ( ! res || ! res.success ) {
 				fail( res && res.data ? res.data.message : '' );
 				return;

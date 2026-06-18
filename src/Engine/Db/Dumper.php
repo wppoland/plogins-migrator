@@ -50,6 +50,11 @@ final class Dumper
         return $this->tablesOfType('BASE TABLE');
     }
 
+    public function prefix(): string
+    {
+        return (string) $this->db->prefix;
+    }
+
     /**
      * Views belonging to this site's prefix.
      *
@@ -63,17 +68,24 @@ final class Dumper
     /**
      * Dump tables (structure + data) followed by views, to a writable stream.
      *
-     * @param string[] $tables
-     * @param resource $handle
+     * @param string[]               $tables Tables to dump.
+     * @param resource               $handle
+     * @param array<string, string>  $where  Optional table => WHERE clause to
+     *                                        filter out disposable rows.
+     * @param string[]               $skip   Tables to omit entirely.
      */
-    public function dumpAll(array $tables, $handle): void
+    public function dumpAll(array $tables, $handle, array $where = [], array $skip = []): void
     {
         $this->write($handle, "-- Migrator SQL dump\n");
         $this->write($handle, "SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n");
         $this->write($handle, "SET FOREIGN_KEY_CHECKS=0;\n\n");
 
         foreach ($tables as $table) {
-            $this->dumpTable((string) $table, $handle);
+            $table = (string) $table;
+            if (in_array($table, $skip, true)) {
+                continue;
+            }
+            $this->dumpTable($table, $handle, $where[$table] ?? null);
         }
 
         // Views are created after every base table, since they reference them.
@@ -157,7 +169,7 @@ final class Dumper
      *
      * @param resource $handle
      */
-    public function dumpTable(string $table, $handle): void
+    public function dumpTable(string $table, $handle, ?string $where = null): void
     {
         $safe = '`' . str_replace('`', '``', $table) . '`';
 
@@ -169,7 +181,7 @@ final class Dumper
             $this->write($handle, $create[1] . ";\n\n");
         }
 
-        $this->dumpRows($table, $safe, $handle);
+        $this->dumpRows($safe, $handle, $where);
         $this->write($handle, "\n");
     }
 
@@ -178,16 +190,17 @@ final class Dumper
      *
      * @param resource $handle
      */
-    private function dumpRows(string $table, string $safe, $handle): void
+    private function dumpRows(string $safe, $handle, ?string $where = null): void
     {
         $offset  = 0;
         $insert  = '';
         $started = false;
+        $filter  = (null !== $where && '' !== $where) ? " WHERE {$where}" : '';
 
         do {
             // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
             $rows = $this->db->get_results(
-                $this->db->prepare("SELECT * FROM {$safe} LIMIT %d OFFSET %d", $this->batchSize, $offset),
+                $this->db->prepare("SELECT * FROM {$safe}{$filter} LIMIT %d OFFSET %d", $this->batchSize, $offset),
                 ARRAY_A,
             );
 

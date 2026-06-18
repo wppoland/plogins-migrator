@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Migrator\Admin;
 
 use Migrator\Contract\HasHooks;
+use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\ExportPipeline;
 use Migrator\Engine\Import\Importer;
 use Migrator\Support\Workspace;
@@ -128,13 +129,30 @@ final class Ajax implements HasHooks
 
     public function exportStart(): void
     {
-        $this->guard();
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+        }
+
         try {
             $this->export->clear();
-            wp_send_json_success($this->shape($this->export->start()));
+            wp_send_json_success($this->shape($this->export->start($this->readExportOptions())));
         } catch (\Throwable $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Read the export exclusion checkboxes from the request.
+     */
+    private function readExportOptions(): ExportOptions
+    {
+        $flags = [];
+        foreach (ExportOptions::keys() as $key) {
+            $flags[$key] = isset($_POST['options'][$key]) // phpcs:ignore WordPress.Security.NonceVerification.Missing
+                && '' !== sanitize_text_field(wp_unslash((string) $_POST['options'][$key])); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        }
+
+        return ExportOptions::fromArray($flags);
     }
 
     public function exportStep(): void

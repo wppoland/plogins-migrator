@@ -48,25 +48,35 @@ final class ExportPipeline
      *
      * @return array<string, mixed>
      */
-    public function start(): array
+    public function start(?ExportOptions $options = null): array
     {
+        $options ??= new ExportOptions();
         $destination = $this->destination();
 
-        $writer   = new Writer($destination);
-        $tables   = $this->dumper->tables();
-        $manifest = Manifest::forThisSite((string) \Migrator\VERSION, ['tables' => $tables]);
+        $writer = new Writer($destination);
+
+        $prefix = $this->dumper->prefix();
+        $skip   = $options->tablesToSkip($prefix);
+        $tables = $options->excludeDatabase() ? [] : array_values(array_diff($this->dumper->tables(), $skip));
+
+        $manifest = Manifest::forThisSite((string) \Migrator\VERSION, [
+            'tables'   => $tables,
+            'excludes' => $options->toArray(),
+        ]);
         $writer->addString(Manifest::NAME, $manifest->toJson(), Entry::TYPE_MANIFEST);
 
-        $sqlTmp = $this->workspace->path('tmp-' . wp_generate_password(8, false) . '.sql');
-        $handle = fopen($sqlTmp, 'wb');
-        if (false === $handle) {
-            $writer->close();
-            throw new \RuntimeException('Migrator: cannot open temp file for SQL dump.');
+        if (! $options->excludeDatabase()) {
+            $sqlTmp = $this->workspace->path('tmp-' . wp_generate_password(8, false) . '.sql');
+            $handle = fopen($sqlTmp, 'wb');
+            if (false === $handle) {
+                $writer->close();
+                throw new \RuntimeException('Migrator: cannot open temp file for SQL dump.');
+            }
+            $this->dumper->dumpAll($tables, $handle, $options->whereFilters($prefix), $skip);
+            fclose($handle);
+            $writer->addFile(Exporter::DB_ENTRY, $sqlTmp);
+            wp_delete_file($sqlTmp);
         }
-        $this->dumper->dumpAll($tables, $handle);
-        fclose($handle);
-        $writer->addFile(Exporter::DB_ENTRY, $sqlTmp);
-        wp_delete_file($sqlTmp);
 
         // Enumerate files to a list the steps walk by index.
         $listPath = $this->workspace->path('job-' . wp_generate_password(8, false) . '.list');
@@ -76,7 +86,7 @@ final class ExportPipeline
             throw new \RuntimeException('Migrator: cannot open file list.');
         }
         $total = 0;
-        foreach ($this->scanner()->scan($this->contentDir()) as $file) {
+        foreach ($this->scanner($options)->scan($this->contentDir()) as $file) {
             fwrite($list, $file['rel'] . "\n");
             $total++;
         }
@@ -161,11 +171,11 @@ final class ExportPipeline
         delete_option(self::JOB_OPTION);
     }
 
-    private function scanner(): FileScanner
+    private function scanner(ExportOptions $options): FileScanner
     {
         return new FileScanner(
             ['node_modules', '.git', '.DS_Store'],
-            [$this->workspace->path()],
+            array_merge([$this->workspace->path()], $options->fileExcludePaths()),
         );
     }
 

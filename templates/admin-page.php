@@ -25,6 +25,33 @@ defined('ABSPATH') || exit;
 				<?php esc_html_e('Package your database and files into a single archive you can download and restore anywhere.', 'migrator'); ?>
 			</p>
 
+			<details class="migrator-options">
+				<summary><?php esc_html_e('What to leave out (optional)', 'migrator'); ?></summary>
+				<?php
+				$migrator_opts = [
+					'no_media'            => __('Media library (uploads)', 'migrator'),
+					'no_themes'           => __('All themes', 'migrator'),
+					'no_inactive_themes'  => __('Inactive themes (keep active only)', 'migrator'),
+					'no_plugins'          => __('All plugins', 'migrator'),
+					'no_inactive_plugins' => __('Inactive plugins (keep active only)', 'migrator'),
+					'no_muplugins'        => __('Must-use plugins', 'migrator'),
+					'no_cache'            => __('Cache files', 'migrator'),
+					'no_spam_comments'    => __('Spam comments', 'migrator'),
+					'no_post_revisions'   => __('Post revisions', 'migrator'),
+					'no_transients'       => __('Transients', 'migrator'),
+					'no_sessions'         => __('WooCommerce sessions', 'migrator'),
+					'no_action_scheduler' => __('Action Scheduler tables', 'migrator'),
+					'no_database'         => __('Database (files-only backup)', 'migrator'),
+				];
+				foreach ($migrator_opts as $migrator_key => $migrator_label) :
+					?>
+					<label class="migrator-options__opt">
+						<input type="checkbox" class="migrator-export-opt" value="<?php echo esc_attr($migrator_key); ?>">
+						<?php echo esc_html($migrator_label); ?>
+					</label>
+				<?php endforeach; ?>
+			</details>
+
 			<button type="button" class="button button-primary button-hero" id="migrator-export-start">
 				<?php esc_html_e('Create backup', 'migrator'); ?>
 			</button>

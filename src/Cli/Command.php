@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Migrator\Cli;
 
 use Migrator\Engine\Db\Dumper;
+use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\Exporter;
 use Migrator\Engine\Import\Importer;
 use Migrator\Support\Workspace;
@@ -25,10 +26,16 @@ final class Command
      * [--output=<file>]
      * : Where to write the archive. Defaults to a dated file in the backups folder.
      *
+     * [--exclude=<list>]
+     * : Comma-separated things to leave out. Any of: database, media, themes,
+     * inactive-themes, plugins, inactive-plugins, muplugins, cache,
+     * spam-comments, post-revisions, transients, sessions, action-scheduler.
+     *
      * ## EXAMPLES
      *
      *     wp migrator export
      *     wp migrator export --output=/tmp/my-site.migrator
+     *     wp migrator export --exclude=media,spam-comments,post-revisions,inactive-plugins
      *
      * @param array<int, string>    $args       Positional args (unused).
      * @param array<string, string> $assoc_args Flags.
@@ -43,10 +50,18 @@ final class Command
 
         $destination = $assoc_args['output'] ?? $exporter->defaultDestination();
 
+        $exclude = array_filter(array_map('trim', explode(',', (string) ($assoc_args['exclude'] ?? ''))));
+        $flags   = [];
+        foreach (ExportOptions::keys() as $key) {
+            $name        = str_replace(['no_', '_'], ['', '-'], $key); // no_post_revisions -> post-revisions
+            $flags[$key] = in_array($name, $exclude, true);
+        }
+        $options = ExportOptions::fromArray($flags);
+
         \WP_CLI::log('Exporting site…');
         $result = $exporter->export($destination, static function (string $message): void {
             \WP_CLI::log('  ' . $message);
-        });
+        }, $options);
 
         \WP_CLI::success(sprintf(
             'Exported %d tables and %d files to %s (%s).',

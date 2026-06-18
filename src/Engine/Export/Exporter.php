@@ -37,42 +37,53 @@ final class Exporter
     }
 
     /**
-     * @param callable(string):void|null $log Optional progress sink.
+     * @param callable(string):void|null $log     Optional progress sink.
+     * @param ExportOptions|null          $options What to leave out (defaults to all-in).
      *
      * @return array{path: string, tables: int, files: int, bytes: int}
      */
-    public function export(string $destination, ?callable $log = null): array
+    public function export(string $destination, ?callable $log = null, ?ExportOptions $options = null): array
     {
         $log ??= static function (string $m): void {};
+        $options ??= new ExportOptions();
 
         $writer = new Writer($destination);
 
-        // 1. Manifest (first entry), recording the table list for the importer.
-        $tables = $this->dumper->tables();
-        $manifest = Manifest::forThisSite((string) \Migrator\VERSION, ['tables' => $tables]);
+        // 1. Manifest (first entry), recording the dumped table list for the importer.
+        $tables = $options->excludeDatabase() ? [] : $this->dumper->tables();
+        $skip   = $options->tablesToSkip($this->dumper->prefix());
+        $tables = array_values(array_diff($tables, $skip));
+
+        $manifest = Manifest::forThisSite((string) \Migrator\VERSION, [
+            'tables'   => $tables,
+            'excludes' => $options->toArray(),
+        ]);
         $writer->addString(Manifest::NAME, $manifest->toJson(), Entry::TYPE_MANIFEST);
         $log(sprintf('Manifest written (%d tables).', count($tables)));
 
         // 2. Database dump — generated to a temp file, then streamed into the
         //    archive (so the entry size is known without buffering it in memory).
-        $sqlTmp = $this->workspace->path('tmp-' . wp_generate_password(8, false) . '.sql');
-        $handle = fopen($sqlTmp, 'wb');
-        if (false === $handle) {
-            $writer->close();
-            throw new \RuntimeException('Migrator: cannot open temp file for SQL dump.');
+        if (! $options->excludeDatabase()) {
+            $sqlTmp = $this->workspace->path('tmp-' . wp_generate_password(8, false) . '.sql');
+            $handle = fopen($sqlTmp, 'wb');
+            if (false === $handle) {
+                $writer->close();
+                throw new \RuntimeException('Migrator: cannot open temp file for SQL dump.');
+            }
+            $this->dumper->dumpAll($tables, $handle, $options->whereFilters($this->dumper->prefix()), $skip);
+            fclose($handle);
+            $writer->addFile(self::DB_ENTRY, $sqlTmp);
+            $dbBytes = (int) filesize($sqlTmp);
+            wp_delete_file($sqlTmp);
+            $log(sprintf('Database dumped (%s).', size_format($dbBytes)));
         }
-        $this->dumper->dumpAll($tables, $handle);
-        fclose($handle);
-        $writer->addFile(self::DB_ENTRY, $sqlTmp);
-        $dbBytes = (int) filesize($sqlTmp);
-        wp_delete_file($sqlTmp);
-        $log(sprintf('Database dumped (%s).', size_format($dbBytes)));
 
-        // 3. Files under wp-content (skipping the backups workspace + dev junk).
+        // 3. Files under wp-content (skipping the backups workspace, dev junk, and
+        //    anything the export options exclude).
         $contentDir = untrailingslashit((string) WP_CONTENT_DIR);
         $scanner = new FileScanner(
             ['node_modules', '.git', '.DS_Store'],
-            [$this->workspace->path()],
+            array_merge([$this->workspace->path()], $options->fileExcludePaths()),
         );
 
         $fileCount = 0;

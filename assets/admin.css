@@ -46,6 +46,10 @@
 .migrator-card.is-error { border-color: #d63638; }
 .migrator-result__msg.is-error { color: #d63638; }
 
+.migrator-options { margin: 14px 0; }
+.migrator-options summary { cursor: pointer; color: #2271b1; margin-bottom: 8px; }
+.migrator-options__opt { display: flex; align-items: center; gap: 6px; padding: 3px 0; color: #50575e; }
+
 .migrator-drop {
 	border: 2px dashed #c3c4c7;
 	border-radius: 8px;
