@@ -58,10 +58,15 @@ final class Page implements HasHooks
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce'   => wp_create_nonce('migrator'),
             'i18n'    => [
-                'preparing' => __('Preparing…', 'migrator'),
-                'archiving' => __('Archiving files…', 'migrator'),
-                'done'      => __('Backup ready.', 'migrator'),
-                'failed'    => __('Export failed.', 'migrator'),
+                'preparing'     => __('Preparing…', 'migrator'),
+                'archiving'     => __('Archiving files…', 'migrator'),
+                'done'          => __('Backup ready.', 'migrator'),
+                'failed'        => __('Export failed.', 'migrator'),
+                'uploading'     => __('Uploading…', 'migrator'),
+                'restoring'     => __('Restoring… do not close this tab.', 'migrator'),
+                'restoreDone'   => __('Restore complete.', 'migrator'),
+                'restoreFailed' => __('Restore failed.', 'migrator'),
+                'confirmRestore' => __('This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?', 'migrator'),
             ],
         ]);
     }

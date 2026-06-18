@@ -46,6 +46,27 @@
 .migrator-card.is-error { border-color: #d63638; }
 .migrator-result__msg.is-error { color: #d63638; }
 
+.migrator-drop {
+	border: 2px dashed #c3c4c7;
+	border-radius: 8px;
+	padding: 24px;
+	text-align: center;
+	margin-bottom: 16px;
+	transition: border-color .15s ease, background .15s ease;
+}
+
+.migrator-drop.is-over {
+	border-color: #2271b1;
+	background: #f0f6fc;
+}
+
+.migrator-drop__hint { margin: 0 0 10px; color: #50575e; }
+.migrator-drop__input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.migrator-drop__name { margin: 10px 0 0; font-weight: 600; }
+.migrator-drop__opt { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; color: #50575e; }
+.migrator-card__cli { margin-top: 18px; font-size: 12px; }
+
 @media (prefers-reduced-motion: reduce) {
 	.migrator-progress__fill { transition: none; }
+	.migrator-drop { transition: none; }
 }

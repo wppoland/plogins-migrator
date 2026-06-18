@@ -6,6 +6,7 @@ namespace Migrator\Admin;
 
 use Migrator\Contract\HasHooks;
 use Migrator\Engine\Export\ExportPipeline;
+use Migrator\Engine\Import\Importer;
 use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
@@ -29,6 +30,95 @@ final class Ajax implements HasHooks
         add_action('wp_ajax_migrator_export_start', [$this, 'exportStart']);
         add_action('wp_ajax_migrator_export_step', [$this, 'exportStep']);
         add_action('wp_ajax_migrator_download', [$this, 'download']);
+        add_action('wp_ajax_migrator_import_upload', [$this, 'importUpload']);
+        add_action('wp_ajax_migrator_import_run', [$this, 'importRun']);
+    }
+
+    /**
+     * Receive one chunk of an uploaded archive and append it to a workspace file.
+     * Chunking sidesteps the host's upload_max_filesize on large backups.
+     */
+    public function importUpload(): void
+    {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+        }
+
+        $id    = isset($_POST['upload_id']) ? sanitize_key(wp_unslash((string) $_POST['upload_id'])) : '';
+        $index = isset($_POST['index']) ? absint(wp_unslash((string) $_POST['index'])) : 0;
+
+        if ('' === $id || ! isset($_FILES['chunk']) || ! is_array($_FILES['chunk'])) {
+            wp_send_json_error(['message' => __('Bad upload request.', 'migrator')], 400);
+        }
+
+        $tmp = isset($_FILES['chunk']['tmp_name']) ? sanitize_text_field(wp_unslash((string) $_FILES['chunk']['tmp_name'])) : '';
+        if ('' === $tmp || ! is_uploaded_file($tmp)) {
+            wp_send_json_error(['message' => __('Invalid upload.', 'migrator')], 400);
+        }
+
+        $dest = $this->uploadPath($id);
+
+        $in  = fopen($tmp, 'rb');
+        $out = fopen($dest, 0 === $index ? 'wb' : 'ab');
+        if (false === $in || false === $out) {
+            wp_send_json_error(['message' => __('Could not store upload.', 'migrator')], 500);
+        }
+        stream_copy_to_stream($in, $out);
+        fclose($in);
+        fclose($out);
+
+        wp_send_json_success(['index' => $index]);
+    }
+
+    /**
+     * Restore a fully-uploaded archive. Runs the hardened importer, which takes a
+     * safety backup and rolls back on failure.
+     */
+    public function importRun(): void
+    {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+        }
+
+        global $wpdb;
+
+        $id    = isset($_POST['upload_id']) ? sanitize_key(wp_unslash((string) $_POST['upload_id'])) : '';
+        $files = isset($_POST['import_files']) && '' !== sanitize_text_field(wp_unslash((string) $_POST['import_files']));
+        $path = $this->uploadPath($id);
+
+        if ('' === $id || ! is_file($path)) {
+            wp_send_json_error(['message' => __('Uploaded archive not found.', 'migrator')], 404);
+        }
+
+        // Give the restore as long as the host allows; large sites should use WP-CLI.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+        }
+
+        $importer = new Importer($this->workspace, $wpdb);
+        try {
+            $result = $importer->import($path, $files);
+            wp_delete_file($path);
+            wp_send_json_success($result);
+        } catch (\Throwable $e) {
+            wp_delete_file($path);
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Resolve (and confine to the workspace) the temp file for an upload id.
+     */
+    private function uploadPath(string $id): string
+    {
+        $path     = $this->workspace->path('upload-' . $id . '.migrator');
+        $realBase = realpath($this->workspace->path());
+        $realDir  = realpath(dirname($path));
+        if (false === $realBase || false === $realDir || ! str_starts_with($realDir . '/', $realBase . '/')) {
+            wp_send_json_error(['message' => __('Invalid upload id.', 'migrator')], 400);
+        }
+
+        return $path;
     }
 
     public function exportStart(): void

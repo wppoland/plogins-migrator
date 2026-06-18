@@ -56,9 +56,41 @@ defined('ABSPATH') || exit;
 				<?php esc_html_e('Restore a backup', 'migrator'); ?>
 			</h2>
 			<p class="migrator-card__desc">
-				<?php esc_html_e('Restoring overwrites this site with the contents of an archive. The drag-and-drop importer is coming next; for now use WP-CLI:', 'migrator'); ?>
+				<?php esc_html_e('Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive — keep a backup of anything you want to keep.', 'migrator'); ?>
 			</p>
-			<p><code>wp migrator import &lt;file&gt;.migrator</code></p>
+
+			<div class="migrator-drop" id="migrator-drop">
+				<p class="migrator-drop__hint"><?php esc_html_e('Drag a .migrator file here, or', 'migrator'); ?></p>
+				<label class="button" for="migrator-file">
+					<?php esc_html_e('Choose a file', 'migrator'); ?>
+					<input type="file" id="migrator-file" accept=".migrator" class="migrator-drop__input">
+				</label>
+				<p class="migrator-drop__name" id="migrator-file-name" aria-live="polite"></p>
+				<label class="migrator-drop__opt">
+					<input type="checkbox" id="migrator-import-files" checked>
+					<?php esc_html_e('Also restore files (wp-content)', 'migrator'); ?>
+				</label>
+			</div>
+
+			<button type="button" class="button button-primary" id="migrator-import-start" disabled>
+				<?php esc_html_e('Restore backup', 'migrator'); ?>
+			</button>
+
+			<div class="migrator-progress" id="migrator-import-progress" hidden>
+				<div class="migrator-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="<?php esc_attr_e('Restore progress', 'migrator'); ?>">
+					<span class="migrator-progress__fill" id="migrator-import-fill"></span>
+				</div>
+				<p class="migrator-progress__status" id="migrator-import-status" aria-live="polite"></p>
+			</div>
+
+			<div class="migrator-result" id="migrator-import-result" hidden>
+				<p class="migrator-result__msg" id="migrator-import-result-msg"></p>
+			</div>
+
+			<p class="migrator-card__desc migrator-card__cli">
+				<?php esc_html_e('Large site? Restore from the command line — it has no time limit:', 'migrator'); ?>
+				<br><code>wp migrator import &lt;file&gt;.migrator</code>
+			</p>
 		</section>
 	</div>
 </div>
