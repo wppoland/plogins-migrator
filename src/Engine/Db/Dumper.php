@@ -66,6 +66,66 @@ final class Dumper
     }
 
     /**
+     * Triggers and stored routines (procedures + functions) for this database,
+     * each as a { drop, create } pair. The create statement is a single SQL
+     * statement (its inner semicolons are part of the body), so the importer can
+     * run it whole with no DELIMITER handling. DEFINER is stripped so it imports
+     * under whatever user runs the restore.
+     *
+     * @return array<int, array{drop: string, create: string}>
+     */
+    public function routines(): array
+    {
+        $out = [];
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+        $triggers = $this->db->get_results('SHOW TRIGGERS', ARRAY_A);
+        foreach (is_array($triggers) ? $triggers : [] as $row) {
+            $name = (string) ($row['Trigger'] ?? '');
+            if ('' === $name) {
+                continue;
+            }
+            $safe = $this->backtick($name);
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+            $def = $this->db->get_row("SHOW CREATE TRIGGER {$safe}", ARRAY_A);
+            $create = is_array($def) ? (string) ($def['SQL Original Statement'] ?? '') : '';
+            if ('' !== $create) {
+                $out[] = ['drop' => "DROP TRIGGER IF EXISTS {$safe}", 'create' => $this->stripDefiner($create)];
+            }
+        }
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+        $dbName = (string) $this->db->get_var('SELECT DATABASE()');
+        foreach (['PROCEDURE' => 'Create Procedure', 'FUNCTION' => 'Create Function'] as $kind => $col) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+            $rows = $this->db->get_results(
+                $this->db->prepare("SHOW {$kind} STATUS WHERE Db = %s", $dbName),
+                ARRAY_A
+            );
+            foreach (is_array($rows) ? $rows : [] as $row) {
+                $name = (string) ($row['Name'] ?? '');
+                if ('' === $name) {
+                    continue;
+                }
+                $safe = $this->backtick($name);
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+                $def = $this->db->get_row("SHOW CREATE {$kind} {$safe}", ARRAY_A);
+                $create = is_array($def) ? (string) ($def[$col] ?? '') : '';
+                if ('' !== $create) {
+                    $out[] = ['drop' => "DROP {$kind} IF EXISTS {$safe}", 'create' => $this->stripDefiner($create)];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    private function backtick(string $identifier): string
+    {
+        return '`' . str_replace('`', '``', $identifier) . '`';
+    }
+
+    /**
      * Dump tables (structure + data) followed by views, to a writable stream.
      *
      * @param string[]               $tables Tables to dump.

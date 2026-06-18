@@ -133,6 +133,8 @@ final class Importer
                 }
 
                 wp_delete_file($rollback);
+            } elseif (Exporter::ROUTINES_ENTRY === $entry->path) {
+                $this->importRoutines($reader->readContents(), $log);
             } elseif (str_starts_with($entry->path, 'wp-content/')) {
                 if ($importFiles && $this->extract($entry->path, $reader)) {
                     $files++;
@@ -211,6 +213,39 @@ final class Importer
         $log(sprintf('Imported database (%d statements).', $count));
 
         return $count;
+    }
+
+    /**
+     * Recreate triggers and stored routines from the routines entry. Each create
+     * is a single statement, so it runs whole with no DELIMITER handling.
+     * Best-effort: a routine that cannot be created (e.g. lacking privilege) is
+     * skipped rather than failing the whole restore.
+     */
+    private function importRoutines(string $json, callable $log): void
+    {
+        $routines = json_decode($json, true);
+        if (! is_array($routines)) {
+            return;
+        }
+
+        $count = 0;
+        foreach ($routines as $routine) {
+            if (! is_array($routine) || ! isset($routine['create'])) {
+                continue;
+            }
+            if (isset($routine['drop'])) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+                $this->db->query((string) $routine['drop']);
+            }
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+            if (false !== $this->db->query((string) $routine['create'])) {
+                $count++;
+            }
+        }
+
+        if ($count > 0) {
+            $log(sprintf('Recreated %d triggers and routines.', $count));
+        }
     }
 
     /**

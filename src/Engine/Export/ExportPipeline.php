@@ -76,6 +76,11 @@ final class ExportPipeline
             fclose($handle);
             $writer->addFile(Exporter::DB_ENTRY, $sqlTmp);
             wp_delete_file($sqlTmp);
+
+            $routines = $this->dumper->routines();
+            if ([] !== $routines) {
+                $writer->addString(Exporter::ROUTINES_ENTRY, (string) wp_json_encode($routines));
+            }
         }
 
         // Enumerate files to a list the steps walk by index.

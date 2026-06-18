@@ -30,6 +30,8 @@ final class Exporter
 {
     public const DB_ENTRY = 'database.sql';
 
+    public const ROUTINES_ENTRY = 'migrator-routines.json';
+
     public function __construct(
         private Workspace $workspace,
         private Dumper $dumper,
@@ -76,6 +78,12 @@ final class Exporter
             $dbBytes = (int) filesize($sqlTmp);
             wp_delete_file($sqlTmp);
             $log(sprintf('Database dumped (%s).', size_format($dbBytes)));
+
+            $routines = $this->dumper->routines();
+            if ([] !== $routines) {
+                $writer->addString(self::ROUTINES_ENTRY, (string) wp_json_encode($routines));
+                $log(sprintf('Triggers and routines: %d.', count($routines)));
+            }
         }
 
         // 3. Files under wp-content (skipping the backups workspace, dev junk, and
