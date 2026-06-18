@@ -43,9 +43,17 @@ final class Page implements HasHooks
 
     public function registerMenu(): void
     {
+        /**
+         * Filters the admin menu label and page title. A companion add-on uses
+         * this to white-label the plugin under an agency's own name.
+         *
+         * @param string $label Default "Migrator".
+         */
+        $label = (string) apply_filters('migrator/menu_label', __('Migrator', 'migrator'));
+
         $hook = add_menu_page(
-            __('Migrator', 'migrator'),
-            __('Migrator', 'migrator'),
+            $label,
+            $label,
             'manage_options',
             self::SLUG,
             [$this, 'render'],

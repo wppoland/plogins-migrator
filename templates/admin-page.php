@@ -130,12 +130,19 @@ defined('ABSPATH') || exit;
 
 	<?php
 	/**
-	 * Filters the URL the "Upgrade" call to action points at.
+	 * Filters whether the "upgrade to Pro" call to action is shown. A white-label
+	 * add-on hides it once the agency has bought Pro.
 	 *
-	 * @param string $url Default Migrator Pro page.
+	 * @param bool $show Default true.
 	 */
-	$migrator_pro_url = (string) apply_filters('migrator/pro_url', 'https://plogins.com/migrator-pro/');
-	?>
+	if (apply_filters('migrator/show_pro_cta', true)) :
+		/**
+		 * Filters the URL the "Upgrade" call to action points at.
+		 *
+		 * @param string $url Default Migrator Pro page.
+		 */
+		$migrator_pro_url = (string) apply_filters('migrator/pro_url', 'https://plogins.com/migrator-pro/');
+		?>
 	<section class="migrator-pro-cta" aria-labelledby="migrator-pro-cta-heading">
 		<div class="migrator-pro-cta__main">
 			<p class="migrator-pro-cta__eyebrow"><?php esc_html_e('Migrator Pro', 'migrator'); ?></p>
@@ -149,7 +156,7 @@ defined('ABSPATH') || exit;
 				<li><?php esc_html_e('Scheduled automatic backups, kept on a retention you choose', 'migrator'); ?></li>
 				<li><?php esc_html_e('Off-site copies to a mounted drive, NAS or cloud storage', 'migrator'); ?></li>
 				<li><?php esc_html_e('Direct server-to-server migration, with no manual download', 'migrator'); ?></li>
-				<li><?php esc_html_e('On the way: no size limit, multisite and encrypted backups', 'migrator'); ?></li>
+				<li><?php esc_html_e('Password-encrypted backups and full multisite migration', 'migrator'); ?></li>
 			</ul>
 		</div>
 		<div class="migrator-pro-cta__action">
@@ -159,4 +166,5 @@ defined('ABSPATH') || exit;
 			<p class="migrator-pro-cta__note"><?php esc_html_e('One licence covers every Pro feature.', 'migrator'); ?></p>
 		</div>
 	</section>
+	<?php endif; ?>
 </div>
