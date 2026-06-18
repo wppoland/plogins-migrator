@@ -126,6 +126,19 @@ final class Dumper
     }
 
     /**
+     * The database's character set, sanitised to an identifier for SET NAMES.
+     * Falls back to utf8mb4 (the WordPress default) when unavailable.
+     */
+    private function charset(): string
+    {
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+        $charset = (string) $this->db->get_var('SELECT @@character_set_database');
+        $charset = preg_replace('/[^a-z0-9_]/i', '', $charset) ?: '';
+
+        return '' !== $charset ? $charset : 'utf8mb4';
+    }
+
+    /**
      * Dump tables (structure + data) followed by views, to a writable stream.
      *
      * @param string[]               $tables Tables to dump.
@@ -138,6 +151,9 @@ final class Dumper
     {
         $this->write($handle, "-- Migrator SQL dump\n");
         $this->write($handle, "SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n");
+        // Pin the connection charset so multibyte data (for example Polish or any
+        // UTF-8 content) imports correctly on a server with a different default.
+        $this->write($handle, "SET NAMES {$this->charset()};\n");
         $this->write($handle, "SET FOREIGN_KEY_CHECKS=0;\n\n");
 
         foreach ($tables as $table) {
