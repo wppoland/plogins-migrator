@@ -21,6 +21,24 @@ final class Page implements HasHooks
     {
         add_action('admin_menu', [$this, 'registerMenu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue']);
+        add_filter('plugin_action_links_' . plugin_basename(\Migrator\PLUGIN_FILE), [$this, 'actionLinks']);
+    }
+
+    /**
+     * Add a quick "Settings" link to the plugin's row on the Plugins screen.
+     *
+     * @param array<int|string, string> $links Existing action links.
+     * @return array<int|string, string>
+     */
+    public function actionLinks(array $links): array
+    {
+        array_unshift($links, sprintf(
+            '<a href="%s">%s</a>',
+            esc_url(admin_url('admin.php?page=' . self::SLUG)),
+            esc_html__('Settings', 'migrator'),
+        ));
+
+        return $links;
     }
 
     public function registerMenu(): void
