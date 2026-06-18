@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Migrator
+ * Plugin Name:       Migrator - Backup, Restore and Migrate Your Site
  * Plugin URI:        https://plogins.com/migrator/
  * Description:        Back up your WordPress site and move it to a new host. One file, drag and drop, no technical setup.
  * Version:           0.1.0

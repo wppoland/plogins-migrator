@@ -14,6 +14,11 @@ use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
 
+// Migrator streams large backup archives (often gigabytes) in chunks. WP_Filesystem
+// reads and writes whole files into memory, which would exhaust it, so this file
+// uses direct stream functions by necessity.
+// phpcs:disable WordPress.WP.AlternativeFunctions
+
 /**
  * Resumable export for the browser. Unlike the straight-through CLI exporter,
  * this runs in time-boxed slices so it survives the request timeout on large

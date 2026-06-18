@@ -6,6 +6,11 @@ namespace Migrator\Engine\Db;
 
 defined('ABSPATH') || exit;
 
+// Migrator streams large backup archives (often gigabytes) in chunks. WP_Filesystem
+// reads and writes whole files into memory, which would exhaust it, so this file
+// uses direct stream functions by necessity.
+// phpcs:disable WordPress.WP.AlternativeFunctions
+
 /**
  * Executes a SQL dump statement by statement.
  *

@@ -11,6 +11,11 @@ use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
 
+// Migrator streams large backup archives (often gigabytes) in chunks. WP_Filesystem
+// reads and writes whole files into memory, which would exhaust it, so this file
+// uses direct stream functions by necessity.
+// phpcs:disable WordPress.WP.AlternativeFunctions
+
 /**
  * AJAX endpoints driving the resumable browser export, plus an authenticated
  * download handler. Every endpoint verifies the nonce and the manage_options
@@ -92,7 +97,7 @@ final class Ajax implements HasHooks
 
         // Give the restore as long as the host allows; large sites should use WP-CLI.
         if (function_exists('set_time_limit')) {
-            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
         }
 
         $importer = new Importer($this->workspace, $wpdb);

@@ -13,6 +13,11 @@ use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
 
+// Migrator streams large backup archives (often gigabytes) in chunks. WP_Filesystem
+// reads and writes whole files into memory, which would exhaust it, so this file
+// uses direct stream functions by necessity.
+// phpcs:disable WordPress.WP.AlternativeFunctions
+
 /**
  * Builds a complete archive of the current site: a manifest, a SQL dump of the
  * database, and every file under wp-content.
