@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Migrator\Engine\Import;
 
+use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Archive\Manifest;
 use Migrator\Engine\Archive\Reader;
 use Migrator\Engine\Db\Dumper;
@@ -55,6 +56,31 @@ final class Importer
     {
         $log ??= static function (string $m): void {};
 
+        // A gzip-compressed archive is expanded to a temp file first; the rest of
+        // the import is unchanged and the temp is always cleaned up.
+        $temp = null;
+        if (Compressor::isCompressed($archivePath)) {
+            $this->workspace->ensure();
+            $temp = $this->workspace->path('decompress-' . wp_generate_password(8, false) . '.migrator');
+            (new Compressor())->decompress($archivePath, $temp);
+            $archivePath = $temp;
+        }
+
+        try {
+            return $this->runImport($archivePath, $importFiles, $log);
+        } finally {
+            if (null !== $temp) {
+                wp_delete_file($temp);
+            }
+        }
+    }
+
+    /**
+     * @param callable(string):void $log
+     * @return array{tables: int, statements: int, replaced: int, files: int}
+     */
+    private function runImport(string $archivePath, bool $importFiles, callable $log): array
+    {
         $reader = new Reader($archivePath);
 
         $first = $reader->nextEntry();

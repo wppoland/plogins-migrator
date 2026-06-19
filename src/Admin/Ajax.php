@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Migrator\Admin;
 
 use Migrator\Contract\HasHooks;
+use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\ExportPipeline;
 use Migrator\Engine\Import\Importer;
@@ -27,6 +28,9 @@ final class Ajax implements HasHooks
 {
     /** Holds an add-on's opaque post-process payload between export start and completion. */
     private const POSTPROCESS_OPTION = 'migrator_export_postprocess';
+
+    /** Whether the current export should be gzip-compressed when it finishes. */
+    private const COMPRESS_OPTION = 'migrator_export_compress';
 
     public function __construct(
         private ExportPipeline $export,
@@ -151,6 +155,9 @@ final class Ajax implements HasHooks
                 delete_option(self::POSTPROCESS_OPTION);
             }
 
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+            update_option(self::COMPRESS_OPTION, ! empty($_POST['compress']), false);
+
             wp_send_json_success($this->shape($job));
         } catch (\Throwable $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
@@ -191,6 +198,14 @@ final class Ajax implements HasHooks
             $job = $this->export->step();
 
             if ('done' === ($job['status'] ?? '')) {
+                // Finalising (compress/encrypt) can take a while on a big archive.
+                if (function_exists('set_time_limit')) {
+                    @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+                }
+
+                // Compress first so encryption (which randomises bytes) runs last.
+                $job = $this->maybeCompress($job);
+
                 /**
                  * Fires when a browser export has finished writing. Handlers may
                  * post-process the archive (e.g. encrypt it) and update the job's
@@ -208,6 +223,40 @@ final class Ajax implements HasHooks
         } catch (\Throwable $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Gzip the finished archive when compression was requested, pointing the job
+     * (and so the download) at the .gz. Never fails the export.
+     *
+     * @param array<string, mixed> $job
+     * @return array<string, mixed>
+     */
+    private function maybeCompress(array $job): array
+    {
+        if (! get_option(self::COMPRESS_OPTION)) {
+            return $job;
+        }
+        delete_option(self::COMPRESS_OPTION);
+
+        $dest = (string) ($job['dest'] ?? '');
+        if ('' === $dest || ! is_file($dest)) {
+            return $job;
+        }
+
+        $gz = $dest . Compressor::EXT;
+        try {
+            (new Compressor())->compress($dest, $gz);
+        } catch (\Throwable $e) {
+            return $job; // Leave the plain archive rather than lose the backup.
+        }
+        wp_delete_file($dest);
+
+        $job['dest']  = $gz;
+        $job['bytes'] = (int) filesize($gz);
+        update_option(ExportPipeline::JOB_OPTION, $job, false);
+
+        return $job;
     }
 
     /**

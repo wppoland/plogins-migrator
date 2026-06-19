@@ -100,6 +100,10 @@
 		document.querySelectorAll( '.migrator-export-path:checked' ).forEach( function ( cb ) {
 			opts[ 'options[exclude_paths][' + pi++ + ']' ] = cb.value;
 		} );
+		var comp = document.querySelector( 'input[name="migrator-compress"]:checked' );
+		if ( comp && comp.value === 'gzip' ) {
+			opts.compress = '1';
+		}
 		// Optional encryption controls, injected by the Pro add-on.
 		var enc = document.getElementById( 'migrator-encrypt' );
 		if ( enc && enc.checked ) {

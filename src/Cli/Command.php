@@ -37,6 +37,9 @@ final class Command
      * [--exclude-files=<list>]
      * : Comma-separated wp-content-relative paths to leave out (e.g. uploads/2019,cache).
      *
+     * [--compress]
+     * : Gzip the finished archive (smaller file). Import auto-detects compression.
+     *
      * ## EXAMPLES
      *
      *     wp migrator export
@@ -71,6 +74,15 @@ final class Command
         $result = $exporter->export($destination, static function (string $message): void {
             \WP_CLI::log('  ' . $message);
         }, $options);
+
+        if (isset($assoc_args['compress'])) {
+            \WP_CLI::log('Compressing…');
+            $gz = $result['path'] . \Migrator\Engine\Archive\Compressor::EXT;
+            (new \Migrator\Engine\Archive\Compressor())->compress($result['path'], $gz);
+            wp_delete_file($result['path']);
+            $result['path']  = $gz;
+            $result['bytes'] = (int) filesize($gz);
+        }
 
         \WP_CLI::success(sprintf(
             'Exported %d tables and %d files to %s (%s).',

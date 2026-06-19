@@ -104,6 +104,18 @@ defined('ABSPATH') || exit;
 				</details>
 			<?php endif; ?>
 
+			<fieldset class="migrator-compress">
+				<legend class="migrator-options__group"><?php esc_html_e('Compression', 'migrator'); ?></legend>
+				<label class="migrator-options__opt">
+					<input type="radio" name="migrator-compress" value="none" checked>
+					<?php esc_html_e('None (fastest, largest file)', 'migrator'); ?>
+				</label>
+				<label class="migrator-options__opt">
+					<input type="radio" name="migrator-compress" value="gzip">
+					<?php esc_html_e('GZip (smaller file, a little slower)', 'migrator'); ?>
+				</label>
+			</fieldset>
+
 			<?php
 			/**
 			 * Fires inside the backup form, below the exclusion options. An add-on
@@ -150,7 +162,7 @@ defined('ABSPATH') || exit;
 				<p class="migrator-drop__hint"><?php esc_html_e('Drag a .migrator file here, or', 'migrator'); ?></p>
 				<label class="button" for="migrator-file">
 					<?php esc_html_e('Choose a file', 'migrator'); ?>
-					<input type="file" id="migrator-file" accept=".migrator" class="migrator-drop__input">
+					<input type="file" id="migrator-file" accept=".migrator,.gz" class="migrator-drop__input">
 				</label>
 				<p class="migrator-drop__name" id="migrator-file-name" aria-live="polite"></p>
 				<label class="migrator-drop__opt">
