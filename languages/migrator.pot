@@ -2,21 +2,23 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Migrator - Backup, Restore and Migrate Your Site 0.1.0\n"
+"Project-Id-Version: Migrator 0.1.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/migrator\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-06-18T13:20:12+00:00\n"
+"POT-Creation-Date: 2026-06-20T08:27:09+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"X-Generator: WP-CLI 2.12.0\n"
+"X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: migrator\n"
 
 #. Plugin Name of the plugin
 #: migrator.php
-msgid "Migrator - Backup, Restore and Migrate Your Site"
+#: src/Admin/Page.php:52
+#: templates/admin-page.php:13
+msgid "Migrator"
 msgstr ""
 
 #. Plugin URI of the plugin
@@ -26,7 +28,7 @@ msgstr ""
 
 #. Description of the plugin
 #: migrator.php
-msgid "Back up your WordPress site and move it to a new host. One file, drag and drop, no technical setup."
+msgid "Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup."
 msgstr ""
 
 #. Author of the plugin
@@ -41,89 +43,87 @@ msgstr ""
 
 #. translators: 1: Required PHP version, 2: Current PHP version
 #: migrator.php:41
-#, php-format
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr ""
 
-#: src/Admin/Ajax.php:44
-#: src/Admin/Ajax.php:80
-#: src/Admin/Ajax.php:152
-#: src/Admin/Ajax.php:187
+#: src/Admin/Ajax.php:57
+#: src/Admin/Ajax.php:93
+#: src/Admin/Ajax.php:140
+#: src/Admin/Ajax.php:269
+#: src/Admin/Ajax.php:304
 msgid "Not allowed."
 msgstr ""
 
-#: src/Admin/Ajax.php:51
+#: src/Admin/Ajax.php:64
 msgid "Bad upload request."
 msgstr ""
 
-#: src/Admin/Ajax.php:56
+#: src/Admin/Ajax.php:69
 msgid "Invalid upload."
 msgstr ""
 
-#: src/Admin/Ajax.php:64
+#: src/Admin/Ajax.php:77
 msgid "Could not store upload."
 msgstr ""
 
-#: src/Admin/Ajax.php:90
+#: src/Admin/Ajax.php:103
 msgid "Uploaded archive not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:118
+#: src/Admin/Ajax.php:131
 msgid "Invalid upload id."
 msgstr ""
 
-#: src/Admin/Ajax.php:162
+#: src/Admin/Ajax.php:279
 msgid "File not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:184
+#: src/Admin/Ajax.php:301
 msgid "Security check failed."
 msgstr ""
 
-#: src/Admin/Page.php:29
-#: src/Admin/Page.php:30
-#: templates/admin-page.php:13
-msgid "Migrator"
+#: src/Admin/Page.php:38
+msgid "Settings"
 msgstr ""
 
-#: src/Admin/Page.php:61
+#: src/Admin/Page.php:87
 msgid "Preparing…"
 msgstr ""
 
-#: src/Admin/Page.php:62
+#: src/Admin/Page.php:88
 msgid "Archiving files…"
 msgstr ""
 
-#: src/Admin/Page.php:63
+#: src/Admin/Page.php:89
 msgid "Backup ready."
 msgstr ""
 
-#: src/Admin/Page.php:64
+#: src/Admin/Page.php:90
 msgid "Export failed."
 msgstr ""
 
-#: src/Admin/Page.php:65
+#: src/Admin/Page.php:91
 msgid "Uploading…"
 msgstr ""
 
-#: src/Admin/Page.php:66
+#: src/Admin/Page.php:92
 msgid "Restoring… do not close this tab."
 msgstr ""
 
-#: src/Admin/Page.php:67
+#: src/Admin/Page.php:93
 msgid "Restore complete."
 msgstr ""
 
-#: src/Admin/Page.php:68
+#: src/Admin/Page.php:94
 msgid "Restore failed."
 msgstr ""
 
-#: src/Admin/Page.php:69
+#: src/Admin/Page.php:95
 msgid "This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?"
 msgstr ""
 
 #: templates/admin-page.php:16
-msgid "Back up your site or move it to a new host — one file, no technical setup."
+msgid "Back up your site or move it to a new host, one file, no technical setup."
 msgstr ""
 
 #: templates/admin-page.php:22
@@ -135,45 +135,165 @@ msgid "Package your database and files into a single archive you can download an
 msgstr ""
 
 #: templates/admin-page.php:29
+msgid "What to leave out (optional)"
+msgstr ""
+
+#: templates/admin-page.php:32
+msgid "Database"
+msgstr ""
+
+#: templates/admin-page.php:33
+msgid "Spam comments"
+msgstr ""
+
+#: templates/admin-page.php:34
+msgid "Post revisions"
+msgstr ""
+
+#: templates/admin-page.php:35
+msgid "Transients"
+msgstr ""
+
+#: templates/admin-page.php:36
+msgid "WooCommerce sessions"
+msgstr ""
+
+#: templates/admin-page.php:37
+msgid "Action Scheduler tables"
+msgstr ""
+
+#: templates/admin-page.php:38
+msgid "Database (files-only backup)"
+msgstr ""
+
+#: templates/admin-page.php:40
+msgid "Files"
+msgstr ""
+
+#: templates/admin-page.php:41
+msgid "Media library (uploads)"
+msgstr ""
+
+#: templates/admin-page.php:42
+msgid "All themes"
+msgstr ""
+
+#: templates/admin-page.php:43
+msgid "Inactive themes (keep active only)"
+msgstr ""
+
+#: templates/admin-page.php:44
+msgid "All plugins"
+msgstr ""
+
+#: templates/admin-page.php:45
+msgid "Inactive plugins (keep active only)"
+msgstr ""
+
+#: templates/admin-page.php:46
+msgid "Must-use plugins"
+msgstr ""
+
+#: templates/admin-page.php:47
+msgid "Cache files"
+msgstr ""
+
+#: templates/admin-page.php:81
+msgid "Exclude specific database tables (optional)"
+msgstr ""
+
+#: templates/admin-page.php:95
+msgid "Exclude specific files and folders (optional)"
+msgstr ""
+
+#: templates/admin-page.php:108
+msgid "Compression"
+msgstr ""
+
+#: templates/admin-page.php:111
+msgid "None (fastest, largest file)"
+msgstr ""
+
+#: templates/admin-page.php:115
+msgid "GZip (smaller file, a little slower)"
+msgstr ""
+
+#: templates/admin-page.php:128
 msgid "Create backup"
 msgstr ""
 
-#: templates/admin-page.php:39
+#: templates/admin-page.php:138
 msgid "Backup progress"
 msgstr ""
 
-#: templates/admin-page.php:49
+#: templates/admin-page.php:148
 msgid "Download backup"
 msgstr ""
 
-#: templates/admin-page.php:56
+#: templates/admin-page.php:155
 msgid "Restore a backup"
 msgstr ""
 
-#: templates/admin-page.php:59
-msgid "Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive — keep a backup of anything you want to keep."
+#: templates/admin-page.php:158
+msgid "Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive, keep a backup of anything you want to keep."
 msgstr ""
 
-#: templates/admin-page.php:63
+#: templates/admin-page.php:162
 msgid "Drag a .migrator file here, or"
 msgstr ""
 
-#: templates/admin-page.php:65
+#: templates/admin-page.php:164
 msgid "Choose a file"
 msgstr ""
 
-#: templates/admin-page.php:71
+#: templates/admin-page.php:170
 msgid "Also restore files (wp-content)"
 msgstr ""
 
-#: templates/admin-page.php:76
+#: templates/admin-page.php:175
 msgid "Restore backup"
 msgstr ""
 
-#: templates/admin-page.php:80
+#: templates/admin-page.php:179
 msgid "Restore progress"
 msgstr ""
 
-#: templates/admin-page.php:91
-msgid "Large site? Restore from the command line — it has no time limit:"
+#: templates/admin-page.php:190
+msgid "Large site? Restore from the command line, it has no time limit:"
+msgstr ""
+
+#: templates/admin-page.php:213
+msgid "Migrator Pro"
+msgstr ""
+
+#: templates/admin-page.php:215
+msgid "Put your backups on autopilot and move sites between servers"
+msgstr ""
+
+#: templates/admin-page.php:218
+msgid "The free plugin backs up, restores and migrates your site by hand. Pro adds the things agencies and busy site owners ask for, all in one licence:"
+msgstr ""
+
+#: templates/admin-page.php:221
+msgid "Scheduled automatic backups, kept on a retention you choose"
+msgstr ""
+
+#: templates/admin-page.php:222
+msgid "Off-site copies to a mounted drive, NAS or cloud storage"
+msgstr ""
+
+#: templates/admin-page.php:223
+msgid "Direct server-to-server migration, with no manual download"
+msgstr ""
+
+#: templates/admin-page.php:224
+msgid "Password-encrypted backups and full multisite migration"
+msgstr ""
+
+#: templates/admin-page.php:229
+msgid "Get Migrator Pro"
+msgstr ""
+
+#: templates/admin-page.php:231
+msgid "One licence covers every Pro feature."
 msgstr ""
