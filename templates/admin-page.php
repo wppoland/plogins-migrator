@@ -25,6 +25,13 @@ defined('ABSPATH') || exit;
 				<?php esc_html_e('Package your database and files into a single archive you can download and restore anywhere.', 'migrator'); ?>
 			</p>
 
+			<div class="migrator-presets" role="group" aria-label="<?php esc_attr_e('Backup presets', 'migrator'); ?>">
+				<span class="migrator-presets__label"><?php esc_html_e('Preset:', 'migrator'); ?></span>
+				<button type="button" class="button button-small migrator-preset is-active" data-preset="full"><?php esc_html_e('Full site', 'migrator'); ?></button>
+				<button type="button" class="button button-small migrator-preset" data-preset="database"><?php esc_html_e('Database only', 'migrator'); ?></button>
+				<button type="button" class="button button-small migrator-preset" data-preset="media"><?php esc_html_e('Media only', 'migrator'); ?></button>
+			</div>
+
 			<details class="migrator-options">
 				<summary><?php esc_html_e('What to leave out (optional)', 'migrator'); ?></summary>
 				<?php
@@ -176,6 +183,16 @@ defined('ABSPATH') || exit;
 				<?php esc_html_e('Large site? Restore from the command line, it has no time limit:', 'migrator'); ?>
 				<br><code>wp migrator import &lt;file&gt;.migrator</code>
 			</p>
+		</section>
+
+		<section class="migrator-card migrator-backups" aria-labelledby="migrator-backups-heading">
+			<h2 id="migrator-backups-heading" class="migrator-card__heading">
+				<?php esc_html_e('Your backups', 'migrator'); ?>
+			</h2>
+			<p class="migrator-card__desc">
+				<?php esc_html_e('Backups stored on this site. Download, restore or delete them here.', 'migrator'); ?>
+			</p>
+			<div class="migrator-backups__list" id="migrator-backups-list" aria-live="polite"></div>
 		</section>
 	</div>
 

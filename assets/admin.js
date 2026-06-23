@@ -61,6 +61,7 @@
 		download.setAttribute( 'href', job.download );
 		download.setAttribute( 'download', job.fileName || 'backup.migrator' );
 		startBtn.disabled = false;
+		loadBackups();
 	}
 
 	function loop() {
@@ -122,6 +123,126 @@
 			fail();
 		} );
 	} );
+
+	// --- Quick presets: one click sets "what to back up" -----------------------
+	// Each preset is the set of exclusion options to tick. "full" ticks nothing.
+	var presetMap = {
+		full: {},
+		database: { no_media: 1, no_themes: 1, no_plugins: 1, no_muplugins: 1, no_cache: 1 },
+		media: { no_database: 1, no_themes: 1, no_plugins: 1, no_muplugins: 1, no_cache: 1 }
+	};
+	var presetBtns = document.querySelectorAll( '.migrator-preset' );
+	var exportOpts = document.querySelectorAll( '.migrator-export-opt' );
+	presetBtns.forEach( function ( btn ) {
+		btn.addEventListener( 'click', function () {
+			var map = presetMap[ btn.getAttribute( 'data-preset' ) ] || {};
+			exportOpts.forEach( function ( cb ) { cb.checked = !! map[ cb.value ]; } );
+			presetBtns.forEach( function ( b ) { b.classList.remove( 'is-active' ); } );
+			btn.classList.add( 'is-active' );
+		} );
+	} );
+	// Hand-toggling an option drops the preset highlight (it's no longer "clean").
+	exportOpts.forEach( function ( cb ) {
+		cb.addEventListener( 'change', function () {
+			presetBtns.forEach( function ( b ) { b.classList.remove( 'is-active' ); } );
+		} );
+	} );
+
+	// --- Stored backups: list / download / restore / delete -------------------
+	var backupsBox = document.getElementById( 'migrator-backups-list' );
+
+	function fmtBytes( n ) {
+		var u = [ 'B', 'KB', 'MB', 'GB', 'TB' ], i = 0;
+		n = n || 0;
+		while ( n >= 1024 && i < u.length - 1 ) { n /= 1024; i++; }
+		return ( i === 0 ? n : n.toFixed( n < 10 ? 1 : 0 ) ) + ' ' + u[ i ];
+	}
+
+	function renderBackups( list ) {
+		if ( ! backupsBox ) { return; }
+		backupsBox.textContent = '';
+		if ( ! list || ! list.length ) {
+			var empty = document.createElement( 'p' );
+			empty.className = 'migrator-backups__empty';
+			empty.textContent = i18n.noBackups || 'No backups stored on this site yet.';
+			backupsBox.appendChild( empty );
+			return;
+		}
+		list.forEach( function ( bk ) {
+			var row = document.createElement( 'div' );
+			row.className = 'migrator-backups__row';
+
+			var meta = document.createElement( 'div' );
+			meta.className = 'migrator-backups__meta';
+			var nm = document.createElement( 'span' );
+			nm.className = 'migrator-backups__name';
+			nm.textContent = bk.file;
+			var sub = document.createElement( 'span' );
+			sub.className = 'migrator-backups__sub';
+			sub.textContent = bk.date + ' · ' + fmtBytes( bk.size ) + ( bk.compressed ? ' · gzip' : '' );
+			meta.appendChild( nm );
+			meta.appendChild( sub );
+
+			var actions = document.createElement( 'div' );
+			actions.className = 'migrator-backups__actions';
+			var dl = document.createElement( 'a' );
+			dl.className = 'button button-small';
+			dl.href = bk.downloadUrl;
+			dl.textContent = i18n.download || 'Download';
+			var rs = document.createElement( 'button' );
+			rs.type = 'button';
+			rs.className = 'button button-small';
+			rs.textContent = i18n.restore || 'Restore';
+			var del = document.createElement( 'button' );
+			del.type = 'button';
+			del.className = 'button button-small button-link-delete';
+			del.textContent = i18n.deleteWord || 'Delete';
+			rs.addEventListener( 'click', function () { restoreStored( bk.file, rs ); } );
+			del.addEventListener( 'click', function () { deleteStored( bk.file, row ); } );
+			actions.appendChild( dl );
+			actions.appendChild( rs );
+			actions.appendChild( del );
+
+			row.appendChild( meta );
+			row.appendChild( actions );
+			backupsBox.appendChild( row );
+		} );
+	}
+
+	function loadBackups() {
+		if ( ! backupsBox ) { return; }
+		post( 'migrator_backups_list' ).then( function ( res ) {
+			renderBackups( res && res.success ? res.data.backups : [] );
+		} ).catch( function () {} );
+	}
+
+	function restoreStored( file, btn ) {
+		if ( ! window.confirm( i18n.confirmRestore || 'This overwrites the current site with the backup. Continue?' ) ) { return; }
+		var label = btn.textContent;
+		btn.disabled = true;
+		btn.textContent = i18n.restoring || 'Restoring…';
+		post( 'migrator_restore_backup', { file: file, import_files: '1' } ).then( function ( res ) {
+			btn.disabled = false;
+			btn.textContent = label;
+			window.alert( res && res.success ? ( i18n.restoreDone || 'Restore complete.' ) : ( ( res && res.data && res.data.message ) || i18n.restoreFailed || 'Restore failed.' ) );
+		} ).catch( function () {
+			btn.disabled = false;
+			btn.textContent = label;
+			window.alert( i18n.restoreFailed || 'Restore failed.' );
+		} );
+	}
+
+	function deleteStored( file, row ) {
+		if ( ! window.confirm( i18n.confirmDelete || 'Delete this backup? This cannot be undone.' ) ) { return; }
+		post( 'migrator_delete_backup', { file: file } ).then( function ( res ) {
+			if ( res && res.success ) {
+				row.remove();
+				if ( ! backupsBox.querySelector( '.migrator-backups__row' ) ) { renderBackups( [] ); }
+			}
+		} ).catch( function () {} );
+	}
+
+	loadBackups();
 }() );
 
 /* Restore: drag-drop + chunked upload + run. */
