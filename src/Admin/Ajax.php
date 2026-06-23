@@ -98,8 +98,10 @@ final class Ajax implements HasHooks
 
         global $wpdb;
 
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
         $name  = isset($_POST['file']) ? sanitize_file_name(wp_unslash((string) $_POST['file'])) : '';
         $files = isset($_POST['import_files']) && '' !== sanitize_text_field(wp_unslash((string) $_POST['import_files']));
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
         $path  = $this->confinedBackup($name);
 
         if (function_exists('set_time_limit')) {
@@ -136,7 +138,9 @@ final class Ajax implements HasHooks
     {
         $this->guard();
 
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
         $name = isset($_POST['file']) ? sanitize_file_name(wp_unslash((string) $_POST['file'])) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
         $path = $this->confinedBackup($name);
 
         wp_delete_file($path);
