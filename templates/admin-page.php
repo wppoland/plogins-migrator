@@ -179,20 +179,16 @@ defined('ABSPATH') || exit;
 				<p class="migrator-result__msg" id="migrator-import-result-msg"></p>
 			</div>
 
+			<div class="migrator-backups" id="migrator-backups">
+				<h3 class="migrator-backups__heading"><?php esc_html_e('Or restore one already stored on this site', 'migrator'); ?></h3>
+				<p class="migrator-card__desc"><?php esc_html_e('Backups saved on this site. Download, restore or delete them here.', 'migrator'); ?></p>
+				<div class="migrator-backups__list" id="migrator-backups-list" aria-live="polite"></div>
+			</div>
+
 			<p class="migrator-card__desc migrator-card__cli">
 				<?php esc_html_e('Large site? Restore from the command line, it has no time limit:', 'migrator'); ?>
 				<br><code>wp migrator import &lt;file&gt;.migrator</code>
 			</p>
-		</section>
-
-		<section class="migrator-card migrator-backups" aria-labelledby="migrator-backups-heading">
-			<h2 id="migrator-backups-heading" class="migrator-card__heading">
-				<?php esc_html_e('Your backups', 'migrator'); ?>
-			</h2>
-			<p class="migrator-card__desc">
-				<?php esc_html_e('Backups stored on this site. Download, restore or delete them here.', 'migrator'); ?>
-			</p>
-			<div class="migrator-backups__list" id="migrator-backups-list" aria-live="polite"></div>
 		</section>
 	</div>
 

@@ -170,7 +170,9 @@
 
 /* Stored backups list */
 .migrator-backups__empty { color: #646970; font-size: 13px; margin: 4px 0 0; }
-.migrator-backups__list { display: flex; flex-direction: column; gap: 8px; }
+.migrator-backups { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e0e0e1; }
+.migrator-backups__heading { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #50575e; }
+.migrator-backups__list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .migrator-backups__row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #dcdcde; border-radius: 6px; background: #fff; }
 .migrator-backups__meta { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .migrator-backups__name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
