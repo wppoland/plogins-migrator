@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -89,6 +89,9 @@ In `wp-content/migrator-backups`, a folder protected from direct web access. Rem
 2. A finished backup, with the progress bar at 100% and a one-click download.
 
 == Changelog ==
+
+= 0.3.2 =
+* Tidier saved-backup rows: the date and size lead, the long file name is a muted single line that no longer wraps, and the row reflows neatly on narrow screens.
 
 = 0.3.1 =
 * Your saved backups now appear inside the "Restore a backup" card, so you can restore one in place without scrolling past it.

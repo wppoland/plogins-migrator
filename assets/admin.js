@@ -176,12 +176,17 @@
 			meta.className = 'migrator-backups__meta';
 			var nm = document.createElement( 'span' );
 			nm.className = 'migrator-backups__name';
-			nm.textContent = bk.file;
+			nm.textContent = bk.date;
 			var sub = document.createElement( 'span' );
 			sub.className = 'migrator-backups__sub';
-			sub.textContent = bk.date + ' · ' + fmtBytes( bk.size ) + ( bk.compressed ? ' · gzip' : '' );
+			sub.textContent = fmtBytes( bk.size ) + ( bk.compressed ? ' · gzip' : '' );
+			var fileEl = document.createElement( 'span' );
+			fileEl.className = 'migrator-backups__file';
+			fileEl.textContent = bk.file;
+			fileEl.title = bk.file;
 			meta.appendChild( nm );
 			meta.appendChild( sub );
+			meta.appendChild( fileEl );
 
 			var actions = document.createElement( 'div' );
 			actions.className = 'migrator-backups__actions';
