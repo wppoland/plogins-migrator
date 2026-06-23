@@ -96,6 +96,11 @@ final class Page implements HasHooks
                 'scanning'      => __('Scanning…', 'migrator'),
                 'scanFailed'    => __('Scan failed.', 'migrator'),
                 'filesWord'     => __('files', 'migrator'),
+                'noBackups'     => __('No backups stored on this site yet.', 'migrator'),
+                'download'      => __('Download', 'migrator'),
+                'restore'       => __('Restore', 'migrator'),
+                'deleteWord'    => __('Delete', 'migrator'),
+                'confirmDelete' => __('Delete this backup? This cannot be undone.', 'migrator'),
             ],
         ]);
     }

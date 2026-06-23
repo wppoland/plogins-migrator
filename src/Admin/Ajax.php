@@ -46,6 +46,121 @@ final class Ajax implements HasHooks
         add_action('wp_ajax_migrator_import_upload', [$this, 'importUpload']);
         add_action('wp_ajax_migrator_import_run', [$this, 'importRun']);
         add_action('wp_ajax_migrator_scan_tree', [$this, 'scanTree']);
+        add_action('wp_ajax_migrator_backups_list', [$this, 'backupsList']);
+        add_action('wp_ajax_migrator_restore_backup', [$this, 'restoreBackup']);
+        add_action('wp_ajax_migrator_delete_backup', [$this, 'deleteBackup']);
+    }
+
+    /**
+     * List the backups stored locally in the workspace, newest first, with a
+     * one-click download URL each. Skips in-progress uploads and temp files.
+     */
+    public function backupsList(): void
+    {
+        $this->guard();
+
+        $dir   = $this->workspace->path();
+        $found = array_merge(
+            glob($dir . '/*.migrator') ?: [],
+            glob($dir . '/*.migrator' . Compressor::EXT) ?: [],
+        );
+
+        $out = [];
+        foreach ($found as $path) {
+            $name = basename($path);
+            if (str_starts_with($name, 'upload-') || str_starts_with($name, 'restore-')) {
+                continue;
+            }
+            $out[] = [
+                'file'        => $name,
+                'size'        => (int) filesize($path),
+                'date'        => gmdate('Y-m-d H:i', (int) filemtime($path)),
+                'compressed'  => str_ends_with($name, Compressor::EXT),
+                'downloadUrl' => wp_nonce_url(
+                    admin_url('admin-ajax.php?action=migrator_download&file=' . rawurlencode($name)),
+                    'migrator_download',
+                    'nonce',
+                ),
+            ];
+        }
+        usort($out, static fn (array $a, array $b): int => strcmp((string) $b['date'], (string) $a['date']));
+
+        wp_send_json_success(['backups' => $out]);
+    }
+
+    /**
+     * Restore a backup already stored in the workspace (decompressing a .gz copy
+     * to a temp archive first). The stored backup itself is kept.
+     */
+    public function restoreBackup(): void
+    {
+        $this->guard();
+
+        global $wpdb;
+
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
+        $name  = isset($_POST['file']) ? sanitize_file_name(wp_unslash((string) $_POST['file'])) : '';
+        $files = isset($_POST['import_files']) && '' !== sanitize_text_field(wp_unslash((string) $_POST['import_files']));
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+        $path  = $this->confinedBackup($name);
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
+        $importPath = $path;
+        $tmp        = null;
+        if (Compressor::isCompressed($path)) {
+            $tmp = $this->workspace->path('restore-' . wp_generate_password(8, false) . '.migrator');
+            (new Compressor())->decompress($path, $tmp);
+            $importPath = $tmp;
+        }
+
+        try {
+            $importer = new Importer($this->workspace, $wpdb);
+            $result   = $importer->import($importPath, $files);
+            if (null !== $tmp) {
+                wp_delete_file($tmp);
+            }
+            wp_send_json_success($result);
+        } catch (\Throwable $e) {
+            if (null !== $tmp) {
+                wp_delete_file($tmp);
+            }
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Delete a stored backup.
+     */
+    public function deleteBackup(): void
+    {
+        $this->guard();
+
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
+        $name = isset($_POST['file']) ? sanitize_file_name(wp_unslash((string) $_POST['file'])) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+        $path = $this->confinedBackup($name);
+
+        wp_delete_file($path);
+        wp_send_json_success(['file' => $name]);
+    }
+
+    /**
+     * Resolve a backup filename to an absolute path, confined to the workspace,
+     * or send a 404 and stop.
+     */
+    private function confinedBackup(string $name): string
+    {
+        $path     = $this->workspace->path($name);
+        $realBase = realpath($this->workspace->path());
+        $realPath = realpath($path);
+        if ('' === $name || false === $realPath || false === $realBase || ! str_starts_with($realPath, $realBase) || ! is_file($realPath)) {
+            wp_send_json_error(['message' => __('Backup not found.', 'migrator')], 404);
+        }
+
+        return $realPath;
     }
 
     /**
