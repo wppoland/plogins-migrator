@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -89,6 +89,9 @@ In `wp-content/migrator-backups`, a folder protected from direct web access. Rem
 2. A finished backup, with the progress bar at 100% and a one-click download.
 
 == Changelog ==
+
+= 0.2.0 =
+* Added a file-size explorer to the backup screen: scan wp-content, see each folder's size and file count, and tick folders or large files to leave out of the backup. Builds on the existing path exclusions.
 
 = 0.1.0 =
 * First release.

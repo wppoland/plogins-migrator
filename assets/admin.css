@@ -147,3 +147,18 @@
 	.migrator-pro-cta { padding: 20px; }
 	.migrator-pro-cta__action { text-align: left; }
 }
+
+/* File-size explorer (scan files by size, tick to exclude) */
+.migrator-explorer__bar { display: flex; align-items: center; gap: 12px; margin: 6px 0 4px; }
+.migrator-explorer__summary { font-size: 12px; color: #50575e; }
+.migrator-explorer__hint { font-size: 12px; color: #646970; margin: 0 0 8px; }
+.migrator-tree { border: 1px solid #dcdcde; border-radius: 6px; max-height: 360px; overflow: auto; background: #fff; font-size: 13px; }
+.migrator-tree__row { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 8px; border-bottom: 1px solid #f0f0f1; }
+.migrator-tree__row:hover { background: #f6f7f7; }
+.migrator-tree__row.is-dir .migrator-tree__name { font-weight: 600; }
+.migrator-tree__caret { width: 18px; min-width: 18px; border: 0; background: none; cursor: pointer; color: #646970; font-size: 11px; line-height: 1; padding: 2px; }
+.migrator-tree__caret:disabled { cursor: default; opacity: 0; }
+.migrator-tree__label { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; cursor: pointer; }
+.migrator-tree__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.migrator-tree__meta { margin-left: auto; color: #646970; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 12px; }
+.migrator-tree__kids { }

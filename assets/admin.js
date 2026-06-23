@@ -275,4 +275,99 @@
 		setProgress( 0, i18n.uploading || 'Uploading…' );
 		uploadChunk( uploadId(), 0 );
 	} );
+
+	// --- File-size explorer: scan wp-content, see sizes, tick to exclude ------
+	var scanBtn = document.getElementById( 'migrator-scan' );
+	var treeEl = document.getElementById( 'migrator-tree' );
+	var scanSummary = document.getElementById( 'migrator-scan-summary' );
+
+	function fmtSize( bytes ) {
+		var u = [ 'B', 'KB', 'MB', 'GB', 'TB' ], i = 0, n = bytes || 0;
+		while ( n >= 1024 && i < u.length - 1 ) { n /= 1024; i++; }
+		return ( i === 0 ? n : n.toFixed( n < 10 ? 1 : 0 ) ) + ' ' + u[ i ];
+	}
+
+	function buildNode( node, depth ) {
+		var hasKids = node.children && node.children.length;
+		var wrap = document.createElement( 'div' );
+		var row = document.createElement( 'div' );
+		row.className = 'migrator-tree__row' + ( node.dir ? ' is-dir' : '' );
+		row.style.paddingLeft = ( 8 + depth * 18 ) + 'px';
+
+		var caret = document.createElement( 'button' );
+		caret.type = 'button';
+		caret.className = 'migrator-tree__caret';
+		caret.textContent = hasKids ? '▸' : '';
+		caret.disabled = ! hasKids;
+		row.appendChild( caret );
+
+		var label = document.createElement( 'label' );
+		label.className = 'migrator-tree__label';
+		if ( node.rel ) {
+			var cb = document.createElement( 'input' );
+			cb.type = 'checkbox';
+			cb.className = 'migrator-export-path';
+			cb.value = node.rel;
+			label.appendChild( cb );
+		}
+		var name = document.createElement( 'span' );
+		name.className = 'migrator-tree__name';
+		name.textContent = node.name + ( node.dir ? '/' : '' );
+		label.appendChild( name );
+		row.appendChild( label );
+
+		var meta = document.createElement( 'span' );
+		meta.className = 'migrator-tree__meta';
+		meta.textContent = ( node.dir && node.nodes ? node.nodes + ' · ' : '' ) + fmtSize( node.size );
+		row.appendChild( meta );
+		wrap.appendChild( row );
+
+		if ( hasKids ) {
+			var kids = document.createElement( 'div' );
+			kids.className = 'migrator-tree__kids';
+			kids.hidden = depth >= 1;
+			caret.textContent = kids.hidden ? '▸' : '▾';
+			caret.setAttribute( 'aria-expanded', String( ! kids.hidden ) );
+			node.children.forEach( function ( c ) { kids.appendChild( buildNode( c, depth + 1 ) ); } );
+			caret.addEventListener( 'click', function () {
+				kids.hidden = ! kids.hidden;
+				caret.textContent = kids.hidden ? '▸' : '▾';
+				caret.setAttribute( 'aria-expanded', String( ! kids.hidden ) );
+			} );
+			wrap.appendChild( kids );
+		}
+		return wrap;
+	}
+
+	if ( scanBtn && treeEl ) {
+		scanBtn.addEventListener( 'click', function () {
+			scanBtn.disabled = true;
+			scanSummary.textContent = i18n.scanning || 'Scanning…';
+			var scanBody = new URLSearchParams();
+			scanBody.set( 'action', 'migrator_scan_tree' );
+			scanBody.set( 'nonce', data.nonce );
+			fetch( data.ajaxUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: scanBody.toString()
+			} ).then( function ( r ) { return r.json(); } ).then( function ( res ) {
+				scanBtn.disabled = false;
+				if ( ! res || ! res.success || ! res.data ) {
+					scanSummary.textContent = i18n.scanFailed || 'Scan failed.';
+					return;
+				}
+				var root = res.data;
+				treeEl.innerHTML = '';
+				( root.children || [] ).forEach( function ( c ) {
+					treeEl.appendChild( buildNode( c, 0 ) );
+				} );
+				treeEl.hidden = false;
+				scanSummary.textContent = ( root.nodes || 0 ) + ' ' + ( i18n.filesWord || 'files' ) + ' · ' + fmtSize( root.size );
+			} ).catch( function () {
+				scanBtn.disabled = false;
+				scanSummary.textContent = i18n.scanFailed || 'Scan failed.';
+			} );
+		} );
+	}
 }() );

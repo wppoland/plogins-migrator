@@ -45,6 +45,24 @@ final class Ajax implements HasHooks
         add_action('wp_ajax_migrator_download', [$this, 'download']);
         add_action('wp_ajax_migrator_import_upload', [$this, 'importUpload']);
         add_action('wp_ajax_migrator_import_run', [$this, 'importRun']);
+        add_action('wp_ajax_migrator_scan_tree', [$this, 'scanTree']);
+    }
+
+    /**
+     * Return a size-annotated tree of wp-content so the merchant can see what
+     * bloats a backup and tick folders or large files to exclude. Paths are
+     * wp-content-relative, matching the exporter's exclude_paths option.
+     */
+    public function scanTree(): void
+    {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+        }
+
+        $base = untrailingslashit((string) WP_CONTENT_DIR);
+        $tree = (new \Migrator\Engine\Files\TreeScanner())->tree($base, [$this->workspace->path()]);
+
+        wp_send_json_success($tree);
     }
 
     /**

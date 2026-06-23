@@ -93,6 +93,9 @@ final class Page implements HasHooks
                 'restoreDone'   => __('Restore complete.', 'migrator'),
                 'restoreFailed' => __('Restore failed.', 'migrator'),
                 'confirmRestore' => __('This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?', 'migrator'),
+                'scanning'      => __('Scanning…', 'migrator'),
+                'scanFailed'    => __('Scan failed.', 'migrator'),
+                'filesWord'     => __('files', 'migrator'),
             ],
         ]);
     }
