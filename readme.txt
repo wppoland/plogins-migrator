@@ -85,8 +85,8 @@ In `wp-content/migrator-backups`, a folder protected from direct web access. Rem
 
 == Screenshots ==
 
-1. The Migrator screen: create a backup (with options for what to leave out) or restore one by drag and drop.
-2. A finished backup, with the progress bar at 100% and a one-click download.
+1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.
+2. The file-size explorer: scan wp-content and see each folder's size so you can leave out what you do not need.
 
 == Changelog ==
 
