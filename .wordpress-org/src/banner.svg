@@ -1,0 +1,27 @@
+<svg width="772" height="250" viewBox="0 0 772 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c1a2c"/><stop offset="1" stop-color="#070e18"/>
+    </linearGradient>
+    <linearGradient id="em" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.16" cy="0.4" r="0.5">
+      <stop offset="0" stop-color="#10b981" stop-opacity="0.30"/><stop offset="1" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="772" height="250" fill="url(#bg)"/>
+  <rect width="772" height="250" fill="url(#glow)"/>
+  <!-- glyph -->
+  <g transform="translate(70,73)">
+    <path d="M0 30 h60 v-15 l28 24 -28 24 v-15 h-60 z" fill="url(#em)"/>
+    <g fill="none" stroke="url(#em)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="64" width="108" height="62" rx="14"/>
+      <path d="M2 87 h108"/><path d="M44 105 h24"/>
+    </g>
+  </g>
+  <!-- wordmark -->
+  <text x="240" y="120" font-family="Helvetica, Arial, sans-serif" font-size="68" font-weight="700" fill="#f8fafc">Migrator</text>
+  <text x="242" y="162" font-family="Helvetica, Arial, sans-serif" font-size="23" font-weight="500" fill="#94a3b8">Backup, restore &amp; migrate WordPress, in one file.</text>
+  <text x="242" y="196" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="600" fill="#5eead4">Self-hosted &#183; No external service &#183; WP-CLI</text>
+</svg>
