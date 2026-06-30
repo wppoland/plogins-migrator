@@ -12,37 +12,37 @@ msgstr ""
 "POT-Creation-Date: 2026-06-23T12:59:29+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
-"X-Domain: migrator\n"
+"X-Domain: plogins-migrator\n"
 
 #. Plugin Name of the plugin
-#: migrator.php
+#: plogins-migrator.php
 #: src/Admin/Page.php:52
 #: templates/admin-page.php:13
 msgid "Migrator"
 msgstr ""
 
 #. Plugin URI of the plugin
-#: migrator.php
+#: plogins-migrator.php
 msgid "https://plogins.com/migrator/"
 msgstr ""
 
 #. Description of the plugin
-#: migrator.php
+#: plogins-migrator.php
 msgid "Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup."
 msgstr ""
 
 #. Author of the plugin
-#: migrator.php
+#: plogins-migrator.php
 msgid "WPPoland.com"
 msgstr ""
 
 #. Author URI of the plugin
-#: migrator.php
+#: plogins-migrator.php
 msgid "https://wppoland.com"
 msgstr ""
 
 #. translators: 1: Required PHP version, 2: Current PHP version
-#: migrator.php:41
+#: plogins-migrator.php:41
 #, php-format
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr ""

@@ -4,7 +4,7 @@ includes:
 parameters:
     level: 6
     paths:
-        - migrator.php
+        - plogins-migrator.php
         - uninstall.php
         - src
         - config

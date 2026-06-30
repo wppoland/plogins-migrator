@@ -157,7 +157,7 @@ final class Ajax implements HasHooks
         $realBase = realpath($this->workspace->path());
         $realPath = realpath($path);
         if ('' === $name || false === $realPath || false === $realBase || ! str_starts_with($realPath, $realBase) || ! is_file($realPath)) {
-            wp_send_json_error(['message' => __('Backup not found.', 'migrator')], 404);
+            wp_send_json_error(['message' => __('Backup not found.', 'plogins-migrator')], 404);
         }
 
         return $realPath;
@@ -171,7 +171,7 @@ final class Ajax implements HasHooks
     public function scanTree(): void
     {
         if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+            wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
         $base = untrailingslashit((string) WP_CONTENT_DIR);
@@ -187,19 +187,19 @@ final class Ajax implements HasHooks
     public function importUpload(): void
     {
         if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+            wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
         $id    = isset($_POST['upload_id']) ? sanitize_key(wp_unslash((string) $_POST['upload_id'])) : '';
         $index = isset($_POST['index']) ? absint(wp_unslash((string) $_POST['index'])) : 0;
 
         if ('' === $id || ! isset($_FILES['chunk']) || ! is_array($_FILES['chunk'])) {
-            wp_send_json_error(['message' => __('Bad upload request.', 'migrator')], 400);
+            wp_send_json_error(['message' => __('Bad upload request.', 'plogins-migrator')], 400);
         }
 
         $tmp = isset($_FILES['chunk']['tmp_name']) ? sanitize_text_field(wp_unslash((string) $_FILES['chunk']['tmp_name'])) : '';
         if ('' === $tmp || ! is_uploaded_file($tmp)) {
-            wp_send_json_error(['message' => __('Invalid upload.', 'migrator')], 400);
+            wp_send_json_error(['message' => __('Invalid upload.', 'plogins-migrator')], 400);
         }
 
         $dest = $this->uploadPath($id);
@@ -207,7 +207,7 @@ final class Ajax implements HasHooks
         $in  = fopen($tmp, 'rb');
         $out = fopen($dest, 0 === $index ? 'wb' : 'ab');
         if (false === $in || false === $out) {
-            wp_send_json_error(['message' => __('Could not store upload.', 'migrator')], 500);
+            wp_send_json_error(['message' => __('Could not store upload.', 'plogins-migrator')], 500);
         }
         stream_copy_to_stream($in, $out);
         fclose($in);
@@ -223,7 +223,7 @@ final class Ajax implements HasHooks
     public function importRun(): void
     {
         if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+            wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
         global $wpdb;
@@ -233,7 +233,7 @@ final class Ajax implements HasHooks
         $path = $this->uploadPath($id);
 
         if ('' === $id || ! is_file($path)) {
-            wp_send_json_error(['message' => __('Uploaded archive not found.', 'migrator')], 404);
+            wp_send_json_error(['message' => __('Uploaded archive not found.', 'plogins-migrator')], 404);
         }
 
         // Give the restore as long as the host allows; large sites should use WP-CLI.
@@ -261,7 +261,7 @@ final class Ajax implements HasHooks
         $realBase = realpath($this->workspace->path());
         $realDir  = realpath(dirname($path));
         if (false === $realBase || false === $realDir || ! str_starts_with($realDir . '/', $realBase . '/')) {
-            wp_send_json_error(['message' => __('Invalid upload id.', 'migrator')], 400);
+            wp_send_json_error(['message' => __('Invalid upload id.', 'plogins-migrator')], 400);
         }
 
         return $path;
@@ -270,7 +270,7 @@ final class Ajax implements HasHooks
     public function exportStart(): void
     {
         if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+            wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
         try {
@@ -399,7 +399,7 @@ final class Ajax implements HasHooks
     public function download(): void
     {
         if (! current_user_can('manage_options') || ! check_admin_referer('migrator_download', 'nonce')) {
-            wp_die(esc_html__('Not allowed.', 'migrator'), '', ['response' => 403]);
+            wp_die(esc_html__('Not allowed.', 'plogins-migrator'), '', ['response' => 403]);
         }
 
         $name = isset($_GET['file']) ? sanitize_file_name(wp_unslash((string) $_GET['file'])) : '';
@@ -409,7 +409,7 @@ final class Ajax implements HasHooks
         $realBase = realpath($this->workspace->path());
         $realPath = realpath($path);
         if ('' === $name || false === $realPath || false === $realBase || ! str_starts_with($realPath, $realBase) || ! is_file($realPath)) {
-            wp_die(esc_html__('File not found.', 'migrator'), '', ['response' => 404]);
+            wp_die(esc_html__('File not found.', 'plogins-migrator'), '', ['response' => 404]);
         }
 
         nocache_headers();
@@ -431,10 +431,10 @@ final class Ajax implements HasHooks
     private function guard(): void
     {
         if (! check_ajax_referer('migrator', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security check failed.', 'migrator')], 403);
+            wp_send_json_error(['message' => __('Security check failed.', 'plogins-migrator')], 403);
         }
         if (! current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Not allowed.', 'migrator')], 403);
+            wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
     }
 

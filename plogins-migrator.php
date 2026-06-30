@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:       Migrator
- * Plugin URI:        https://plogins.com/migrator/
+ * Plugin Name:       Plogins Migrator for WooCommerce
+ * Plugin URI:        https://plogins.com/plogins-migrator/
  * Description:        Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup.
- * Version:           0.3.2
+ * Version:           0.3.3
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Tested up to:      7.0
@@ -11,7 +11,7 @@
  * Author URI:        https://wppoland.com
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       migrator
+ * Text Domain:       plogins-migrator
  * Domain Path:       /languages
  *
  * @package Migrator
@@ -23,7 +23,7 @@ namespace Migrator;
 
 defined('ABSPATH') || exit;
 
-const VERSION         = '0.3.2';
+const VERSION         = '0.3.3';
 const PLUGIN_FILE     = __FILE__;
 const PLUGIN_DIR      = __DIR__;
 const MIN_PHP_VERSION = '8.1.0';
@@ -38,7 +38,7 @@ if (version_compare(PHP_VERSION, MIN_PHP_VERSION, '<')) {
             '<div class="notice notice-error"><p>%s</p></div>',
             esc_html(sprintf(
                 /* translators: 1: Required PHP version, 2: Current PHP version */
-                __('Migrator requires PHP %1$s or higher. You are running PHP %2$s.', 'migrator'),
+                __('Migrator requires PHP %1$s or higher. You are running PHP %2$s.', 'plogins-migrator'),
                 MIN_PHP_VERSION,
                 PHP_VERSION,
             )),

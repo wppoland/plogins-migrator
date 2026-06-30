@@ -1,10 +1,10 @@
-=== Migrator ===
+=== Plogins Migrator for WooCommerce ===
 Contributors: motylanogha
 Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Back up, clone and migrate your whole site to one file, then restore it here or 
 
 Migrator packs your database and everything in `wp-content` into a single file you can download, keep as a backup, and restore, on the same site or on a brand-new install somewhere else. When you restore onto a different address, Migrator rewrites the old URLs and file paths to the new ones for you, so the site just works.
 
-Everything happens on your own server. There is no account to create, no file size sold back to you, and nothing is ever sent to a third-party service. Because it is fully open, you can read exactly what it does: the source lives at https://github.com/wppoland/migrator, which is also where to file a bug or request a feature.
+Everything happens on your own server. There is no account to create, no file size sold back to you, and nothing is ever sent to a third-party service. Because it is fully open, you can read exactly what it does: the source lives at https://github.com/wppoland/plogins-migrator, which is also where to file a bug or request a feature.
 
 **How it works**
 
@@ -56,11 +56,10 @@ For large sites where a browser request would time out, every job also runs from
 
 = Documentation and links =
 
-* **Documentation** - https://plogins.com/migrator/docs/
-* **Plugin page** - https://plogins.com/migrator/
-* **Source code** - https://github.com/wppoland/migrator
-* **Bug reports and feature requests** - https://github.com/wppoland/migrator/issues
-* **Discussions and questions** - https://github.com/wppoland/migrator/discussions
+* **Documentation** - https://plogins.com/plogins-migrator/docs/
+* **Plugin page** - https://plogins.com/plogins-migrator/
+* **Source code** - https://github.com/wppoland/plogins-migrator
+* **Bug reports and feature requests** - https://github.com/wppoland/plogins-migrator/issues
 
 
 = Does restoring delete what is already on the destination? =
@@ -89,6 +88,9 @@ In `wp-content/migrator-backups`, a folder protected from direct web access. Rem
 2. The file-size explorer: scan wp-content and see each folder's size so you can leave out what you do not need.
 
 == Changelog ==
+
+= 0.3.3 =
+* Renamed to Plogins Migrator for WooCommerce for a more distinctive plugin name.
 
 = 0.3.2 =
 * Tidier saved-backup rows: the date and size lead, the long file name is a muted single line that no longer wraps, and the row reflows neatly on narrow screens.

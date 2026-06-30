@@ -35,7 +35,7 @@ final class Page implements HasHooks
         array_unshift($links, sprintf(
             '<a href="%s">%s</a>',
             esc_url(admin_url('admin.php?page=' . self::SLUG)),
-            esc_html__('Settings', 'migrator'),
+            esc_html__('Settings', 'plogins-migrator'),
         ));
 
         return $links;
@@ -49,7 +49,7 @@ final class Page implements HasHooks
          *
          * @param string $label Default "Migrator".
          */
-        $label = (string) apply_filters('migrator/menu_label', __('Migrator', 'migrator'));
+        $label = (string) apply_filters('migrator/menu_label', __('Migrator', 'plogins-migrator'));
 
         $hook = add_menu_page(
             $label,
@@ -84,23 +84,23 @@ final class Page implements HasHooks
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce'   => wp_create_nonce('migrator'),
             'i18n'    => [
-                'preparing'     => __('Preparing…', 'migrator'),
-                'archiving'     => __('Archiving files…', 'migrator'),
-                'done'          => __('Backup ready.', 'migrator'),
-                'failed'        => __('Export failed.', 'migrator'),
-                'uploading'     => __('Uploading…', 'migrator'),
-                'restoring'     => __('Restoring… do not close this tab.', 'migrator'),
-                'restoreDone'   => __('Restore complete.', 'migrator'),
-                'restoreFailed' => __('Restore failed.', 'migrator'),
-                'confirmRestore' => __('This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?', 'migrator'),
-                'scanning'      => __('Scanning…', 'migrator'),
-                'scanFailed'    => __('Scan failed.', 'migrator'),
-                'filesWord'     => __('files', 'migrator'),
-                'noBackups'     => __('No backups stored on this site yet.', 'migrator'),
-                'download'      => __('Download', 'migrator'),
-                'restore'       => __('Restore', 'migrator'),
-                'deleteWord'    => __('Delete', 'migrator'),
-                'confirmDelete' => __('Delete this backup? This cannot be undone.', 'migrator'),
+                'preparing'     => __('Preparing…', 'plogins-migrator'),
+                'archiving'     => __('Archiving files…', 'plogins-migrator'),
+                'done'          => __('Backup ready.', 'plogins-migrator'),
+                'failed'        => __('Export failed.', 'plogins-migrator'),
+                'uploading'     => __('Uploading…', 'plogins-migrator'),
+                'restoring'     => __('Restoring… do not close this tab.', 'plogins-migrator'),
+                'restoreDone'   => __('Restore complete.', 'plogins-migrator'),
+                'restoreFailed' => __('Restore failed.', 'plogins-migrator'),
+                'confirmRestore' => __('This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?', 'plogins-migrator'),
+                'scanning'      => __('Scanning…', 'plogins-migrator'),
+                'scanFailed'    => __('Scan failed.', 'plogins-migrator'),
+                'filesWord'     => __('files', 'plogins-migrator'),
+                'noBackups'     => __('No backups stored on this site yet.', 'plogins-migrator'),
+                'download'      => __('Download', 'plogins-migrator'),
+                'restore'       => __('Restore', 'plogins-migrator'),
+                'deleteWord'    => __('Delete', 'plogins-migrator'),
+                'confirmDelete' => __('Delete this backup? This cannot be undone.', 'plogins-migrator'),
             ],
         ]);
     }
