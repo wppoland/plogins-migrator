@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Plogins Migrator for WooCommerce
+ * Plugin Name:       Plogins Migrator - Migration and Backup for WooCommerce
  * Plugin URI:        https://plogins.com/plogins-migrator/
  * Description:        Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup.
  * Version:           0.3.3

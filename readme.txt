@@ -1,4 +1,4 @@
-=== Plogins Migrator for WooCommerce ===
+=== Plogins Migrator - Migration and Backup for WooCommerce ===
 Contributors: motylanogha
 Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
