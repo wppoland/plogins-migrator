@@ -82,6 +82,11 @@ No. Migrator runs entirely on your own server. It creates no account and contact
 
 In `wp-content/migrator-backups`, a folder protected from direct web access. Removing the plugin deletes that folder and its contents.
 
+
+= Does this plugin work on WordPress Multisite? =
+
+Yes. This plugin is compatible with WordPress Multisite. Network activate it or activate it on individual sites; each site keeps its own settings and data.
+
 == Screenshots ==
 
 1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.
