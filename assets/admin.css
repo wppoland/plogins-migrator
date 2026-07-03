@@ -98,54 +98,164 @@
 	.migrator-drop { transition: none; }
 }
 
-/* Pro upgrade call to action */
-.migrator-pro-cta {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	justify-content: space-between;
-	gap: 24px;
-	max-width: 880px;
-	margin: 22px 0 4px;
-	padding: 24px 28px;
-	border: 1px solid #c3d9ff;
-	border-radius: 10px;
-	background: linear-gradient(135deg, #f4f8ff 0%, #eef6ff 100%);
+/* Two-column layout: main content + PRO sidebar */
+.migrator-cols {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 300px;
+	gap: 20px;
+	align-items: start;
+	max-width: 1200px;
+	margin-top: 20px;
 }
-.migrator-pro-cta__main { flex: 1 1 380px; }
-.migrator-pro-cta__eyebrow {
-	margin: 0 0 4px;
+.migrator-cols .migrator__cards { margin-top: 0; }
+.migrator-side { display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 960px) {
+	.migrator-cols { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------------ *
+ * PRO upsell — dismissible banner, sidebar promo, "what PRO adds"
+ * locked cards. Pure advertising (no disabled inputs), scoped to
+ * .migrator, using the plugin's own WordPress-blue accent.
+ * ------------------------------------------------------------------ */
+.migrator {
+	--migrator-accent: #2271b1;
+	--migrator-accent-ink: #135e96;
+	--migrator-muted: #646970;
+	--migrator-card-bg: #fff;
+	--migrator-card-border: #dcdcde;
+	--migrator-radius: 8px;
+	--migrator-radius-sm: 6px;
+}
+
+/* Top banner */
+.migrator .migrator-pro-banner {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	max-width: 1200px;
+	margin: 12px 0 4px;
+	padding: 12px 16px;
+	border: 1px solid color-mix(in srgb, var(--migrator-accent) 30%, #dcdcde);
+	border-inline-start: 4px solid var(--migrator-accent);
+	border-radius: var(--migrator-radius);
+	background: color-mix(in srgb, var(--migrator-accent) 7%, #fff);
+}
+.migrator .migrator-pro-banner__tag,
+.migrator .migrator-pro-card__badge,
+.migrator .migrator-pro-aside__eyebrow {
 	font-size: 11px;
 	font-weight: 700;
-	text-transform: uppercase;
 	letter-spacing: .08em;
-	color: #2271b1;
+	text-transform: uppercase;
 }
-.migrator-pro-cta__heading { margin: 0 0 8px; font-size: 18px; line-height: 1.3; }
-.migrator-pro-cta__lead { margin: 0 0 12px; color: #50575e; max-width: 56ch; }
-.migrator-pro-cta__list { margin: 0; padding: 0; list-style: none; }
-.migrator-pro-cta__list li {
-	position: relative;
-	padding: 4px 0 4px 26px;
-	color: #1d2327;
+.migrator .migrator-pro-banner__tag {
+	flex: 0 0 auto;
+	padding: 2px 8px;
+	border-radius: 999px;
+	color: #fff;
+	background: var(--migrator-accent);
 }
-.migrator-pro-cta__list li::before {
-	content: "";
-	position: absolute;
-	left: 4px;
-	top: 9px;
-	width: 6px;
-	height: 11px;
-	border: solid #007017;
-	border-width: 0 2px 2px 0;
-	transform: rotate(45deg);
+.migrator .migrator-pro-banner__text { flex: 1 1 auto; margin: 0; color: #1d2327; }
+.migrator .migrator-pro-banner__sub { margin-inline-start: 6px; color: var(--migrator-muted); }
+.migrator .migrator-pro-banner__price {
+	margin-inline-start: 6px;
+	color: var(--migrator-muted);
+	font-weight: 600;
+	white-space: nowrap;
 }
-.migrator-pro-cta__action { flex: 0 0 auto; text-align: center; }
-.migrator-pro-cta__note { margin: 8px 0 0; font-size: 12px; color: #646970; }
+.migrator .migrator-pro-banner__dismiss {
+	flex: 0 0 auto;
+	font-size: 18px;
+	line-height: 1;
+	text-decoration: none;
+	color: var(--migrator-muted);
+	padding: 4px;
+	border-radius: 4px;
+}
+.migrator .migrator-pro-banner__dismiss:hover { color: #1d2327; background: rgba(0, 0, 0, .05); }
 
-@media (max-width: 600px) {
-	.migrator-pro-cta { padding: 20px; }
-	.migrator-pro-cta__action { text-align: left; }
+/* Accent CTA buttons (override WP blue with the plugin accent) */
+.migrator .migrator-pro-banner__cta.button-primary,
+.migrator .migrator-pro-aside__cta.button-primary {
+	background: var(--migrator-accent);
+	border-color: var(--migrator-accent-ink);
+	color: #fff;
+	text-shadow: none;
+	box-shadow: none;
+}
+.migrator .migrator-pro-banner__cta.button-primary:hover,
+.migrator .migrator-pro-aside__cta.button-primary:hover {
+	background: var(--migrator-accent-ink);
+	border-color: var(--migrator-accent-ink);
+}
+
+/* Sidebar promo card */
+.migrator .migrator-pro-aside {
+	background: var(--migrator-card-bg);
+	border: 1px solid var(--migrator-card-border);
+	border-top: 3px solid var(--migrator-accent);
+	border-radius: var(--migrator-radius);
+	padding: 18px 20px;
+	position: sticky;
+	top: 46px;
+}
+.migrator .migrator-pro-aside__eyebrow { margin: 0 0 4px; color: var(--migrator-accent); }
+.migrator .migrator-pro-aside__heading { margin: 0 0 12px; font-size: 16px; line-height: 1.3; }
+.migrator .migrator-pro-aside__list { margin: 0 0 16px; padding: 0; list-style: none; }
+.migrator .migrator-pro-aside__list li {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 5px 0;
+	color: #1d2327;
+	font-size: 13px;
+}
+.migrator .migrator-pro-aside__lock::before,
+.migrator .migrator-pro-card__lock::before {
+	content: "\f160"; /* dashicons-lock */
+	font-family: dashicons;
+	font-size: 15px;
+	line-height: 1.2;
+	color: var(--migrator-accent);
+}
+.migrator .migrator-pro-aside__cta { width: 100%; text-align: center; }
+.migrator .migrator-pro-aside__price { margin: 10px 0 0; font-size: 12px; color: var(--migrator-muted); text-align: center; }
+
+/* "What PRO adds" locked cards */
+.migrator .migrator-pro-cards { max-width: 1200px; margin: 24px 0 0; }
+.migrator .migrator-pro-cards__title { font-size: 15px; margin: 0 0 12px; }
+.migrator .migrator-pro-cards__grid {
+	display: grid;
+	gap: 14px;
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.migrator .migrator-pro-card {
+	position: relative;
+	padding: 16px 16px 16px 18px;
+	border: 1px solid var(--migrator-card-border);
+	border-radius: var(--migrator-radius-sm);
+	background: color-mix(in srgb, var(--migrator-accent) 3%, #fff);
+}
+.migrator .migrator-pro-card__badge {
+	position: absolute;
+	top: 12px;
+	inset-inline-end: 12px;
+	padding: 1px 7px;
+	border-radius: 999px;
+	color: var(--migrator-accent);
+	border: 1px solid color-mix(in srgb, var(--migrator-accent) 40%, #fff);
+}
+.migrator .migrator-pro-card__lock { display: inline-block; margin-bottom: 6px; }
+.migrator .migrator-pro-card__title { margin: 0 0 6px; font-size: 14px; line-height: 1.3; }
+.migrator .migrator-pro-card__desc { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--migrator-muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+	.migrator .migrator-pro-banner__cta,
+	.migrator .migrator-pro-aside__cta { transition: background-color .15s ease, border-color .15s ease; }
+}
+@media (max-width: 960px) {
+	.migrator .migrator-pro-aside { position: static; }
 }
 
 /* File-size explorer (scan files by size, tick to exclude) */
