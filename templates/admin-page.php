@@ -12,11 +12,16 @@ defined('ABSPATH') || exit;
 		<span class="dashicons dashicons-migrate" aria-hidden="true"></span>
 		<?php esc_html_e('Migrator', 'plogins-migrator'); ?>
 	</h1>
+
+	<?php $migrator_pro_upsell->banner(); ?>
+
 	<p class="migrator__lead">
 		<?php esc_html_e('Back up your site or move it to a new host, one file, no technical setup.', 'plogins-migrator'); ?>
 	</p>
 
-	<div class="migrator__cards">
+	<div class="migrator-cols">
+		<div class="migrator-main">
+			<div class="migrator__cards">
 		<section class="migrator-card" aria-labelledby="migrator-export-heading">
 			<h2 id="migrator-export-heading" class="migrator-card__heading">
 				<?php esc_html_e('Create a backup', 'plogins-migrator'); ?>
@@ -190,45 +195,13 @@ defined('ABSPATH') || exit;
 				<br><code>wp migrator import &lt;file&gt;.migrator</code>
 			</p>
 		</section>
+			</div>
+		</div>
+
+		<div class="migrator-side">
+			<?php $migrator_pro_upsell->aside(); ?>
+		</div>
 	</div>
 
-	<?php
-	/**
-	 * Filters whether the "upgrade to Pro" call to action is shown. A white-label
-	 * add-on hides it once the agency has bought Pro.
-	 *
-	 * @param bool $show Default true.
-	 */
-	if (apply_filters('migrator/show_pro_cta', true)) :
-		/**
-		 * Filters the URL the "Upgrade" call to action points at.
-		 *
-		 * @param string $url Default Migrator Pro page.
-		 */
-		$migrator_pro_url = (string) apply_filters('migrator/pro_url', 'https://plogins.com/migrator-pro/');
-		?>
-	<section class="migrator-pro-cta" aria-labelledby="migrator-pro-cta-heading">
-		<div class="migrator-pro-cta__main">
-			<p class="migrator-pro-cta__eyebrow"><?php esc_html_e('Migrator Pro', 'plogins-migrator'); ?></p>
-			<h2 id="migrator-pro-cta-heading" class="migrator-pro-cta__heading">
-				<?php esc_html_e('Put your backups on autopilot and move sites between servers', 'plogins-migrator'); ?>
-			</h2>
-			<p class="migrator-pro-cta__lead">
-				<?php esc_html_e('The free plugin backs up, restores and migrates your site by hand. Pro adds the things agencies and busy site owners ask for, all in one licence:', 'plogins-migrator'); ?>
-			</p>
-			<ul class="migrator-pro-cta__list">
-				<li><?php esc_html_e('Scheduled automatic backups, kept on a retention you choose', 'plogins-migrator'); ?></li>
-				<li><?php esc_html_e('Off-site copies to a mounted drive, NAS or cloud storage', 'plogins-migrator'); ?></li>
-				<li><?php esc_html_e('Direct server-to-server migration, with no manual download', 'plogins-migrator'); ?></li>
-				<li><?php esc_html_e('Password-encrypted backups and full multisite migration', 'plogins-migrator'); ?></li>
-			</ul>
-		</div>
-		<div class="migrator-pro-cta__action">
-			<a class="button button-primary button-hero" href="<?php echo esc_url($migrator_pro_url); ?>" target="_blank" rel="noopener noreferrer">
-				<?php esc_html_e('Get Migrator Pro', 'plogins-migrator'); ?>
-			</a>
-			<p class="migrator-pro-cta__note"><?php esc_html_e('One licence covers every Pro feature.', 'plogins-migrator'); ?></p>
-		</div>
-	</section>
-	<?php endif; ?>
+	<?php $migrator_pro_upsell->cards(); ?>
 </div>
