@@ -17,11 +17,19 @@ final class Page implements HasHooks
 
     private string $hookSuffix = '';
 
+    private ?ProUpsell $proUpsell = null;
+
+    private function proUpsell(): ProUpsell
+    {
+        return $this->proUpsell ??= new ProUpsell();
+    }
+
     public function registerHooks(): void
     {
         add_action('admin_menu', [$this, 'registerMenu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue']);
         add_filter('plugin_action_links_' . plugin_basename(\Migrator\PLUGIN_FILE), [$this, 'actionLinks']);
+        $this->proUpsell()->registerHooks();
     }
 
     /**
@@ -66,6 +74,7 @@ final class Page implements HasHooks
 
     public function render(): void
     {
+        $migrator_pro_upsell = $this->proUpsell();
         require \Migrator\PLUGIN_DIR . '/templates/admin-page.php';
     }
 
