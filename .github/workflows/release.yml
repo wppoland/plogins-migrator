@@ -1,22 +1,57 @@
 name: Release
 
+# Auto-release on version bump: a push to main that raises the Stable tag above
+# the live wp.org version deploys via the shared reusable workflow. The gate also
+# requires a NON-EMPTY live version, so it stays inert until the plugin is first
+# published on wp.org (the initial trunk commit is done manually — wp.org denies
+# creating assets/tags in the same commit as the first trunk). workflow_dispatch
+# = manual/dry-run.
+
 on:
   push:
-    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Build the zip but do NOT push to wp.org'
+        type: boolean
+        default: false
 
-# The reusable workflow's release job creates a GitHub release; grant it here
-# (a reusable workflow cannot exceed the caller's GITHUB_TOKEN permissions).
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  gate:
+    name: Release only on a version bump of a published plugin
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          REPO=$(grep -i "Stable tag:" readme.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          LIVE=$(curl -s "https://api.wordpress.org/plugins/info/1.0/plogins-migrator.json" | jq -r '.version // empty' 2>/dev/null || true)
+          echo "repo=$REPO live=$LIVE"
+          if [ -n "$LIVE" ] && [ -n "$REPO" ] && [ "$REPO" != "$LIVE" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          fi
+
   release:
+    needs: gate
+    if: ${{ needs.gate.outputs.go == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: wppoland/workflows/.github/workflows/_release-free.yml@v1
     with:
       slug: migrator
-      wporg-slug: migrator
+      wporg-slug: plogins-migrator
       has-js: false
+      dry-run: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run) || false }}
     secrets:
       WPORG_SVN_USERNAME: ${{ secrets.WPORG_SVN_USERNAME }}
       WPORG_SVN_PASSWORD: ${{ secrets.WPORG_SVN_PASSWORD }}
