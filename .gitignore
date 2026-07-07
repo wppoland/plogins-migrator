@@ -6,3 +6,5 @@
 # Local-only wp-env overrides (mounts ../migrator-pro + sets a dev license flag).
 .wp-env.override.json
 # composer.lock IS committed — pins the dev toolchain (phpcs/phpstan/stubs).
+*~
+*.bak
