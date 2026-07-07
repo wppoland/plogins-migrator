@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.3
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,9 @@ Yes. This plugin is compatible with WordPress Multisite. Network activate it or 
 2. The file-size explorer: scan wp-content and see each folder's size so you can leave out what you do not need.
 
 == Changelog ==
+
+= 1.0.1 =
+* First stable release.
 
 = 0.3.3 =
 * Renamed to Plogins Migrator for WooCommerce for a more distinctive plugin name.
