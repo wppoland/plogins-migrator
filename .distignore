@@ -23,3 +23,7 @@
 .DS_Store
 /.wordpress-org
 /test-results
+
+# editor backups (never ship / never a badly_named_files reject)
+*~
+*.bak
