@@ -1,0 +1,40 @@
+# wp.org Stable Readme translation (de_DE)
+msgid ""
+msgstr ""
+"Project-Id-Version: migrator Stable Readme\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: plogins-i18n\n"
+
+msgid "* <strong>Documentation</strong> - https://plogins.com/plogins-migrator/docs/\n* <strong>Plugin page</strong> - https://plogins.com/plogins-migrator/\n* <strong>Source code</strong> - https://github.com/wppoland/plogins-migrator\n* <strong>Bug reports and feature requests</strong> - https://github.com/wppoland/plogins-migrator/issues"
+msgstr "* <strong>Documentation</strong> - https://plogins.com/de/plogins-migrator/docs/\n* <strong>Plugin page</strong> - https://plogins.com/de/plogins-migrator/\n* <strong>Source code</strong> - https://github.com/wppoland/plogins-migrator\n* <strong>Bug reports and feature requests</strong> - https://github.com/wppoland/plogins-migrator/issues"
+
+msgid "Yes. This plugin is compatible with WordPress Multisite. Network activate it or activate it on individual sites; each site keeps its own settings and data."
+msgstr "Ja. Dieses Plugin ist mit WordPress Multisite kompatibel. Aktiviere es im Netzwerk oder auf einzelnen Websites. Jede Site behält ihre eigenen Einstellungen und Daten."
+
+msgid "1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.\n2. The file-size explorer: scan wp-content and see each folder's size so you can leave out what you do not need."
+msgstr "1. Der Migrator-Bildschirm: Erstelle neben der Wiederherstellung und deinen gespeicherten Backups ein Backup mit Voreinstellungen und Ausschlussoptionen.\n2. Der Dateigrößen-Explorer: Scanne den wp-Inhalt und sehen Sie sich die Größe jedes Ordners an, damit du weglassen können, was du nicht benötigen."
+
+msgid "* First stable release."
+msgstr "* Erste stabile Version."
+
+msgid "* Renamed to Plogins Migrator for WooCommerce for a more distinctive plugin name."
+msgstr "* Für einen eindeutigeren Plugin-Namen in Plogins Migrator für WooCommerce umbenannt."
+
+msgid "* Tidier saved-backup rows: the date and size lead, the long file name is a muted single line that no longer wraps, and the row reflows neatly on narrow screens."
+msgstr "* Aufgeräumtere gespeicherte Backup-Zeilen: Das Datum und die Größe stehen im Vordergrund, der lange Dateiname ist eine gedämpfte einzelne Zeile, die nicht mehr umbrochen wird, und die Zeile fließt auf schmalen Bildschirmen sauber um."
+
+msgid "* Your saved backups now appear inside the \"Restore a backup\" card, so you can restore one in place without scrolling past it."
+msgstr "* deine gespeicherten Backups werden jetzt auf der Karte „Backup wiederherstellen“ angezeigt, sodass du eines direkt wiederherstellen können, ohne darüber scrollen zu müssen."
+
+msgid "* New \"Your backups\" section: every backup stored on the site is listed with its date and size, so you can download, restore or delete it in one click without leaving the screen.\n* Restore straight from a stored backup (gzip backups are unpacked automatically). The backup file is kept, not consumed.\n* Added one-click presets to the backup screen: Full site, Database only and Media only set the right exclusions for you."
+msgstr "* Neuer Abschnitt „deine Backups“: Jedes auf der Website gespeicherte Backup wird mit Datum und Größe aufgelistet, sodass du es mit einem Klick herunterladen, wiederherstellen oder löschen können, ohne den Bildschirm zu verlassen.\n* Direkte Wiederherstellung von einem gespeicherten Backup (gzip-Backups werden automatisch entpackt). Die Sicherungsdatei wird aufbewahrt und nicht verbraucht.\n* Dem Backup-Bildschirm wurden Ein-Klick-Voreinstellungen hinzugefügt: „Vollständige Site“, „Nur Datenbank“ und „Nur Medien“ legen die richtigen Ausschlüsse für dich fest."
+
+msgid "* Added a file-size explorer to the backup screen: scan wp-content, see each folder's size and file count, and tick folders or large files to leave out of the backup. Builds on the existing path exclusions."
+msgstr "* Dem Backup-Bildschirm wurde ein Dateigrößen-Explorer hinzugefügt: Scanne den wp-Inhalt, sehen Sie sich die Größe und Dateianzahl jedes Ordners an und markiere Ordner oder große Dateien, die aus dem Backup ausgeschlossen werden sollen. Baut auf den vorhandenen Pfadausschlüssen auf."
+
+msgid "* First release.\n* One-file backup of the database (tables, views, triggers and stored routines) and all of `wp-content`.\n* Restore to the same site, or migrate to a new host with serialization-safe URL and path rewriting.\n* Selective backup: leave out media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables.\n* In-browser resumable export with a progress bar and a direct download, plus drag-and-drop restore.\n* WP-CLI `export` and `import` for sites too large for the browser.\n* Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix."
+msgstr "* Erste Veröffentlichung.\n* Sicherung der Datenbank (Tabellen, Ansichten, Trigger und gespeicherte Routinen) und des gesamten „wp-Inhalts“ in einer Datei.\n* Wiederherstellen auf derselben Site oder Migration auf einen neuen Host mit serialisierungssicherer URL- und Pfadumschreibung.\n* Selektives Backup: Lass Medien, Themes, Plugins, Cache, Spam-Kommentare, Post-Revisionen, Transienten, WooCommerce-Sitzungen oder Action-Scheduler-Tabellen weg.\n* Fortsetzbarer Export im Browser mit Fortschrittsbalken und direktem Download sowie Wiederherstellung per Drag-and-Drop.\n* WP-CLI „Export“ und „Import“ für Websites, die zu groß für den Browser sind.\n* Sicherheit geht vor: ein Datenbank-Snapshot vor dem Import mit automatischem Rollback, wenn eine Wiederherstellung fehlschlägt, Prüfsummen pro Element und einer Importverweigerung bei einem nicht übereinstimmenden Tabellenpräfix."
+

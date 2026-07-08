@@ -1,0 +1,410 @@
+# Copyright (C) 2026 WPPoland.com
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Migrator 0.3.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/migrator\n"
+"POT-Creation-Date: 2026-06-23T12:59:29+00:00\n"
+"PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: pl_PL\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Domain: plogins-migrator\n"
+"X-Generator: WP-CLI 2.12.0\n"
+
+#. Plugin Name of the plugin
+#: plogins-migrator.php src/Admin/Page.php:52 templates/admin-page.php:13
+msgid "Migrator"
+msgstr "Migrator"
+
+#. Plugin URI of the plugin
+#: plogins-migrator.php
+msgid "https://plogins.com/migrator/"
+msgstr "https://plogins.com/pl/migrator/"
+
+#. Description of the plugin
+#: plogins-migrator.php
+msgid ""
+"Back up, clone and migrate your WordPress site to a new host. One file, drag"
+" and drop, no technical setup."
+msgstr ""
+"Utwórz kopię zapasową, sklonuj i przenieś swoją witrynę WordPress na nowy "
+"host. Jeden plik, przeciągnij i upuść, bez konfiguracji technicznej."
+
+#. Author of the plugin
+#: plogins-migrator.php
+msgid "WPPoland.com"
+msgstr "WPPoland.com"
+
+#. Author URI of the plugin
+#: plogins-migrator.php
+msgid "https://wppoland.com"
+msgstr "https://wppoland.com"
+
+#. translators: 1: Required PHP version, 2: Current PHP version
+#: plogins-migrator.php:41
+#, php-format
+msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
+msgstr "Migrator wymaga PHP %1$s lub nowszego. Używasz PHP %2$s."
+
+#: src/Admin/Ajax.php:160
+msgid "Backup not found."
+msgstr "Nie znaleziono kopii zapasowej."
+
+#: src/Admin/Ajax.php:174 src/Admin/Ajax.php:190 src/Admin/Ajax.php:226
+#: src/Admin/Ajax.php:273 src/Admin/Ajax.php:402 src/Admin/Ajax.php:437
+msgid "Not allowed."
+msgstr "Niedozwolony."
+
+#: src/Admin/Ajax.php:197
+msgid "Bad upload request."
+msgstr "Zła prośba o przesłanie."
+
+#: src/Admin/Ajax.php:202
+msgid "Invalid upload."
+msgstr "Nieprawidłowe przesyłanie."
+
+#: src/Admin/Ajax.php:210
+msgid "Could not store upload."
+msgstr "Nie można zapisać przesłanego pliku."
+
+#: src/Admin/Ajax.php:236
+msgid "Uploaded archive not found."
+msgstr "Nie znaleziono przesłanego archiwum."
+
+#: src/Admin/Ajax.php:264
+msgid "Invalid upload id."
+msgstr "Nieprawidłowy identyfikator przesyłania."
+
+#: src/Admin/Ajax.php:412
+msgid "File not found."
+msgstr "Nie znaleziono pliku."
+
+#: src/Admin/Ajax.php:434
+msgid "Security check failed."
+msgstr "Weryfikacja zabezpieczeń nie powiodła się."
+
+#: src/Admin/Page.php:38
+msgid "Settings"
+msgstr "Ustawienia"
+
+#: src/Admin/Page.php:87
+msgid "Preparing…"
+msgstr "Przygotowanie…"
+
+#: src/Admin/Page.php:88
+msgid "Archiving files…"
+msgstr "Archiwizuję pliki…"
+
+#: src/Admin/Page.php:89
+msgid "Backup ready."
+msgstr "Kopia zapasowa gotowa."
+
+#: src/Admin/Page.php:90
+msgid "Export failed."
+msgstr "Eksport nie powiódł się."
+
+#: src/Admin/Page.php:91
+msgid "Uploading…"
+msgstr "Przesyłanie…"
+
+#: src/Admin/Page.php:92
+msgid "Restoring… do not close this tab."
+msgstr "Przywracanie… nie zamykaj tej zakładki."
+
+#: src/Admin/Page.php:93
+msgid "Restore complete."
+msgstr "Przywracanie zakończone."
+
+#: src/Admin/Page.php:94
+msgid "Restore failed."
+msgstr "Przywracanie nie powiodło się."
+
+#: src/Admin/Page.php:95
+msgid ""
+"This overwrites the current site with the backup. A safety copy of the "
+"database is taken first. Continue?"
+msgstr ""
+"Spowoduje to zastąpienie bieżącej witryny kopią zapasową. Najpierw "
+"wykonywana jest kopia bezpieczeństwa bazy danych. Kontynuować?"
+
+#: src/Admin/Page.php:96
+msgid "Scanning…"
+msgstr "Skanowanie…"
+
+#: src/Admin/Page.php:97
+msgid "Scan failed."
+msgstr "Skanowanie nie powiodło się."
+
+#: src/Admin/Page.php:98
+msgid "files"
+msgstr "akta"
+
+#: src/Admin/Page.php:99
+msgid "No backups stored on this site yet."
+msgstr "Na tej stronie nie znajdują się jeszcze żadne kopie zapasowe."
+
+#: src/Admin/Page.php:100
+msgid "Download"
+msgstr "Pobierać"
+
+#: src/Admin/Page.php:101
+msgid "Restore"
+msgstr "Przywrócić"
+
+#: src/Admin/Page.php:102
+msgid "Delete"
+msgstr "Usuń"
+
+#: src/Admin/Page.php:103
+msgid "Delete this backup? This cannot be undone."
+msgstr "Usunąć tę kopię zapasową? Tego nie można cofnąć."
+
+#: templates/admin-page.php:16
+msgid ""
+"Back up your site or move it to a new host, one file, no technical setup."
+msgstr ""
+"Utwórz kopię zapasową swojej witryny lub przenieś ją na nowy host, jeden "
+"plik, bez konfiguracji technicznej."
+
+#: templates/admin-page.php:22
+msgid "Create a backup"
+msgstr "Utwórz kopię zapasową"
+
+#: templates/admin-page.php:25
+msgid ""
+"Package your database and files into a single archive you can download and "
+"restore anywhere."
+msgstr ""
+"Spakuj bazę danych i pliki w jedno archiwum, które możesz pobrać i "
+"przywrócić w dowolnym miejscu."
+
+#: templates/admin-page.php:28
+msgid "Backup presets"
+msgstr "Ustawienia kopii zapasowych"
+
+#: templates/admin-page.php:29
+msgid "Preset:"
+msgstr "Ustawienie wstępne:"
+
+#: templates/admin-page.php:30
+msgid "Full site"
+msgstr "Pełna witryna"
+
+#: templates/admin-page.php:31
+msgid "Database only"
+msgstr "Tylko baza danych"
+
+#: templates/admin-page.php:32
+msgid "Media only"
+msgstr "Tylko media"
+
+#: templates/admin-page.php:36
+msgid "What to leave out (optional)"
+msgstr "Co pominąć (opcjonalnie)"
+
+#: templates/admin-page.php:39
+msgid "Database"
+msgstr "Baza danych"
+
+#: templates/admin-page.php:40
+msgid "Spam comments"
+msgstr "Komentarze spamowe"
+
+#: templates/admin-page.php:41
+msgid "Post revisions"
+msgstr "Wersje wpisów"
+
+#: templates/admin-page.php:42
+msgid "Transients"
+msgstr "Stany nieustalone"
+
+#: templates/admin-page.php:43
+msgid "WooCommerce sessions"
+msgstr "Sesje WooCommerce"
+
+#: templates/admin-page.php:44
+msgid "Action Scheduler tables"
+msgstr "Tabele harmonogramu akcji"
+
+#: templates/admin-page.php:45
+msgid "Database (files-only backup)"
+msgstr "Baza danych (kopia zapasowa samych plików)"
+
+#: templates/admin-page.php:47
+msgid "Files"
+msgstr "Akta"
+
+#: templates/admin-page.php:48
+msgid "Media library (uploads)"
+msgstr "Biblioteka multimediów (przesłane pliki)"
+
+#: templates/admin-page.php:49
+msgid "All themes"
+msgstr "Wszystkie motywy"
+
+#: templates/admin-page.php:50
+msgid "Inactive themes (keep active only)"
+msgstr "Nieaktywne motywy (tylko pozostaw aktywne)"
+
+#: templates/admin-page.php:51
+msgid "All plugins"
+msgstr "Wszystkie wtyczki"
+
+#: templates/admin-page.php:52
+msgid "Inactive plugins (keep active only)"
+msgstr "Nieaktywne wtyczki (tylko pozostaw aktywne)"
+
+#: templates/admin-page.php:53
+msgid "Must-use plugins"
+msgstr "Wtyczki, których należy używać"
+
+#: templates/admin-page.php:54
+msgid "Cache files"
+msgstr "Pliki pamięci podręcznej"
+
+#: templates/admin-page.php:78
+msgid "Exclude specific database tables (optional)"
+msgstr "Wyklucz określone tabele bazy danych (opcjonalnie)"
+
+#: templates/admin-page.php:91
+msgid "Exclude specific files and folders (optional)"
+msgstr "Wyklucz określone pliki i foldery (opcjonalnie)"
+
+#: templates/admin-page.php:93
+msgid "Scan files by size"
+msgstr "Skanuj pliki według rozmiaru"
+
+#: templates/admin-page.php:96
+msgid ""
+"Browse your wp-content folder by size and tick anything you do not need in "
+"the backup, for example a large cache, logs, or another plugin's stored "
+"data."
+msgstr ""
+"Przeglądaj folder wp-content według rozmiaru i zaznacz wszystko, czego nie "
+"potrzebujesz w kopii zapasowej, na przykład dużą pamięć podręczną, dzienniki"
+" lub dane przechowywane przez inną wtyczkę."
+
+#: templates/admin-page.php:101
+msgid "Compression"
+msgstr "Kompresja"
+
+#: templates/admin-page.php:104
+msgid "None (fastest, largest file)"
+msgstr "Brak (najszybszy, największy plik)"
+
+#: templates/admin-page.php:108
+msgid "GZip (smaller file, a little slower)"
+msgstr "GZip (mniejszy plik, trochę wolniejszy)"
+
+#: templates/admin-page.php:121
+msgid "Create backup"
+msgstr "Utwórz kopię zapasową"
+
+#: templates/admin-page.php:131
+msgid "Backup progress"
+msgstr "Postęp tworzenia kopii zapasowej"
+
+#: templates/admin-page.php:141
+msgid "Download backup"
+msgstr "Pobierz kopię zapasową"
+
+#: templates/admin-page.php:148
+msgid "Restore a backup"
+msgstr "Przywróć kopię zapasową"
+
+#: templates/admin-page.php:151
+msgid ""
+"Drop a Migrator archive here to restore it. This overwrites the current "
+"database (and files) with the archive, keep a backup of anything you want to"
+" keep."
+msgstr ""
+"Upuść tutaj archiwum Migrator, aby je przywrócić. Spowoduje to zastąpienie "
+"bieżącej bazy danych (i plików) archiwum. Zachowaj kopię zapasową "
+"wszystkiego, co chcesz zachować."
+
+#: templates/admin-page.php:155
+msgid "Drag a .migrator file here, or"
+msgstr "Przeciągnij tutaj plik .migrator lub"
+
+#: templates/admin-page.php:157
+msgid "Choose a file"
+msgstr "Wybierz plik"
+
+#: templates/admin-page.php:163
+msgid "Also restore files (wp-content)"
+msgstr "Przywróć także pliki (wp-content)"
+
+#: templates/admin-page.php:168
+msgid "Restore backup"
+msgstr "Przywróć kopię zapasową"
+
+#: templates/admin-page.php:172
+msgid "Restore progress"
+msgstr "Przywróć postęp"
+
+#: templates/admin-page.php:183
+msgid "Or restore one already stored on this site"
+msgstr "Lub przywróć plik już zapisany na tej stronie"
+
+#: templates/admin-page.php:184
+msgid "Backups saved on this site. Download, restore or delete them here."
+msgstr ""
+"Kopie zapasowe zapisane na tej stronie. Pobierz, przywróć lub usuń je tutaj."
+
+#: templates/admin-page.php:189
+msgid "Large site? Restore from the command line, it has no time limit:"
+msgstr "Duża witryna? Przywróć z wiersza poleceń, nie ma limitu czasu:"
+
+#: templates/admin-page.php:212
+msgid "Migrator Pro"
+msgstr "Migrator Pro"
+
+#: templates/admin-page.php:214
+msgid "Put your backups on autopilot and move sites between servers"
+msgstr ""
+"Włącz swoje kopie zapasowe na autopilocie i przenoś witryny pomiędzy "
+"serwerami"
+
+#: templates/admin-page.php:217
+msgid ""
+"The free plugin backs up, restores and migrates your site by hand. Pro adds "
+"the things agencies and busy site owners ask for, all in one licence:"
+msgstr ""
+"Bezpłatna wtyczka ręcznie tworzy kopie zapasowe, przywraca i migruje Twoją "
+"witrynę. Pro dodaje wszystko, o co proszą agencje i zapracowani właściciele "
+"witryn, wszystko w jednej licencji:"
+
+#: templates/admin-page.php:220
+msgid "Scheduled automatic backups, kept on a retention you choose"
+msgstr ""
+"Zaplanowane automatyczne kopie zapasowe przechowywane w wybranym przez "
+"Ciebie miejscu"
+
+#: templates/admin-page.php:221
+msgid "Off-site copies to a mounted drive, NAS or cloud storage"
+msgstr ""
+"Kopie poza siedzibą firmy na zamontowanym dysku, serwerze NAS lub w chmurze"
+
+#: templates/admin-page.php:222
+msgid "Direct server-to-server migration, with no manual download"
+msgstr ""
+"Bezpośrednia migracja z serwera na serwer, bez konieczności ręcznego "
+"pobierania"
+
+#: templates/admin-page.php:223
+msgid "Password-encrypted backups and full multisite migration"
+msgstr ""
+"Kopie zapasowe szyfrowane hasłem i pełna migracja na wiele lokalizacji"
+
+#: templates/admin-page.php:228
+msgid "Get Migrator Pro"
+msgstr "Pobierz Migrator Pro"
+
+#: templates/admin-page.php:230
+msgid "One licence covers every Pro feature."
+msgstr "Jedna licencja obejmuje wszystkie funkcje Pro."

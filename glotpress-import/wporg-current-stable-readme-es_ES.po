@@ -1,0 +1,40 @@
+# wp.org Stable Readme translation (es_ES)
+msgid ""
+msgstr ""
+"Project-Id-Version: migrator Stable Readme\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: plogins-i18n\n"
+
+msgid "* <strong>Documentation</strong> - https://plogins.com/plogins-migrator/docs/\n* <strong>Plugin page</strong> - https://plogins.com/plogins-migrator/\n* <strong>Source code</strong> - https://github.com/wppoland/plogins-migrator\n* <strong>Bug reports and feature requests</strong> - https://github.com/wppoland/plogins-migrator/issues"
+msgstr "* <strong>Documentation</strong> - https://plogins.com/es/plogins-migrator/docs/\n* <strong>Plugin page</strong> - https://plogins.com/es/plogins-migrator/\n* <strong>Source code</strong> - https://github.com/wppoland/plogins-migrator\n* <strong>Bug reports and feature requests</strong> - https://github.com/wppoland/plogins-migrator/issues"
+
+msgid "Yes. This plugin is compatible with WordPress Multisite. Network activate it or activate it on individual sites; each site keeps its own settings and data."
+msgstr "Sí. Este complemento es compatible con WordPress Multisite. Activarlo en red o activarlo en sitios individuales; Cada sitio mantiene su propia configuración y datos."
+
+msgid "1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.\n2. The file-size explorer: scan wp-content and see each folder's size so you can leave out what you do not need."
+msgstr "1. La pantalla Migrator: cree una copia de seguridad con ajustes preestablecidos y opciones de exclusión, junto con la restauración y sus copias de seguridad guardadas.\n2. El explorador de tamaño de archivos: escanea el contenido de wp y ve el tamaño de cada carpeta para que puedas omitir lo que no necesitas."
+
+msgid "* First stable release."
+msgstr "* Primera versión estable."
+
+msgid "* Renamed to Plogins Migrator for WooCommerce for a more distinctive plugin name."
+msgstr "* Renombrado a Plogins Migrator para WooCommerce para obtener un nombre de complemento más distintivo."
+
+msgid "* Tidier saved-backup rows: the date and size lead, the long file name is a muted single line that no longer wraps, and the row reflows neatly on narrow screens."
+msgstr "* Filas de copia de seguridad guardadas más ordenadas: la fecha y el tamaño encabezan, el nombre largo del archivo es una sola línea silenciada que ya no se ajusta y la fila se redistribuye ordenadamente en pantallas estrechas."
+
+msgid "* Your saved backups now appear inside the \"Restore a backup\" card, so you can restore one in place without scrolling past it."
+msgstr "* Tus copias de seguridad guardadas ahora aparecen dentro de la tarjeta \"Restaurar una copia de seguridad\", por lo que puedes restaurar una en su lugar sin tener que desplazarte más allá de ella."
+
+msgid "* New \"Your backups\" section: every backup stored on the site is listed with its date and size, so you can download, restore or delete it in one click without leaving the screen.\n* Restore straight from a stored backup (gzip backups are unpacked automatically). The backup file is kept, not consumed.\n* Added one-click presets to the backup screen: Full site, Database only and Media only set the right exclusions for you."
+msgstr "* Nueva sección \"Tus copias de seguridad\": cada copia de seguridad almacenada en el sitio aparece con su fecha y tamaño, para que puedas descargarla, restaurarla o eliminarla con un solo clic sin salir de la pantalla.\n* Restaurar directamente desde una copia de seguridad almacenada (las copias de seguridad gzip se descomprimen automáticamente). El archivo de copia de seguridad se conserva, no se consume.\n* Se agregaron ajustes preestablecidos con un solo clic a la pantalla de respaldo: Sitio completo, Solo base de datos y Solo medios configuran las exclusiones correctas para ti."
+
+msgid "* Added a file-size explorer to the backup screen: scan wp-content, see each folder's size and file count, and tick folders or large files to leave out of the backup. Builds on the existing path exclusions."
+msgstr "* Se agregó un explorador de tamaño de archivo a la pantalla de respaldo: escanee el contenido de wp, vea el tamaño de cada carpeta y el recuento de archivos, y marque las carpetas o archivos grandes para dejarlos fuera de la copia de seguridad. Se basa en las exclusiones de rutas existentes."
+
+msgid "* First release.\n* One-file backup of the database (tables, views, triggers and stored routines) and all of `wp-content`.\n* Restore to the same site, or migrate to a new host with serialization-safe URL and path rewriting.\n* Selective backup: leave out media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables.\n* In-browser resumable export with a progress bar and a direct download, plus drag-and-drop restore.\n* WP-CLI `export` and `import` for sites too large for the browser.\n* Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix."
+msgstr "*Primer lanzamiento.\n* Copia de seguridad de un archivo de la base de datos (tablas, vistas, activadores y rutinas almacenadas) y todo el \"wp-content\".\n* Restaurar al mismo sitio o migrar a un nuevo host con URL segura para serialización y reescritura de rutas.\n* Copia de seguridad selectiva: omita medios, temas, complementos, caché, comentarios de spam, revisiones de publicaciones, transitorios, sesiones de WooCommerce o tablas del Programador de acciones.\n* Exportación reanudable en el navegador con una barra de progreso y descarga directa, además de restauración con arrastrar y soltar.\n* WP-CLI `exportar` e `importar` para sitios demasiado grandes para el navegador.\n* La seguridad es lo primero: una instantánea de la base de datos previa a la importación con reversión automática si falla una restauración, sumas de verificación por elemento y rechazo de importación a través de un prefijo de tabla que no coincide."
+
