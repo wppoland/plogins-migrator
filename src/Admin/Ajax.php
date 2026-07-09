@@ -279,9 +279,12 @@ final class Ajax implements HasHooks
 
             // Let an add-on register post-processing for the finished archive
             // (e.g. encryption). The returned payload is opaque to core and is
-            // handed back on the migrator/export_complete action.
+            // handed back on the migrator/export_complete action. Sanitize the
+            // whole request first: values are recursively cleaned as text fields
+            // before any callback sees them.
             // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
-            $postprocess = apply_filters('migrator/postprocess_request', [], wp_unslash($_POST));
+            $request = map_deep(wp_unslash($_POST), 'sanitize_text_field');
+            $postprocess = apply_filters('migrator/postprocess_request', [], $request);
             if (is_array($postprocess) && [] !== $postprocess) {
                 update_option(self::POSTPROCESS_OPTION, $postprocess, false);
             } else {

@@ -1,10 +1,10 @@
-=== Plogins Migrator - Migration and Backup for WooCommerce ===
+=== Plogins Migrator - Site Migration and Backup ===
 Contributors: motylanogha
 Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,10 @@ Plogins Migrator includes Polish, German and Spanish translations for the plugin
 
 == Changelog ==
 
+= 1.0.3 =
+* Clearer name: Plogins Migrator - Site Migration and Backup (it backs up and migrates the whole site, not only WooCommerce).
+* Hardened the export AJAX handler: the request payload is fully sanitized before any filter callback runs.
+
 = 1.0.2 =
 * Added bundled Polish, German and Spanish translations for the plugin interface.
 
@@ -105,7 +109,7 @@ Plogins Migrator includes Polish, German and Spanish translations for the plugin
 * First stable release.
 
 = 0.3.3 =
-* Renamed to Plogins Migrator for WooCommerce for a more distinctive plugin name.
+* Renamed to Plogins Migrator for a more distinctive plugin name.
 
 = 0.3.2 =
 * Tidier saved-backup rows: the date and size lead, the long file name is a muted single line that no longer wraps, and the row reflows neatly on narrow screens.
