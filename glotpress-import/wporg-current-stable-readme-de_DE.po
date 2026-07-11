@@ -1,0 +1,100 @@
+# wp.org Stable Readme translation (de_DE)
+msgid ""
+msgstr ""
+"Project-Id-Version: migrator Stable Readme\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: plogins-i18n\n"
+
+msgid "Back up, clone and migrate your whole site to one file, then restore it here or on a new host. URLs and paths are fixed for you. Runs on your server."
+msgstr "Sichere, klone und migriere deine gesamte Website in eine Datei und stelle sie hier oder auf einem neuen Host wieder her. URLs und Pfade werden für dich angepasst. Läuft auf deinem Server."
+
+msgid "Migrator packs your database and everything in `wp-content` into a single file you can download, keep as a backup, and restore, on the same site or on a brand-new install somewhere else. When you restore onto a different address, Migrator rewrites the old URLs and file paths to the new ones for you, so the site just works."
+msgstr "Migrator packt deine Datenbank und alles in `wp-content` in eine einzelne Datei, die du herunterladen, als Backup aufbewahren und wiederherstellen kannst – auf derselben Website oder auf einer brandneuen Installation woanders. Wenn du unter einer anderen Adresse wiederherstellst, schreibt Migrator die alten URLs und Dateipfade für dich auf die neuen um, sodass die Website einfach funktioniert."
+
+msgid "Everything happens on your own server. There is no account to create, no file size sold back to you, and nothing is ever sent to a third-party service. Because it is fully open, you can read exactly what it does: the source lives at https://github.com/wppoland/plogins-migrator, which is also where to file a bug or request a feature."
+msgstr "Alles passiert auf deinem eigenen Server. Es gibt kein Konto zum Anlegen, keine Dateigröße, die dir zurückverkauft wird, und nichts wird jemals an einen Drittanbieterdienst gesendet. Weil das Projekt vollständig offen ist, kannst du genau nachlesen, was es tut: Der Quellcode liegt unter https://github.com/wppoland/plogins-migrator, wo du auch Fehler melden oder Funktionen vorschlagen kannst."
+
+msgid "<strong>How it works</strong>"
+msgstr "<strong>So funktioniert es</strong>"
+
+msgid "1. On the site you want to copy, create a backup. Migrator writes your database to a portable SQL dump and streams every file in `wp-content` into one archive next to it.\n2. Download that archive (or, on a big site, build it from the command line, see below).\n3. On the destination, the same site to roll back, or a fresh WordPress install to move to, restore the archive. Migrator imports the database, puts the files back, and rewrites the source site's web address and paths to this one."
+msgstr "1. Erstelle auf der Website, die du kopieren möchtest, ein Backup. Migrator schreibt deine Datenbank in einen portablen SQL-Dump und streamt jede Datei in `wp-content` in ein Archiv daneben.\n2. Lade dieses Archiv herunter (oder erstelle es bei einer großen Website über die Befehlszeile – siehe unten).\n3. Am Ziel – derselben Website zum Zurücksetzen oder einer frischen WordPress-Installation, zu der du wechselst – stelle das Archiv wieder her. Migrator importiert die Datenbank, legt die Dateien zurück und schreibt die Webadresse und Pfade der Quellwebsite auf die hier um."
+
+msgid "The address rewrite is <strong>safe for serialized data</strong>: Migrator walks the actual data structures rather than doing a blind text replace, so the byte-length counts PHP stores inside serialized options and meta stay correct and nothing breaks."
+msgstr "Das Umschreiben der Adresse ist <strong>sicher für serialisierte Daten</strong>: Migrator durchläuft die tatsächlichen Datenstrukturen, statt blind Text zu ersetzen, sodass die Byte-Längen, die PHP in serialisierten Optionen und Meta speichert, korrekt bleiben und nichts kaputtgeht."
+
+msgid "<strong>A few things worth knowing</strong>"
+msgstr "<strong>Ein paar Dinge, die du wissen solltest</strong>"
+
+msgid "Backups are written to a protected folder (`wp-content/migrator-backups`) that denies direct web access, and the in-browser download is served only to logged-in administrators through an authenticated handler, the files are never exposed at a guessable URL. Each item inside an archive carries a checksum, so a truncated or corrupted backup is caught before it is ever restored over a live site."
+msgstr "Backups werden in einen geschützten Ordner (`wp-content/migrator-backups`) geschrieben, der direkten Webzugriff verweigert, und der Download im Browser wird nur angemeldeten Administratoren über einen authentifizierten Handler bereitgestellt – die Dateien sind nie unter einer erratbaren URL erreichbar. Jedes Element in einem Archiv trägt eine Prüfsumme, sodass ein abgeschnittenes oder beschädigtes Backup erkannt wird, bevor es jemals über eine Live-Website wiederhergestellt wird."
+
+msgid "Restoring <strong>overwrites</strong> the destination database and files, that is the point of a restore, so it asks for confirmation and is limited to administrators. Migrator never overwrites its own plugin folder during a restore, so it cannot pull the rug out from under itself mid-import."
+msgstr "Das Wiederherstellen <strong>überschreibt</strong> die Ziel-Datenbank und -Dateien – genau darum geht es beim Wiederherstellen –, deshalb fragt es nach Bestätigung und ist auf Administratoren beschränkt. Migrator überschreibt während einer Wiederherstellung nie seinen eigenen Plugin-Ordner, sodass es sich nicht mitten im Import den Boden unter den Füßen wegziehen kann."
+
+msgid "For large sites where a browser request would time out, every job also runs from WP-CLI, which has no timeout:"
+msgstr "Bei großen Websites, bei denen eine Browser-Anfrage in ein Timeout laufen würde, läuft jeder Job auch über WP-CLI, das kein Timeout hat:"
+
+msgid "<strong>What's included</strong>"
+msgstr "<strong>Was enthalten ist</strong>"
+
+msgid "* One-click backup of your database and all of `wp-content` into a single archive\n* Restore to the same site, or migrate to a new host with automatic, serialization-safe URL and path rewriting\n* Choose what to leave out: media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables\n* In-browser export with a progress bar and a direct download, resumable so large sites finish across multiple steps, plus drag-and-drop restore\n* WP-CLI `export` and `import` commands for sites too large for the browser\n* A safety snapshot of your database before every restore, rolled back automatically if anything fails\n* Per-item checksums so a corrupt archive is detected, not restored\n* Self-hosted: no account, no third-party service, nothing leaves your server"
+msgstr "* Ein-Klick-Backup deiner Datenbank und des gesamten `wp-content` in ein einzelnes Archiv\n* Wiederherstellung auf derselben Website oder Migration auf einen neuen Host mit automatischem, serialisierungssicherem Umschreiben von URLs und Pfaden\n* Auswahl, was ausgelassen wird: Medien, Themes, Plugins, Cache, Spam-Kommentare, Beitragsrevisionen, Transients, WooCommerce-Sitzungen oder Action-Scheduler-Tabellen\n* Export im Browser mit Fortschrittsbalken und direktem Download, fortsetzbar, sodass große Websites in mehreren Schritten fertig werden, plus Wiederherstellung per Drag-and-drop\n* WP-CLI-Befehle `export` und `import` für Websites, die für den Browser zu groß sind\n* Ein Sicherheits-Snapshot deiner Datenbank vor jeder Wiederherstellung, der bei einem Fehler automatisch zurückgerollt wird\n* Prüfsummen pro Element, sodass ein beschädigtes Archiv erkannt, aber nicht wiederhergestellt wird\n* Self-hosted: kein Konto, kein Drittanbieterdienst, nichts verlässt deinen Server"
+
+msgid "1. Upload the plugin to `/wp-content/plugins/migrator`, or install it from Plugins → Add New.\n2. Activate it. There are no required dependencies.\n3. Open <strong>Migrator</strong> in the admin menu to create a backup, or use `wp migrator export` from the command line."
+msgstr "1. Lade das Plugin nach `/wp-content/plugins/migrator` hoch oder installiere es über Plugins → Installieren.\n2. Aktiviere es. Es gibt keine erforderlichen Abhängigkeiten.\n3. Öffne <strong>Migrator</strong> im Admin-Menü, um ein Backup zu erstellen, oder verwende `wp migrator export` über die Befehlszeile."
+
+msgid "* <strong>Documentation</strong> - https://plogins.com/plogins-migrator/docs/\n* <strong>Plugin page</strong> - https://plogins.com/plogins-migrator/\n* <strong>Source code</strong> - https://github.com/wppoland/plogins-migrator\n* <strong>Bug reports and feature requests</strong> - https://github.com/wppoland/plogins-migrator/issues"
+msgstr "* <strong>Dokumentation</strong> - https://plogins.com/de/plogins-migrator/docs/\n* <strong>Plugin-Seite</strong> - https://plogins.com/de/plogins-migrator/\n* <strong>Quellcode</strong> - https://github.com/wppoland/plogins-migrator\n* <strong>Fehlerberichte und Funktionswünsche</strong> - https://github.com/wppoland/plogins-migrator/issues"
+
+msgid "Yes. A restore replaces the destination's database and files with the contents of the archive, that is what restoring a backup means. It is limited to administrators and asks for confirmation first. Always keep a separate backup of anything on the destination you want to keep."
+msgstr "Ja. Eine Wiederherstellung ersetzt die Datenbank und Dateien am Ziel durch den Inhalt des Archivs – genau das bedeutet das Wiederherstellen eines Backups. Sie ist auf Administratoren beschränkt und fragt zuerst nach Bestätigung. Bewahre immer ein separates Backup von allem auf, was du am Ziel behalten möchtest."
+
+msgid "No. When you restore onto a different address, Migrator rewrites the old site URL and file paths to the new ones, including inside serialized data, so internal links and settings keep working."
+msgstr "Nein. Wenn du unter einer anderen Adresse wiederherstellst, schreibt Migrator die alte Website-URL und die Dateipfade auf die neuen um, auch innerhalb serialisierter Daten, sodass interne Links und Einstellungen weiter funktionieren."
+
+msgid "Use WP-CLI, which has no request time limit: `wp migrator export` to build the archive and `wp migrator import <file>` to restore it."
+msgstr "Verwende WP-CLI, das kein Anfragezeitlimit hat: `wp migrator export`, um das Archiv zu erstellen, und `wp migrator import <file>`, um es wiederherzustellen."
+
+msgid "No. Migrator runs entirely on your own server. It creates no account and contacts no external service. Your backups stay in `wp-content/migrator-backups` until you download or delete them."
+msgstr "Nein. Migrator läuft vollständig auf deinem eigenen Server. Es legt kein Konto an und kontaktiert keinen externen Dienst. Deine Backups bleiben in `wp-content/migrator-backups`, bis du sie herunterlädst oder löschst."
+
+msgid "In `wp-content/migrator-backups`, a folder protected from direct web access. Removing the plugin deletes that folder and its contents."
+msgstr "In `wp-content/migrator-backups`, einem Ordner, der vor direktem Webzugriff geschützt ist. Entfernst du das Plugin, wird dieser Ordner samt Inhalt gelöscht."
+
+msgid "Yes. This plugin is compatible with WordPress Multisite. Network activate it or activate it on individual sites; each site keeps its own settings and data."
+msgstr "Ja. Dieses Plugin ist mit WordPress Multisite kompatibel. Aktiviere es netzwerkweit oder auf einzelnen Websites; jede Website behält ihre eigenen Einstellungen und Daten."
+
+msgid "1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.\n2. The file-size explorer: scan wp-content and see each folder's size so you can leave out what you do not need."
+msgstr "1. Der Migrator-Bildschirm: Erstelle ein Backup mit Voreinstellungen und Ausschlussoptionen, neben Wiederherstellung und deinen gespeicherten Backups.\n2. Der Dateigrößen-Explorer: Scanne `wp-content` und sieh dir die Größe jedes Ordners an, damit du weglassen kannst, was du nicht brauchst."
+
+msgid "Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations."
+msgstr "Plogins Migrator enthält polnische, deutsche und spanische Übersetzungen für die Plugin-Oberfläche. Die Textdomain ist `plogins-migrator`, sodass Sprachpakete von WordPress.org diese mitgelieferten Übersetzungen ebenfalls überschreiben oder erweitern können."
+
+msgid "* Added bundled Polish, German and Spanish translations for the plugin interface."
+msgstr "* Mitgelieferte polnische, deutsche und spanische Übersetzungen für die Plugin-Oberfläche hinzugefügt."
+
+msgid "* First stable release."
+msgstr "* Erste stabile Version."
+
+msgid "* Renamed to Plogins Migrator for WooCommerce for a more distinctive plugin name."
+msgstr "* Umbenannt in Plogins Migrator for WooCommerce für einen unverwechselbaren Plugin-Namen."
+
+msgid "* Tidier saved-backup rows: the date and size lead, the long file name is a muted single line that no longer wraps, and the row reflows neatly on narrow screens."
+msgstr "* Aufgeräumtere gespeicherte Backup-Zeilen: Datum und Größe stehen vorn, der lange Dateiname ist eine gedämpfte Einzelzeile, die nicht mehr umbricht, und die Zeile fließt auf schmalen Bildschirmen sauber um."
+
+msgid "* Your saved backups now appear inside the \"Restore a backup\" card, so you can restore one in place without scrolling past it."
+msgstr "* Deine gespeicherten Backups erscheinen jetzt in der Karte „Backup wiederherstellen“, sodass du eines direkt wiederherstellen kannst, ohne darüber hinaus scrollen zu müssen."
+
+msgid "* New \"Your backups\" section: every backup stored on the site is listed with its date and size, so you can download, restore or delete it in one click without leaving the screen.\n* Restore straight from a stored backup (gzip backups are unpacked automatically). The backup file is kept, not consumed.\n* Added one-click presets to the backup screen: Full site, Database only and Media only set the right exclusions for you."
+msgstr "* Neuer Abschnitt „Deine Backups“: Jedes auf der Website gespeicherte Backup wird mit Datum und Größe aufgelistet, sodass du es mit einem Klick herunterladen, wiederherstellen oder löschen kannst, ohne den Bildschirm zu verlassen.\n* Direkte Wiederherstellung aus einem gespeicherten Backup (gzip-Backups werden automatisch entpackt). Die Backup-Datei bleibt erhalten und wird nicht verbraucht.\n* Ein-Klick-Voreinstellungen auf dem Backup-Bildschirm hinzugefügt: Vollständige Website, Nur Datenbank und Nur Medien setzen die richtigen Ausschlüsse für dich."
+
+msgid "* Added a file-size explorer to the backup screen: scan wp-content, see each folder's size and file count, and tick folders or large files to leave out of the backup. Builds on the existing path exclusions."
+msgstr "* Dateigrößen-Explorer auf dem Backup-Bildschirm hinzugefügt: Scanne `wp-content`, sieh dir die Größe und Dateianzahl jedes Ordners an und markiere Ordner oder große Dateien, die aus dem Backup ausgelassen werden sollen. Baut auf den vorhandenen Pfadausschlüssen auf."
+
+msgid "* First release.\n* One-file backup of the database (tables, views, triggers and stored routines) and all of `wp-content`.\n* Restore to the same site, or migrate to a new host with serialization-safe URL and path rewriting.\n* Selective backup: leave out media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables.\n* In-browser resumable export with a progress bar and a direct download, plus drag-and-drop restore.\n* WP-CLI `export` and `import` for sites too large for the browser.\n* Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix."
+msgstr "* Erste Veröffentlichung.\n* Ein-Datei-Backup der Datenbank (Tabellen, Views, Trigger und gespeicherte Routinen) und des gesamten `wp-content`.\n* Wiederherstellung auf derselben Website oder Migration auf einen neuen Host mit serialisierungssicherem Umschreiben von URLs und Pfaden.\n* Selektives Backup: Lass Medien, Themes, Plugins, Cache, Spam-Kommentare, Beitragsrevisionen, Transients, WooCommerce-Sitzungen oder Action-Scheduler-Tabellen weg.\n* Fortsetzbarer Export im Browser mit Fortschrittsbalken und direktem Download sowie Wiederherstellung per Drag-and-drop.\n* WP-CLI `export` und `import` für Websites, die für den Browser zu groß sind.\n* Sicherheit zuerst: Datenbank-Snapshot vor dem Import mit automatischem Rollback bei fehlgeschlagener Wiederherstellung, Prüfsummen pro Element und Verweigerung des Imports bei nicht passendem Tabellenpräfix."
+
