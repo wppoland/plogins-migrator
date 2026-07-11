@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,6 +45,22 @@ For large sites where a browser request would time out, every job also runs from
 * A safety snapshot of your database before every restore, rolled back automatically if anything fails
 * Per-item checksums so a corrupt archive is detected, not restored
 * Self-hosted: no account, no third-party service, nothing leaves your server
+
+== Plogins Migrator PRO ==
+
+The free edition backs up and migrates your whole site by hand. **Plogins Migrator PRO** makes it run itself:
+
+* **Scheduled and incremental backups** - daily or weekly with retention; only changed files after a baseline
+* **Cloud and off-site copies** - S3, R2, Backblaze B2, Wasabi, FTP/SFTP, WebDAV, Dropbox and Google Drive
+* **Recovery points** - one-click rollback to a known-good backup
+* **Encrypted backups** - password-protected archives, decrypted on restore
+* **Server-to-server transfer** - move a site between servers with no manual download
+* **Email notifications and activity log** - a silent failure never slips by
+* **Full multisite** - back up and migrate a whole network with correct URL rewriting
+
+Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year (PLN shown at checkout).
+
+Compare editions and pricing: https://plogins.com/plogins-migrator-pro/pricing/
 
 == Installation ==
 
@@ -97,6 +113,9 @@ Yes. This plugin is compatible with WordPress Multisite. Network activate it or 
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.1.1 =
+* Added a Free vs PRO overview to the readme.
 
 = 1.1.0 =
 * New: in-plugin overview of Plogins Migrator PRO (incremental + scheduled backups, off-site storage, one-click cloud restore) on the admin screen.
