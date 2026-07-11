@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,8 @@ For large sites where a browser request would time out, every job also runs from
 * WP-CLI `export` and `import` commands for sites too large for the browser
 * A safety snapshot of your database before every restore, rolled back automatically if anything fails
 * Per-item checksums so a corrupt archive is detected, not restored
+* Serialization-safe search and replace across the database, with a dry-run preview and a `wp migrator replace` command, to change a domain, URL or path safely
+* Inspect any stored backup before you restore it: source URL, WordPress and PHP versions, table count, plus pre-restore checks for table prefix, disk space and writability
 * Self-hosted: no account, no third-party service, nothing leaves your server
 
 == Plogins Migrator PRO ==
@@ -113,6 +115,10 @@ Yes. This plugin is compatible with WordPress Multisite. Network activate it or 
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.0 =
+* New: standalone serialization-safe search and replace (admin tool + dry run + `wp migrator replace`) to change a domain, URL or path without corrupting serialized data.
+* New: inspect a stored backup before restoring - shows the source URL, WordPress and PHP versions and table count, and runs pre-restore checks (table prefix, disk space, writable files).
 
 = 1.1.1 =
 * Added a Free vs PRO overview to the readme.

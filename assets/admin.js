@@ -204,8 +204,14 @@
 			del.textContent = i18n.deleteWord || 'Delete';
 			rs.addEventListener( 'click', function () { restoreStored( bk.file, rs ); } );
 			del.addEventListener( 'click', function () { deleteStored( bk.file, row ); } );
+			var insp = document.createElement( 'button' );
+			insp.type = 'button';
+			insp.className = 'button button-small';
+			insp.textContent = ( i18n.inspect || 'Details' );
+			insp.addEventListener( 'click', function () { inspectStored( bk.file, row, insp ); } );
 			actions.appendChild( dl );
 			actions.appendChild( rs );
+			actions.appendChild( insp );
 			actions.appendChild( del );
 
 			row.appendChild( meta );
@@ -245,6 +251,45 @@
 				if ( ! backupsBox.querySelector( '.migrator-backups__row' ) ) { renderBackups( [] ); }
 			}
 		} ).catch( function () {} );
+	}
+
+	function inspectStored( file, row, btn ) {
+		var open = row.querySelector( '.migrator-inspect' );
+		if ( open ) { open.remove(); return; }
+		btn.disabled = true;
+		post( 'migrator_inspect', { file: file } ).then( function ( res ) {
+			btn.disabled = false;
+			if ( ! res || ! res.success ) {
+				window.alert( ( res && res.data && res.data.message ) || i18n.inspectFailed || 'Could not read this backup.' );
+				return;
+			}
+			var panel = document.createElement( 'div' );
+			panel.className = 'migrator-inspect';
+			var grid = document.createElement( 'dl' );
+			grid.className = 'migrator-inspect__grid';
+			( res.data.summary || [] ).forEach( function ( r ) {
+				var dt = document.createElement( 'dt' );
+				dt.textContent = r.label;
+				var dd = document.createElement( 'dd' );
+				dd.textContent = r.value;
+				grid.appendChild( dt );
+				grid.appendChild( dd );
+			} );
+			panel.appendChild( grid );
+			var checks = res.data.preflight || [];
+			if ( checks.length ) {
+				var ul = document.createElement( 'ul' );
+				ul.className = 'migrator-inspect__checks';
+				checks.forEach( function ( c ) {
+					var li = document.createElement( 'li' );
+					li.className = 'migrator-check migrator-check--' + c.level;
+					li.textContent = c.label + ': ' + c.message;
+					ul.appendChild( li );
+				} );
+				panel.appendChild( ul );
+			}
+			row.appendChild( panel );
+		} ).catch( function () { btn.disabled = false; } );
 	}
 
 	loadBackups();
@@ -496,4 +541,47 @@
 			} );
 		} );
 	}
+}() );
+
+/* Standalone serialization-safe search & replace. */
+( function () {
+	'use strict';
+	var data = window.migratorData || {};
+	var i18n = data.i18n || {};
+	var runBtn = document.getElementById( 'migrator-sr-run' );
+	if ( ! runBtn ) { return; }
+	var search = document.getElementById( 'migrator-sr-search' );
+	var replace = document.getElementById( 'migrator-sr-replace' );
+	var dry = document.getElementById( 'migrator-sr-dry' );
+	var result = document.getElementById( 'migrator-sr-result' );
+
+	runBtn.addEventListener( 'click', function () {
+		var from = ( search.value || '' ).trim();
+		if ( ! from ) { result.textContent = i18n.srNoSearch || 'Enter the text to search for.'; return; }
+		var isDry = dry.checked;
+		if ( ! isDry && ! window.confirm( i18n.srConfirm || 'This changes your database now. Make a backup first. Continue?' ) ) { return; }
+		runBtn.disabled = true;
+		result.textContent = i18n.srRunning || 'Working…';
+		var body = new FormData();
+		body.set( 'action', 'migrator_search_replace' );
+		body.set( 'nonce', data.nonce );
+		body.set( 'search', from );
+		body.set( 'replace', replace.value || '' );
+		body.set( 'dry_run', isDry ? '1' : '' );
+		fetch( data.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: body } )
+			.then( function ( r ) { return r.json(); } )
+			.then( function ( res ) {
+				runBtn.disabled = false;
+				if ( ! res || ! res.success ) {
+					result.textContent = ( res && res.data && res.data.message ) || i18n.srFailed || 'Failed.';
+					return;
+				}
+				var d = res.data;
+				var verb = d.dryRun ? ( i18n.srWould || 'Would change' ) : ( i18n.srMade || 'Changed' );
+				var msg = verb + ' ' + d.changes + ' row(s) across ' + d.tables + ' table(s).';
+				if ( d.skipped && d.skipped.length ) { msg += ' ' + ( i18n.srSkipped || 'Skipped (no primary key):' ) + ' ' + d.skipped.join( ', ' ) + '.'; }
+				result.textContent = msg;
+			} )
+			.catch( function () { runBtn.disabled = false; result.textContent = i18n.srFailed || 'Failed.'; } );
+	} );
 }() );

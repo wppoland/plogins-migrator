@@ -195,6 +195,31 @@ defined('ABSPATH') || exit;
 				<br><code>wp migrator import &lt;file&gt;.migrator</code>
 			</p>
 		</section>
+
+		<section class="migrator-card" aria-labelledby="migrator-sr-heading">
+			<h2 id="migrator-sr-heading" class="migrator-card__heading"><?php esc_html_e('Search & replace', 'plogins-migrator'); ?></h2>
+			<p class="migrator-card__desc"><?php esc_html_e('Change a domain, URL or path across this site\'s database, safely for serialized data. Run a dry run first to see how many rows would change. Back up before a live run.', 'plogins-migrator'); ?></p>
+			<div class="migrator-sr">
+				<label class="migrator-sr__field">
+					<span><?php esc_html_e('Find', 'plogins-migrator'); ?></span>
+					<input type="text" id="migrator-sr-search" class="regular-text" placeholder="https://old-domain.com">
+				</label>
+				<label class="migrator-sr__field">
+					<span><?php esc_html_e('Replace with', 'plogins-migrator'); ?></span>
+					<input type="text" id="migrator-sr-replace" class="regular-text" placeholder="https://new-domain.com">
+				</label>
+				<label class="migrator-sr__dry">
+					<input type="checkbox" id="migrator-sr-dry" checked>
+					<?php esc_html_e('Dry run (preview only, writes nothing)', 'plogins-migrator'); ?>
+				</label>
+				<button type="button" class="button button-primary" id="migrator-sr-run"><?php esc_html_e('Run', 'plogins-migrator'); ?></button>
+				<p class="migrator-sr__result" id="migrator-sr-result" aria-live="polite"></p>
+			</div>
+			<p class="migrator-card__desc migrator-card__cli">
+				<?php esc_html_e('From the command line:', 'plogins-migrator'); ?>
+				<br><code>wp migrator replace &lt;from&gt; &lt;to&gt; --dry-run</code>
+			</p>
+		</section>
 			</div>
 		</div>
 

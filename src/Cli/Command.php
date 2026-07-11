@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Migrator\Cli;
 
 use Migrator\Engine\Db\Dumper;
+use Migrator\Engine\Db\SearchReplace;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\Exporter;
 use Migrator\Engine\Import\Importer;
+use Migrator\Engine\Transform\SerializedReplacer;
 use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
@@ -145,6 +147,62 @@ final class Command
             $result['statements'],
             $result['replaced'],
             $result['files'],
+        ));
+    }
+
+    /**
+     * Search and replace a literal string across this install's tables, safely
+     * for serialized data (byte-length counts stay correct).
+     *
+     * ## OPTIONS
+     *
+     * <search>
+     * : The text to find, for example an old site URL or file path.
+     *
+     * <replace>
+     * : The text to put in its place.
+     *
+     * [--dry-run]
+     * : Report how many rows would change without writing anything.
+     *
+     * ## EXAMPLES
+     *
+     *     wp migrator replace https://old.example.com https://new.example.com
+     *     wp migrator replace /var/www/old /var/www/new --dry-run
+     *
+     * @param array<int, string>    $args       Positional args: search, replace.
+     * @param array<string, string> $assoc_args Flags.
+     */
+    public function replace(array $args, array $assoc_args): void
+    {
+        global $wpdb;
+
+        $from = (string) ($args[0] ?? '');
+        $to   = (string) ($args[1] ?? '');
+        if ('' === $from) {
+            \WP_CLI::error('Provide the text to search for.');
+        }
+        if ($from === $to) {
+            \WP_CLI::error('Search and replace values are identical.');
+        }
+
+        $dryRun = isset($assoc_args['dry-run']);
+        $like   = $wpdb->esc_like($wpdb->prefix) . '%';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+        $tables = array_map('strval', (array) $wpdb->get_col($wpdb->prepare('SHOW TABLES LIKE %s', $like)));
+
+        $engine = new SearchReplace($wpdb, new SerializedReplacer($from, $to));
+        $result = $engine->run($tables, $dryRun);
+
+        if ([] !== $result['skipped']) {
+            \WP_CLI::warning('Skipped tables with no primary key: ' . implode(', ', $result['skipped']));
+        }
+        \WP_CLI::success(sprintf(
+            '%s %d change(s) across %d table(s); %d row(s) scanned.',
+            $dryRun ? 'Dry run: would make' : 'Made',
+            $result['changes'],
+            $result['tables'],
+            $result['rows']
         ));
     }
 }
