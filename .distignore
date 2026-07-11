@@ -23,3 +23,10 @@
 .DS_Store
 /.wordpress-org
 /test-results
+
+# editor backups (never ship / never a badly_named_files reject)
+*~
+*.bak
+
+# Translation import tooling (GlotPress PO/MO staging) - never ship in the zip
+glotpress-import/
