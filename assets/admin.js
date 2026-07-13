@@ -17,6 +17,7 @@
 	var result = document.getElementById( 'migrator-export-result' );
 	var resultMsg = document.getElementById( 'migrator-export-result-msg' );
 	var download = document.getElementById( 'migrator-export-download' );
+	var serviceCta = document.getElementById( 'migrator-service-cta' );
 
 	function post( action, extra ) {
 		var body = new URLSearchParams();
@@ -60,6 +61,9 @@
 		download.hidden = false;
 		download.setAttribute( 'href', job.download );
 		download.setAttribute( 'download', job.fileName || 'backup.migrator' );
+		if ( serviceCta ) {
+			serviceCta.hidden = false;
+		}
 		startBtn.disabled = false;
 		loadBackups();
 	}

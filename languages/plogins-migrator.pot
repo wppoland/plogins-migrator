@@ -2,28 +2,26 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Migrator 0.3.1\n"
+"Project-Id-Version: Plogins Migrator - Site Migration and Backup 1.2.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/migrator\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-06-23T12:59:29+00:00\n"
+"POT-Creation-Date: 2026-07-13T11:03:26+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: plogins-migrator\n"
 
 #. Plugin Name of the plugin
 #: plogins-migrator.php
-#: src/Admin/Page.php:52
-#: templates/admin-page.php:13
-msgid "Migrator"
+msgid "Plogins Migrator - Site Migration and Backup"
 msgstr ""
 
 #. Plugin URI of the plugin
 #: plogins-migrator.php
-msgid "https://plogins.com/migrator/"
+msgid "https://plogins.com/plogins-migrator/"
 msgstr ""
 
 #. Description of the plugin
@@ -47,327 +45,521 @@ msgstr ""
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr ""
 
-#: src/Admin/Ajax.php:160
+#: src/Admin/Ajax.php:166
 msgid "Backup not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:174
-#: src/Admin/Ajax.php:190
-#: src/Admin/Ajax.php:226
-#: src/Admin/Ajax.php:273
-#: src/Admin/Ajax.php:402
-#: src/Admin/Ajax.php:437
+#: src/Admin/Ajax.php:180
+#: src/Admin/Ajax.php:196
+#: src/Admin/Ajax.php:232
+#: src/Admin/Ajax.php:279
+#: src/Admin/Ajax.php:411
+#: src/Admin/Ajax.php:522
 msgid "Not allowed."
 msgstr ""
 
-#: src/Admin/Ajax.php:197
+#: src/Admin/Ajax.php:203
 msgid "Bad upload request."
 msgstr ""
 
-#: src/Admin/Ajax.php:202
+#: src/Admin/Ajax.php:208
 msgid "Invalid upload."
 msgstr ""
 
-#: src/Admin/Ajax.php:210
+#: src/Admin/Ajax.php:216
 msgid "Could not store upload."
 msgstr ""
 
-#: src/Admin/Ajax.php:236
+#: src/Admin/Ajax.php:242
 msgid "Uploaded archive not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:264
+#: src/Admin/Ajax.php:270
 msgid "Invalid upload id."
 msgstr ""
 
-#: src/Admin/Ajax.php:412
+#: src/Admin/Ajax.php:421
 msgid "File not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:434
+#: src/Admin/Ajax.php:488
+#: src/Admin/Page.php:115
+msgid "Enter the text to search for."
+msgstr ""
+
+#: src/Admin/Ajax.php:491
+msgid "Search and replace values are identical."
+msgstr ""
+
+#: src/Admin/Ajax.php:519
 msgid "Security check failed."
 msgstr ""
 
-#: src/Admin/Page.php:38
+#: src/Admin/Page.php:46
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/Page.php:87
-msgid "Preparing…"
-msgstr ""
-
-#: src/Admin/Page.php:88
-msgid "Archiving files…"
-msgstr ""
-
-#: src/Admin/Page.php:89
-msgid "Backup ready."
-msgstr ""
-
-#: src/Admin/Page.php:90
-msgid "Export failed."
-msgstr ""
-
-#: src/Admin/Page.php:91
-msgid "Uploading…"
-msgstr ""
-
-#: src/Admin/Page.php:92
-msgid "Restoring… do not close this tab."
-msgstr ""
-
-#: src/Admin/Page.php:93
-msgid "Restore complete."
-msgstr ""
-
-#: src/Admin/Page.php:94
-msgid "Restore failed."
-msgstr ""
-
-#: src/Admin/Page.php:95
-msgid "This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?"
+#: src/Admin/Page.php:60
+#: templates/admin-page.php:13
+msgid "Migrator"
 msgstr ""
 
 #: src/Admin/Page.php:96
-msgid "Scanning…"
+msgid "Preparing…"
 msgstr ""
 
 #: src/Admin/Page.php:97
-msgid "Scan failed."
+msgid "Archiving files…"
 msgstr ""
 
 #: src/Admin/Page.php:98
-msgid "files"
+msgid "Backup ready."
 msgstr ""
 
 #: src/Admin/Page.php:99
-msgid "No backups stored on this site yet."
+msgid "Export failed."
 msgstr ""
 
 #: src/Admin/Page.php:100
-msgid "Download"
+msgid "Uploading…"
 msgstr ""
 
 #: src/Admin/Page.php:101
-msgid "Restore"
+msgid "Restoring… do not close this tab."
 msgstr ""
 
 #: src/Admin/Page.php:102
-msgid "Delete"
+msgid "Restore complete."
 msgstr ""
 
 #: src/Admin/Page.php:103
+msgid "Restore failed."
+msgstr ""
+
+#: src/Admin/Page.php:104
+msgid "This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?"
+msgstr ""
+
+#: src/Admin/Page.php:105
+msgid "Scanning…"
+msgstr ""
+
+#: src/Admin/Page.php:106
+msgid "Scan failed."
+msgstr ""
+
+#: src/Admin/Page.php:107
+msgid "files"
+msgstr ""
+
+#: src/Admin/Page.php:108
+msgid "No backups stored on this site yet."
+msgstr ""
+
+#: src/Admin/Page.php:109
+msgid "Download"
+msgstr ""
+
+#: src/Admin/Page.php:110
+msgid "Restore"
+msgstr ""
+
+#: src/Admin/Page.php:111
+msgid "Delete"
+msgstr ""
+
+#: src/Admin/Page.php:112
 msgid "Delete this backup? This cannot be undone."
 msgstr ""
 
-#: templates/admin-page.php:16
+#: src/Admin/Page.php:113
+msgid "Details"
+msgstr ""
+
+#: src/Admin/Page.php:114
+msgid "Could not read this backup."
+msgstr ""
+
+#: src/Admin/Page.php:116
+msgid "This changes your database now. Make a backup first. Continue?"
+msgstr ""
+
+#: src/Admin/Page.php:117
+msgid "Working…"
+msgstr ""
+
+#: src/Admin/Page.php:118
+msgid "Search and replace failed."
+msgstr ""
+
+#: src/Admin/Page.php:119
+msgid "Would change"
+msgstr ""
+
+#: src/Admin/Page.php:120
+msgid "Changed"
+msgstr ""
+
+#: src/Admin/Page.php:121
+msgid "Skipped (no primary key):"
+msgstr ""
+
+#. translators: %d: yearly price in PLN
+#: src/Admin/ProUpsell.php:74
+#, php-format
+msgid "od %d zł/rok"
+msgstr ""
+
+#. translators: 1: currency symbol, 2: yearly price
+#: src/Admin/ProUpsell.php:79
+#, php-format
+msgid "from %1$s%2$d/yr"
+msgstr ""
+
+#: src/Admin/ProUpsell.php:111
+msgid "Permission denied."
+msgstr ""
+
+#. translators: %s: PRO edition name
+#: src/Admin/ProUpsell.php:141
+#, php-format
+msgid "Do more with %s"
+msgstr ""
+
+#: src/Admin/ProUpsell.php:146
+#: src/Admin/ProUpsell.php:175
+msgid "Upgrade to PRO"
+msgstr ""
+
+#: src/Admin/ProUpsell.php:148
+msgid "Dismiss this notice"
+msgstr ""
+
+#: src/Admin/ProUpsell.php:165
+msgid "Unlock every PRO feature"
+msgstr ""
+
+#: src/Admin/ProUpsell.php:178
+msgid "one licence, every PRO feature"
+msgstr ""
+
+#. translators: %s: PRO edition name
+#: src/Admin/ProUpsell.php:197
+#, php-format
+msgid "What %s adds"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:52
+msgid "Source site"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:53
+msgid "Made with"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:54
+msgid "WordPress"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:55
+msgid "PHP"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:56
+#: src/Engine/Import/Preflight.php:38
+#: src/Engine/Import/Preflight.php:49
+msgid "Table prefix"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:57
+msgid "Tables"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:58
+#: src/Engine/Import/Preflight.php:59
+msgid "Multisite"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:58
+#: src/Engine/Archive/Inspector.php:61
+msgid "Yes"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:58
+msgid "No"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:61
+msgid "WooCommerce"
+msgstr ""
+
+#: src/Engine/Archive/Inspector.php:61
+msgid "Yes (HPOS)"
+msgstr ""
+
+#. translators: 1: source prefix, 2: this site's prefix
+#: src/Engine/Import/Preflight.php:41
+#, php-format
+msgid "Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be refused until this site's $table_prefix in wp-config.php matches."
+msgstr ""
+
+#. translators: %s: table prefix
+#: src/Engine/Import/Preflight.php:50
+#, php-format
+msgid "Matches (%s)."
+msgstr ""
+
+#: src/Engine/Import/Preflight.php:60
+msgid "This archive or this site is a network. A network-to-network restore needs Migrator Pro; the free edition will refuse it."
+msgstr ""
+
+#: src/Engine/Import/Preflight.php:76
+#: src/Engine/Import/Preflight.php:87
+msgid "Disk space"
+msgstr ""
+
+#. translators: 1: free space, 2: estimated needed
+#: src/Engine/Import/Preflight.php:79
+#, php-format
+msgid "About %1$s free, restore may need ~%2$s. Free up space before restoring."
+msgstr ""
+
+#. translators: %s: free space
+#: src/Engine/Import/Preflight.php:88
+#, php-format
+msgid "%s free."
+msgstr ""
+
+#: src/Engine/Import/Preflight.php:97
+msgid "Writable files"
+msgstr ""
+
+#: src/Engine/Import/Preflight.php:98
+msgid "wp-content is not writable by the web server. File restore will fail."
+msgstr ""
+
+#: src/Engine/Import/Preflight.php:108
+msgid "PHP version"
+msgstr ""
+
+#. translators: 1: source PHP, 2: this PHP
+#: src/Engine/Import/Preflight.php:111
+#, php-format
+msgid "Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer PHP may not run here."
+msgstr ""
+
+#: templates/admin-page.php:19
 msgid "Back up your site or move it to a new host, one file, no technical setup."
 msgstr ""
 
-#: templates/admin-page.php:22
+#: templates/admin-page.php:27
 msgid "Create a backup"
 msgstr ""
 
-#: templates/admin-page.php:25
+#: templates/admin-page.php:30
 msgid "Package your database and files into a single archive you can download and restore anywhere."
 msgstr ""
 
-#: templates/admin-page.php:28
+#: templates/admin-page.php:33
 msgid "Backup presets"
 msgstr ""
 
-#: templates/admin-page.php:29
+#: templates/admin-page.php:34
 msgid "Preset:"
 msgstr ""
 
-#: templates/admin-page.php:30
+#: templates/admin-page.php:35
 msgid "Full site"
 msgstr ""
 
-#: templates/admin-page.php:31
+#: templates/admin-page.php:36
 msgid "Database only"
 msgstr ""
 
-#: templates/admin-page.php:32
+#: templates/admin-page.php:37
 msgid "Media only"
 msgstr ""
 
-#: templates/admin-page.php:36
+#: templates/admin-page.php:41
 msgid "What to leave out (optional)"
 msgstr ""
 
-#: templates/admin-page.php:39
+#: templates/admin-page.php:44
 msgid "Database"
 msgstr ""
 
-#: templates/admin-page.php:40
+#: templates/admin-page.php:45
 msgid "Spam comments"
 msgstr ""
 
-#: templates/admin-page.php:41
+#: templates/admin-page.php:46
 msgid "Post revisions"
 msgstr ""
 
-#: templates/admin-page.php:42
+#: templates/admin-page.php:47
 msgid "Transients"
 msgstr ""
 
-#: templates/admin-page.php:43
+#: templates/admin-page.php:48
 msgid "WooCommerce sessions"
 msgstr ""
 
-#: templates/admin-page.php:44
+#: templates/admin-page.php:49
 msgid "Action Scheduler tables"
 msgstr ""
 
-#: templates/admin-page.php:45
+#: templates/admin-page.php:50
 msgid "Database (files-only backup)"
 msgstr ""
 
-#: templates/admin-page.php:47
+#: templates/admin-page.php:52
 msgid "Files"
 msgstr ""
 
-#: templates/admin-page.php:48
+#: templates/admin-page.php:53
 msgid "Media library (uploads)"
 msgstr ""
 
-#: templates/admin-page.php:49
+#: templates/admin-page.php:54
 msgid "All themes"
 msgstr ""
 
-#: templates/admin-page.php:50
+#: templates/admin-page.php:55
 msgid "Inactive themes (keep active only)"
 msgstr ""
 
-#: templates/admin-page.php:51
+#: templates/admin-page.php:56
 msgid "All plugins"
 msgstr ""
 
-#: templates/admin-page.php:52
+#: templates/admin-page.php:57
 msgid "Inactive plugins (keep active only)"
 msgstr ""
 
-#: templates/admin-page.php:53
+#: templates/admin-page.php:58
 msgid "Must-use plugins"
 msgstr ""
 
-#: templates/admin-page.php:54
+#: templates/admin-page.php:59
 msgid "Cache files"
 msgstr ""
 
-#: templates/admin-page.php:78
+#: templates/admin-page.php:83
 msgid "Exclude specific database tables (optional)"
 msgstr ""
 
-#: templates/admin-page.php:91
+#: templates/admin-page.php:96
 msgid "Exclude specific files and folders (optional)"
 msgstr ""
 
-#: templates/admin-page.php:93
+#: templates/admin-page.php:98
 msgid "Scan files by size"
 msgstr ""
 
-#: templates/admin-page.php:96
+#: templates/admin-page.php:101
 msgid "Browse your wp-content folder by size and tick anything you do not need in the backup, for example a large cache, logs, or another plugin's stored data."
 msgstr ""
 
-#: templates/admin-page.php:101
+#: templates/admin-page.php:106
 msgid "Compression"
 msgstr ""
 
-#: templates/admin-page.php:104
+#: templates/admin-page.php:109
 msgid "None (fastest, largest file)"
 msgstr ""
 
-#: templates/admin-page.php:108
+#: templates/admin-page.php:113
 msgid "GZip (smaller file, a little slower)"
 msgstr ""
 
-#: templates/admin-page.php:121
+#: templates/admin-page.php:126
 msgid "Create backup"
 msgstr ""
 
-#: templates/admin-page.php:131
+#: templates/admin-page.php:136
 msgid "Backup progress"
 msgstr ""
 
-#: templates/admin-page.php:141
+#: templates/admin-page.php:146
 msgid "Download backup"
 msgstr ""
 
-#: templates/admin-page.php:148
-msgid "Restore a backup"
+#: templates/admin-page.php:149
+msgid "Moving a complex store?"
 msgstr ""
 
-#: templates/admin-page.php:151
-msgid "Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive, keep a backup of anything you want to keep."
+#: templates/admin-page.php:150
+msgid "If the backup is ready but the migration needs staging, checkout checks or an integration plan, send the scope in writing."
 msgstr ""
 
 #: templates/admin-page.php:155
+msgid "Request written migration help"
+msgstr ""
+
+#: templates/admin-page.php:162
+msgid "Restore a backup"
+msgstr ""
+
+#: templates/admin-page.php:165
+msgid "Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive, keep a backup of anything you want to keep."
+msgstr ""
+
+#: templates/admin-page.php:169
 msgid "Drag a .migrator file here, or"
 msgstr ""
 
-#: templates/admin-page.php:157
+#: templates/admin-page.php:171
 msgid "Choose a file"
 msgstr ""
 
-#: templates/admin-page.php:163
+#: templates/admin-page.php:177
 msgid "Also restore files (wp-content)"
 msgstr ""
 
-#: templates/admin-page.php:168
+#: templates/admin-page.php:182
 msgid "Restore backup"
 msgstr ""
 
-#: templates/admin-page.php:172
+#: templates/admin-page.php:186
 msgid "Restore progress"
 msgstr ""
 
-#: templates/admin-page.php:183
+#: templates/admin-page.php:197
 msgid "Or restore one already stored on this site"
 msgstr ""
 
-#: templates/admin-page.php:184
+#: templates/admin-page.php:198
 msgid "Backups saved on this site. Download, restore or delete them here."
 msgstr ""
 
-#: templates/admin-page.php:189
+#: templates/admin-page.php:203
 msgid "Large site? Restore from the command line, it has no time limit:"
 msgstr ""
 
-#: templates/admin-page.php:212
-msgid "Migrator Pro"
+#: templates/admin-page.php:209
+msgid "Search & replace"
 msgstr ""
 
-#: templates/admin-page.php:214
-msgid "Put your backups on autopilot and move sites between servers"
+#: templates/admin-page.php:210
+msgid "Change a domain, URL or path across this site's database, safely for serialized data. Run a dry run first to see how many rows would change. Back up before a live run."
+msgstr ""
+
+#: templates/admin-page.php:213
+msgid "Find"
 msgstr ""
 
 #: templates/admin-page.php:217
-msgid "The free plugin backs up, restores and migrates your site by hand. Pro adds the things agencies and busy site owners ask for, all in one licence:"
-msgstr ""
-
-#: templates/admin-page.php:220
-msgid "Scheduled automatic backups, kept on a retention you choose"
-msgstr ""
-
-#: templates/admin-page.php:221
-msgid "Off-site copies to a mounted drive, NAS or cloud storage"
+msgid "Replace with"
 msgstr ""
 
 #: templates/admin-page.php:222
-msgid "Direct server-to-server migration, with no manual download"
+msgid "Dry run (preview only, writes nothing)"
 msgstr ""
 
-#: templates/admin-page.php:223
-msgid "Password-encrypted backups and full multisite migration"
+#: templates/admin-page.php:224
+msgid "Run"
 msgstr ""
 
 #: templates/admin-page.php:228
-msgid "Get Migrator Pro"
-msgstr ""
-
-#: templates/admin-page.php:230
-msgid "One licence covers every Pro feature."
+msgid "From the command line:"
 msgstr ""
