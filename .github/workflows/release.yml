@@ -48,7 +48,7 @@ jobs:
     if: ${{ needs.gate.outputs.go == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: wppoland/workflows/.github/workflows/_release-free.yml@v1
     with:
-      slug: migrator
+      slug: plogins-migrator
       wporg-slug: plogins-migrator
       has-js: false
       dry-run: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run) || false }}
