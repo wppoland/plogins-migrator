@@ -77,15 +77,15 @@ final class Preflight
                     'message' => sprintf(
                         /* translators: 1: free space, 2: estimated needed */
                         __('About %1$s free, restore may need ~%2$s. Free up space before restoring.', 'plogins-migrator'),
-                        size_format((float) $free),
-                        size_format((float) $needed)
+                        size_format((int) $free),
+                        size_format($needed)
                     ),
                 ];
             } else {
                 $out[] = [
                     'level'   => self::OK,
                     'label'   => __('Disk space', 'plogins-migrator'),
-                    'message' => sprintf(/* translators: %s: free space */ __('%s free.', 'plogins-migrator'), size_format((float) $free)),
+                    'message' => sprintf(/* translators: %s: free space */ __('%s free.', 'plogins-migrator'), size_format((int) $free)),
                 ];
             }
         }

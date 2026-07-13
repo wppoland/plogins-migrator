@@ -298,6 +298,11 @@
 .migrator-sr__dry { display: flex; align-items: center; gap: .4rem; }
 .migrator-sr__result { margin: .25rem 0 0; font-weight: 500; min-height: 1.2em; }
 
+/* Contextual service link shown only after a successful backup. */
+.migrator-service-cta { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid #dcdcde; color: #50575e; font-size: 12px; line-height: 1.5; }
+.migrator-service-cta strong { color: #1d2327; }
+.migrator-service-cta a { margin-left: 4px; font-weight: 600; }
+
 /* Inspect panel */
 .migrator-inspect { margin-top: .6rem; padding: .75rem; border: 1px solid #e2e4e7; border-radius: 6px; background: #f6f7f7; }
 .migrator-inspect__grid { display: grid; grid-template-columns: max-content 1fr; gap: .25rem .75rem; margin: 0 0 .5rem; }

@@ -145,6 +145,15 @@ defined('ABSPATH') || exit;
 				<a class="button button-primary" id="migrator-export-download" href="#" download>
 					<?php esc_html_e('Download backup', 'plogins-migrator'); ?>
 				</a>
+				<p class="migrator-service-cta" id="migrator-service-cta" hidden>
+					<strong><?php esc_html_e('Moving a complex store?', 'plogins-migrator'); ?></strong>
+					<?php esc_html_e('If the backup is ready but the migration needs staging, checkout checks or an integration plan, send the scope in writing.', 'plogins-migrator'); ?>
+					<a
+						href="https://wppoland.com/en/contact/?type=other&amp;source=plogins%3Aplogins-migrator%3Apost-backup&amp;service=Migrator%20implementation&amp;message=Source%20site%3A%0A%0ADestination%20host%20or%20domain%3A%0A%0AStore%20and%20critical%20integrations%3A%0A%0AExpected%20migration%20window%3A"
+						target="_blank"
+						rel="noopener noreferrer"
+					><?php esc_html_e('Request written migration help', 'plogins-migrator'); ?></a>
+				</p>
 			</div>
 		</section>
 
