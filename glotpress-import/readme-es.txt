@@ -20,7 +20,7 @@ Todo ocurre en tu propio servidor. No hay cuenta que crear, no te venden de vuel
 
 1. En el sitio que quieras copiar, crea una copia de seguridad. Migrator escribe tu base de datos en un volcado SQL portable y transmite cada archivo de `wp-content` a un archivo junto a él.
 2. Descarga ese archivo (o, en un sitio grande, créalo desde la línea de comandos; ver más abajo).
-3. En el destino, el mismo sitio para volver atrás o una instalación nueva de WordPress a la que te mudas, restaura el archivo. Migrator importa la base de datos, devuelve los archivos a su sitio y reescribe la dirección web y las rutas del sitio de origen por las de aquí.
+3. En el destino, el mismo sitio para volver atrás o una instalación nueva de WordPress a la que te mudas, restaura el archivo. Migrator importa la base de datos, devuelve los archivos a tu sitio y reescribe la dirección web y las rutas del sitio de origen por las de aquí.
 
 La reescritura de la dirección es <strong>segura para datos serializados</strong>: Migrator recorre las estructuras de datos reales en lugar de hacer un reemplazo de texto a ciegas, así que los recuentos de longitud en bytes que PHP guarda dentro de opciones y meta serializadas siguen siendo correctos y nada se rompe.
 
@@ -111,7 +111,7 @@ Plogins Migrator incluye traducciones al polaco, al alemán y al español para l
 * Filas de copias guardadas más ordenadas: la fecha y el tamaño van primero, el nombre largo del archivo es una sola línea atenuada que ya no se envuelve y la fila se reacomoda con limpieza en pantallas estrechas.
 
 = 0.3.1 =
-* Tus copias guardadas aparecen ahora dentro de la tarjeta «Restaurar una copia de seguridad», así que puedes restaurar una en su sitio sin desplazarte más allá.
+* Tus copias guardadas aparecen ahora dentro de la tarjeta «Restaurar una copia de seguridad», así que puedes restaurar una en tu sitio sin desplazarte más allá.
 
 = 0.3.0 =
 * Nueva sección «Tus copias de seguridad»: cada copia almacenada en el sitio se lista con su fecha y tamaño, para que puedas descargarla, restaurarla o eliminarla con un clic sin salir de la pantalla.

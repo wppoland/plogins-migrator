@@ -1,28 +1,38 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Migrator 0.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/migrator\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"POT-Creation-Date: 2026-07-13T11:03:26+00:00\n"
+"PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
+"Last-Translator: wppoland.com <hello@wppoland.com>\n"
+"Language-Team: Polish <pl@li.org>\n"
+"Language: pl_PL\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-06-23T12:59:29+00:00\n"
-"PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
-"Language: pl_PL\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Domain: plogins-migrator\n"
 "X-Generator: WP-CLI 2.12.0\n"
 
-#: src/Admin/Page.php:60
-#: templates/admin-page.php:13
-msgid "Migrator"
-msgstr "Migrator"
+#. Plugin Name of the plugin
+#: plogins-migrator.php
+msgid "Plogins Migrator - Site Migration and Backup"
+msgstr "Plogins Migrator — migracja witryny i tworzenie kopii zapasowych"
+
+#. Plugin URI of the plugin
+#: plogins-migrator.php
+msgid "https://plogins.com/plogins-migrator/"
+msgstr "https://plogins.com/pl/plogins-migrator/"
 
 #. Description of the plugin
 #: plogins-migrator.php
-msgid "Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup."
-msgstr "Utwórz kopię zapasową, sklonuj i przenieś swoją witrynę WordPress na nowy host. Jeden plik, przeciągnij i upuść, bez konfiguracji technicznej."
+msgid ""
+"Back up, clone and migrate your WordPress site to a new host. One file, drag"
+" and drop, no technical setup."
+msgstr ""
+"Utwórz kopię zapasową, sklonuj i przenieś swoją witrynę WordPress na nowy "
+"host. Jeden plik, przeciągnij i upuść, bez konfiguracji technicznej."
 
 #. Author of the plugin
 #: plogins-migrator.php
@@ -44,12 +54,8 @@ msgstr "Migrator wymaga PHP %1$s lub nowszego. Używasz PHP %2$s."
 msgid "Backup not found."
 msgstr "Nie znaleziono kopii zapasowej."
 
-#: src/Admin/Ajax.php:180
-#: src/Admin/Ajax.php:196
-#: src/Admin/Ajax.php:232
-#: src/Admin/Ajax.php:279
-#: src/Admin/Ajax.php:411
-#: src/Admin/Ajax.php:522
+#: src/Admin/Ajax.php:180 src/Admin/Ajax.php:196 src/Admin/Ajax.php:232
+#: src/Admin/Ajax.php:279 src/Admin/Ajax.php:411 src/Admin/Ajax.php:522
 msgid "Not allowed."
 msgstr "Niedozwolony."
 
@@ -77,6 +83,14 @@ msgstr "Nieprawidłowy identyfikator przesyłania."
 msgid "File not found."
 msgstr "Nie znaleziono pliku."
 
+#: src/Admin/Ajax.php:488 src/Admin/Page.php:115
+msgid "Enter the text to search for."
+msgstr "Wpisz tekst, który chcesz wyszukać."
+
+#: src/Admin/Ajax.php:491
+msgid "Search and replace values are identical."
+msgstr "Wartości wyszukiwania i zamiany są identyczne."
+
 #: src/Admin/Ajax.php:519
 msgid "Security check failed."
 msgstr "Weryfikacja zabezpieczeń nie powiodła się."
@@ -84,6 +98,10 @@ msgstr "Weryfikacja zabezpieczeń nie powiodła się."
 #: src/Admin/Page.php:46
 msgid "Settings"
 msgstr "Ustawienia"
+
+#: src/Admin/Page.php:60 templates/admin-page.php:13
+msgid "Migrator"
+msgstr "Migrator"
 
 #: src/Admin/Page.php:96
 msgid "Preparing…"
@@ -118,8 +136,12 @@ msgid "Restore failed."
 msgstr "Przywracanie nie powiodło się."
 
 #: src/Admin/Page.php:104
-msgid "This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?"
-msgstr "Spowoduje to zastąpienie bieżącej witryny kopią zapasową. Najpierw wykonywana jest kopia bezpieczeństwa bazy danych. Kontynuować?"
+msgid ""
+"This overwrites the current site with the backup. A safety copy of the "
+"database is taken first. Continue?"
+msgstr ""
+"Spowoduje to zastąpienie bieżącej witryny kopią zapasową. Najpierw "
+"wykonywana jest kopia bezpieczeństwa bazy danych. Kontynuować?"
 
 #: src/Admin/Page.php:105
 msgid "Scanning…"
@@ -153,17 +175,214 @@ msgstr "Usuń"
 msgid "Delete this backup? This cannot be undone."
 msgstr "Usunąć tę kopię zapasową? Tego nie można cofnąć."
 
+#: src/Admin/Page.php:113
+msgid "Details"
+msgstr "Szczegóły"
+
+#: src/Admin/Page.php:114
+msgid "Could not read this backup."
+msgstr "Nie można odczytać tej kopii zapasowej."
+
+#: src/Admin/Page.php:116
+msgid "This changes your database now. Make a backup first. Continue?"
+msgstr ""
+"To zmienia teraz twoją bazę danych. Najpierw wykonaj kopię zapasową. "
+"Kontynuować?"
+
+#: src/Admin/Page.php:117
+msgid "Working…"
+msgstr "Pracuję…"
+
+#: src/Admin/Page.php:118
+msgid "Search and replace failed."
+msgstr "Wyszukaj i zamień nie powiodło się."
+
+#: src/Admin/Page.php:119
+msgid "Would change"
+msgstr "Zmieniłoby się"
+
+#: src/Admin/Page.php:120
+msgid "Changed"
+msgstr "Zmieniono"
+
+#: src/Admin/Page.php:121
+msgid "Skipped (no primary key):"
+msgstr "Pominięte (brak klucza podstawowego):"
+
+#. translators: %d: yearly price in PLN
+#: src/Admin/ProUpsell.php:74
+#, php-format
+msgid "od %d zł/rok"
+msgstr "od %d zł/rok"
+
+#. translators: 1: currency symbol, 2: yearly price
+#: src/Admin/ProUpsell.php:79
+#, php-format
+msgid "from %1$s%2$d/yr"
+msgstr "od %1$s%2$d/rok"
+
+#: src/Admin/ProUpsell.php:111
+msgid "Permission denied."
+msgstr "Brak uprawnień."
+
+#. translators: %s: PRO edition name
+#: src/Admin/ProUpsell.php:141
+#, php-format
+msgid "Do more with %s"
+msgstr "Zrób więcej z %s"
+
+#: src/Admin/ProUpsell.php:146 src/Admin/ProUpsell.php:175
+msgid "Upgrade to PRO"
+msgstr "Przejdź na PRO"
+
+#: src/Admin/ProUpsell.php:148
+msgid "Dismiss this notice"
+msgstr "Ukryj to powiadomienie"
+
+#: src/Admin/ProUpsell.php:165
+msgid "Unlock every PRO feature"
+msgstr "Odblokuj wszystkie funkcje PRO"
+
+#: src/Admin/ProUpsell.php:178
+msgid "one licence, every PRO feature"
+msgstr "jedna licencja, wszystkie funkcje PRO"
+
+#. translators: %s: PRO edition name
+#: src/Admin/ProUpsell.php:197
+#, php-format
+msgid "What %s adds"
+msgstr "Co dodaje %s"
+
+#: src/Engine/Archive/Inspector.php:52
+msgid "Source site"
+msgstr "Strona źródłowa"
+
+#: src/Engine/Archive/Inspector.php:53
+msgid "Made with"
+msgstr "Wykonane z"
+
+#: src/Engine/Archive/Inspector.php:54
+msgid "WordPress"
+msgstr "WordPressa"
+
+#: src/Engine/Archive/Inspector.php:55
+msgid "PHP"
+msgstr "PHP"
+
+#: src/Engine/Archive/Inspector.php:56 src/Engine/Import/Preflight.php:38
+#: src/Engine/Import/Preflight.php:49
+msgid "Table prefix"
+msgstr "Przedrostek tabeli"
+
+#: src/Engine/Archive/Inspector.php:57
+msgid "Tables"
+msgstr "Stoły"
+
+#: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:59
+msgid "Multisite"
+msgstr "Wiele witryn"
+
+#: src/Engine/Archive/Inspector.php:58 src/Engine/Archive/Inspector.php:61
+msgid "Yes"
+msgstr "Tak"
+
+#: src/Engine/Archive/Inspector.php:58
+msgid "No"
+msgstr "Nie"
+
+#: src/Engine/Archive/Inspector.php:61
+msgid "WooCommerce"
+msgstr "WooCommerce"
+
+#: src/Engine/Archive/Inspector.php:61
+msgid "Yes (HPOS)"
+msgstr "Tak (HPOS)"
+
+#. translators: 1: source prefix, 2: this site's prefix
+#: src/Engine/Import/Preflight.php:41
+#, php-format
+msgid ""
+"Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be "
+"refused until this site's $table_prefix in wp-config.php matches."
+msgstr ""
+"Archiwum używa „%1$s”, ale ta witryna używa „%2$s”. Przywrócenie zostanie "
+"odrzucone do czasu dopasowania $table_prefix tej witryny w wp-config.php."
+
+#. translators: %s: table prefix
+#: src/Engine/Import/Preflight.php:50
+#, php-format
+msgid "Matches (%s)."
+msgstr "Dopasowania (%s)."
+
+#: src/Engine/Import/Preflight.php:60
+msgid ""
+"This archive or this site is a network. A network-to-network restore needs "
+"Migrator Pro; the free edition will refuse it."
+msgstr ""
+"To archiwum lub ta witryna jest siecią. Przywracanie z sieci do sieci wymaga"
+" Migrator Pro; darmowa edycja odrzuci to."
+
+#: src/Engine/Import/Preflight.php:76 src/Engine/Import/Preflight.php:87
+msgid "Disk space"
+msgstr "Miejsce na dysku"
+
+#. translators: 1: free space, 2: estimated needed
+#: src/Engine/Import/Preflight.php:79
+#, php-format
+msgid ""
+"About %1$s free, restore may need ~%2$s. Free up space before restoring."
+msgstr ""
+"Około %1$s za darmo, przywrócenie może wymagać ~%2$s. Zwolnij miejsce przed "
+"przywróceniem."
+
+#. translators: %s: free space
+#: src/Engine/Import/Preflight.php:88
+#, php-format
+msgid "%s free."
+msgstr "%s bezpłatnie."
+
+#: src/Engine/Import/Preflight.php:97
+msgid "Writable files"
+msgstr "Pliki zapisywalne"
+
+#: src/Engine/Import/Preflight.php:98
+msgid "wp-content is not writable by the web server. File restore will fail."
+msgstr ""
+"wp-content nie może być zapisywany przez serwer WWW. Przywracanie plików nie"
+" powiedzie się."
+
+#: src/Engine/Import/Preflight.php:108
+msgid "PHP version"
+msgstr "Wersja PHP"
+
+#. translators: 1: source PHP, 2: this PHP
+#: src/Engine/Import/Preflight.php:111
+#, php-format
+msgid ""
+"Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer "
+"PHP may not run here."
+msgstr ""
+"Kopia zapasowa została utworzona w PHP %1$s; ten serwer działa %2$s. Kod "
+"oparty na nowszym PHP może nie zostać tutaj uruchomiony."
+
 #: templates/admin-page.php:19
-msgid "Back up your site or move it to a new host, one file, no technical setup."
-msgstr "Utwórz kopię zapasową swojej witryny lub przenieś ją na nowy host, jeden plik, bez konfiguracji technicznej."
+msgid ""
+"Back up your site or move it to a new host, one file, no technical setup."
+msgstr ""
+"Utwórz kopię zapasową swojej witryny lub przenieś ją na nowy host, jeden "
+"plik, bez konfiguracji technicznej."
 
 #: templates/admin-page.php:27
 msgid "Create a backup"
 msgstr "Utwórz kopię zapasową"
 
 #: templates/admin-page.php:30
-msgid "Package your database and files into a single archive you can download and restore anywhere."
-msgstr "Spakuj bazę danych i pliki w jedno archiwum, które możesz pobrać i przywrócić w dowolnym miejscu."
+msgid ""
+"Package your database and files into a single archive you can download and "
+"restore anywhere."
+msgstr ""
+"Spakuj bazę danych i pliki w jedno archiwum, które możesz pobrać i "
+"przywrócić w dowolnym miejscu."
 
 #: templates/admin-page.php:33
 msgid "Backup presets"
@@ -262,8 +481,14 @@ msgid "Scan files by size"
 msgstr "Skanuj pliki według rozmiaru"
 
 #: templates/admin-page.php:101
-msgid "Browse your wp-content folder by size and tick anything you do not need in the backup, for example a large cache, logs, or another plugin's stored data."
-msgstr "Przeglądaj folder wp-content według rozmiaru i zaznacz wszystko, czego nie potrzebujesz w kopii zapasowej, na przykład dużą pamięć podręczną, dzienniki lub dane przechowywane przez inną wtyczkę."
+msgid ""
+"Browse your wp-content folder by size and tick anything you do not need in "
+"the backup, for example a large cache, logs, or another plugin's stored "
+"data."
+msgstr ""
+"Przeglądaj folder wp-content według rozmiaru i zaznacz wszystko, czego nie "
+"potrzebujesz w kopii zapasowej, na przykład dużą pamięć podręczną, dzienniki"
+" lub dane przechowywane przez inną wtyczkę."
 
 #: templates/admin-page.php:106
 msgid "Compression"
@@ -289,13 +514,36 @@ msgstr "Postęp tworzenia kopii zapasowej"
 msgid "Download backup"
 msgstr "Pobierz kopię zapasową"
 
+#: templates/admin-page.php:149
+msgid "Moving a complex store?"
+msgstr "Przenosisz rozbudowany sklep?"
+
+#: templates/admin-page.php:150
+msgid ""
+"If the backup is ready but the migration needs staging, checkout checks or "
+"an integration plan, send the scope in writing."
+msgstr ""
+"Jeśli kopia zapasowa jest gotowa, ale migracja wymaga środowiska testowego, "
+"sprawdzenia procesu zakupowego lub planu integracji, opisz zakres w "
+"wiadomości."
+
+#: templates/admin-page.php:155
+msgid "Request written migration help"
+msgstr "Poproś o pisemną pomoc przy migracji"
+
 #: templates/admin-page.php:162
 msgid "Restore a backup"
 msgstr "Przywróć kopię zapasową"
 
 #: templates/admin-page.php:165
-msgid "Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive, keep a backup of anything you want to keep."
-msgstr "Upuść tutaj archiwum Migrator, aby je przywrócić. Spowoduje to zastąpienie bieżącej bazy danych (i plików) archiwum. Zachowaj kopię zapasową wszystkiego, co chcesz zachować."
+msgid ""
+"Drop a Migrator archive here to restore it. This overwrites the current "
+"database (and files) with the archive, keep a backup of anything you want to"
+" keep."
+msgstr ""
+"Upuść tutaj archiwum Migrator, aby je przywrócić. Spowoduje to zastąpienie "
+"bieżącej bazy danych (i plików) archiwum. Zachowaj kopię zapasową "
+"wszystkiego, co chcesz zachować."
 
 #: templates/admin-page.php:169
 msgid "Drag a .migrator file here, or"
@@ -323,243 +571,43 @@ msgstr "Lub przywróć plik już zapisany na tej stronie"
 
 #: templates/admin-page.php:198
 msgid "Backups saved on this site. Download, restore or delete them here."
-msgstr "Kopie zapasowe zapisane na tej stronie. Pobierz, przywróć lub usuń je tutaj."
+msgstr ""
+"Kopie zapasowe zapisane na tej stronie. Pobierz, przywróć lub usuń je tutaj."
 
 #: templates/admin-page.php:203
 msgid "Large site? Restore from the command line, it has no time limit:"
 msgstr "Duża witryna? Przywróć z wiersza poleceń, nie ma limitu czasu:"
 
-#. Plugin Name of the plugin
-#: plogins-migrator.php
-msgid "Plogins Migrator - Site Migration and Backup"
-msgstr ""
-
-#. Plugin URI of the plugin
-#: plogins-migrator.php
-msgid "https://plogins.com/plogins-migrator/"
-msgstr ""
-
-#: src/Admin/Ajax.php:488
-#: src/Admin/Page.php:115
-msgid "Enter the text to search for."
-msgstr ""
-
-#: src/Admin/Ajax.php:491
-msgid "Search and replace values are identical."
-msgstr ""
-
-#: src/Admin/Page.php:113
-msgid "Details"
-msgstr ""
-
-#: src/Admin/Page.php:114
-msgid "Could not read this backup."
-msgstr ""
-
-#: src/Admin/Page.php:116
-msgid "This changes your database now. Make a backup first. Continue?"
-msgstr ""
-
-#: src/Admin/Page.php:117
-msgid "Working…"
-msgstr ""
-
-#: src/Admin/Page.php:118
-msgid "Search and replace failed."
-msgstr ""
-
-#: src/Admin/Page.php:119
-msgid "Would change"
-msgstr ""
-
-#: src/Admin/Page.php:120
-msgid "Changed"
-msgstr ""
-
-#: src/Admin/Page.php:121
-msgid "Skipped (no primary key):"
-msgstr ""
-
-#. translators: %d: yearly price in PLN
-#: src/Admin/ProUpsell.php:74
-#, php-format
-msgid "od %d zł/rok"
-msgstr ""
-
-#. translators: 1: currency symbol, 2: yearly price
-#: src/Admin/ProUpsell.php:79
-#, php-format
-msgid "from %1$s%2$d/yr"
-msgstr ""
-
-#: src/Admin/ProUpsell.php:111
-msgid "Permission denied."
-msgstr ""
-
-#. translators: %s: PRO edition name
-#: src/Admin/ProUpsell.php:141
-#, php-format
-msgid "Do more with %s"
-msgstr ""
-
-#: src/Admin/ProUpsell.php:146
-#: src/Admin/ProUpsell.php:175
-msgid "Upgrade to PRO"
-msgstr ""
-
-#: src/Admin/ProUpsell.php:148
-msgid "Dismiss this notice"
-msgstr ""
-
-#: src/Admin/ProUpsell.php:165
-msgid "Unlock every PRO feature"
-msgstr ""
-
-#: src/Admin/ProUpsell.php:178
-msgid "one licence, every PRO feature"
-msgstr ""
-
-#. translators: %s: PRO edition name
-#: src/Admin/ProUpsell.php:197
-#, php-format
-msgid "What %s adds"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:52
-msgid "Source site"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:53
-msgid "Made with"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:54
-msgid "WordPress"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:55
-msgid "PHP"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:56
-#: src/Engine/Import/Preflight.php:38
-#: src/Engine/Import/Preflight.php:49
-msgid "Table prefix"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:57
-msgid "Tables"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:58
-#: src/Engine/Import/Preflight.php:59
-msgid "Multisite"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:58
-#: src/Engine/Archive/Inspector.php:61
-msgid "Yes"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:58
-msgid "No"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:61
-msgid "WooCommerce"
-msgstr ""
-
-#: src/Engine/Archive/Inspector.php:61
-msgid "Yes (HPOS)"
-msgstr ""
-
-#. translators: 1: source prefix, 2: this site's prefix
-#: src/Engine/Import/Preflight.php:41
-#, php-format
-msgid "Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be refused until this site's $table_prefix in wp-config.php matches."
-msgstr ""
-
-#. translators: %s: table prefix
-#: src/Engine/Import/Preflight.php:50
-#, php-format
-msgid "Matches (%s)."
-msgstr ""
-
-#: src/Engine/Import/Preflight.php:60
-msgid "This archive or this site is a network. A network-to-network restore needs Migrator Pro; the free edition will refuse it."
-msgstr ""
-
-#: src/Engine/Import/Preflight.php:76
-#: src/Engine/Import/Preflight.php:87
-msgid "Disk space"
-msgstr ""
-
-#. translators: 1: free space, 2: estimated needed
-#: src/Engine/Import/Preflight.php:79
-#, php-format
-msgid "About %1$s free, restore may need ~%2$s. Free up space before restoring."
-msgstr ""
-
-#. translators: %s: free space
-#: src/Engine/Import/Preflight.php:88
-#, php-format
-msgid "%s free."
-msgstr ""
-
-#: src/Engine/Import/Preflight.php:97
-msgid "Writable files"
-msgstr ""
-
-#: src/Engine/Import/Preflight.php:98
-msgid "wp-content is not writable by the web server. File restore will fail."
-msgstr ""
-
-#: src/Engine/Import/Preflight.php:108
-msgid "PHP version"
-msgstr ""
-
-#. translators: 1: source PHP, 2: this PHP
-#: src/Engine/Import/Preflight.php:111
-#, php-format
-msgid "Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer PHP may not run here."
-msgstr ""
-
-#: templates/admin-page.php:149
-msgid "Moving a complex store?"
-msgstr "Przenosisz rozbudowany sklep?"
-
-#: templates/admin-page.php:150
-msgid "If the backup is ready but the migration needs staging, checkout checks or an integration plan, send the scope in writing."
-msgstr "Jeśli kopia zapasowa jest gotowa, ale migracja wymaga środowiska testowego, sprawdzenia procesu zakupowego lub planu integracji, opisz zakres w wiadomości."
-
-#: templates/admin-page.php:155
-msgid "Request written migration help"
-msgstr "Poproś o pisemną pomoc przy migracji"
-
 #: templates/admin-page.php:209
 msgid "Search & replace"
-msgstr ""
+msgstr "Wyszukaj i zamień"
 
 #: templates/admin-page.php:210
-msgid "Change a domain, URL or path across this site's database, safely for serialized data. Run a dry run first to see how many rows would change. Back up before a live run."
+msgid ""
+"Change a domain, URL or path across this site's database, safely for "
+"serialized data. Run a dry run first to see how many rows would change. Back"
+" up before a live run."
 msgstr ""
+"Zmień domenę, adres URL lub ścieżkę w bazie danych tej witryny, bezpiecznie "
+"dla danych serializowanych. Najpierw wykonaj próbę próbną, aby zobaczyć, ile"
+" wierszy ulegnie zmianie. Zrób kopię zapasową przed biegiem na żywo."
 
 #: templates/admin-page.php:213
 msgid "Find"
-msgstr ""
+msgstr "Znajdź"
 
 #: templates/admin-page.php:217
 msgid "Replace with"
-msgstr ""
+msgstr "Zamień na"
 
 #: templates/admin-page.php:222
 msgid "Dry run (preview only, writes nothing)"
-msgstr ""
+msgstr "Praca próbna (tylko podgląd, nic nie zapisuje)"
 
 #: templates/admin-page.php:224
 msgid "Run"
-msgstr ""
+msgstr "Uruchomić"
 
 #: templates/admin-page.php:228
 msgid "From the command line:"
-msgstr ""
+msgstr "Z wiersza poleceń:"
