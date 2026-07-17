@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,7 +62,7 @@ The free edition backs up and migrates your whole site by hand. **Plogins Migrat
 
 Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year (PLN shown at checkout).
 
-Compare editions and pricing: https://plogins.com/plogins-migrator-pro/pricing/
+Compare editions and pricing: [plogins.com/plogins-migrator-pro/pricing/](https://plogins.com/plogins-migrator-pro/pricing/)
 
 == Installation ==
 
@@ -74,10 +74,10 @@ Compare editions and pricing: https://plogins.com/plogins-migrator-pro/pricing/
 
 = Documentation and links =
 
-* **Documentation** - https://plogins.com/plogins-migrator/docs/
-* **Plugin page** - https://plogins.com/plogins-migrator/
-* **Source code** - https://github.com/wppoland/plogins-migrator
-* **Bug reports and feature requests** - https://github.com/wppoland/plogins-migrator/issues
+* **Documentation** - [plogins.com/plogins-migrator/docs/](https://plogins.com/plogins-migrator/docs/)
+* **Plugin page** - [plogins.com/plogins-migrator/](https://plogins.com/plogins-migrator/)
+* **Source code** - [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator)
+* **Bug reports and feature requests** - [github.com/wppoland/plogins-migrator/issues](https://github.com/wppoland/plogins-migrator/issues)
 
 
 = Does restoring delete what is already on the destination? =
@@ -115,6 +115,9 @@ Yes. This plugin is compatible with WordPress Multisite. Network activate it or 
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.3 =
+* Documentation: readme links are now labelled links.
 
 = 1.2.2 =
 * Shortened display name (dropped the Plogins prefix; slug unchanged).
