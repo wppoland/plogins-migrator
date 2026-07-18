@@ -18,7 +18,7 @@ msgstr ""
 #. Plugin Name of the plugin
 #: plogins-migrator.php
 msgid "Plogins Migrator - Site Migration and Backup"
-msgstr "Plogins Migrator – Site-Migration und Backup"
+msgstr "Plogins Migrator - Site-Migration und Backup"
 
 #. Plugin URI of the plugin
 #: plogins-migrator.php
@@ -276,7 +276,7 @@ msgstr "Tabellenpräfix"
 
 #: src/Engine/Archive/Inspector.php:57
 msgid "Tables"
-msgstr "Tische"
+msgstr "Tabellen"
 
 #: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:59
 msgid "Multisite"
@@ -385,7 +385,7 @@ msgid ""
 "restore anywhere."
 msgstr ""
 "Packe deine Datenbank und Dateien in ein einziges Archiv, das du überall "
-"herunterladen und wiederherstellen können."
+"herunterladen und wiederherstellen kannst."
 
 #: templates/admin-page.php:33
 msgid "Backup presets"
@@ -409,7 +409,7 @@ msgstr "Nur Medien"
 
 #: templates/admin-page.php:41
 msgid "What to leave out (optional)"
-msgstr "Was du weglassen sollten (optional)"
+msgstr "Was du weglassen möchtest (optional)"
 
 #: templates/admin-page.php:44
 msgid "Database"
@@ -421,7 +421,7 @@ msgstr "Spam-Kommentare"
 
 #: templates/admin-page.php:46
 msgid "Post revisions"
-msgstr "Überarbeitungen veröffentlichen"
+msgstr "Beitragsrevisionen"
 
 #: templates/admin-page.php:47
 msgid "Transients"
@@ -449,7 +449,7 @@ msgstr "Mediathek (Uploads)"
 
 #: templates/admin-page.php:54
 msgid "All themes"
-msgstr "Alle Themen"
+msgstr "Alle Themes"
 
 #: templates/admin-page.php:55
 msgid "Inactive themes (keep active only)"
@@ -490,7 +490,7 @@ msgid ""
 "data."
 msgstr ""
 "Durchsuche deinen wp-content-Ordner nach Größe und markiere alles, was du im"
-" Backup nicht benötigen, zum Beispiel einen großen Cache, Protokolle oder "
+" Backup nicht benötigst, zum Beispiel einen großen Cache, Protokolle oder "
 "die gespeicherten Daten eines anderen Plugins."
 
 #: templates/admin-page.php:106
@@ -519,7 +519,7 @@ msgstr "Backup herunterladen"
 
 #: templates/admin-page.php:149
 msgid "Moving a complex store?"
-msgstr "Möchte einen komplexen Shop umziehen?"
+msgstr "Einen komplexen Shop umziehen?"
 
 #: templates/admin-page.php:150
 msgid ""
@@ -546,7 +546,7 @@ msgid ""
 msgstr ""
 "Lege hier ein Migrator-Archiv ab, um es wiederherzustellen. Dadurch wird die"
 " aktuelle Datenbank (und die Dateien) mit dem Archiv überschrieben. Erstelle"
-" ein Backup von allem, was du behalten möchten."
+" ein Backup von allem, was du behalten möchtest."
 
 #: templates/admin-page.php:169
 msgid "Drag a .migrator file here, or"
@@ -613,7 +613,7 @@ msgstr "Probelauf (nur Vorschau, schreibt nichts)"
 
 #: templates/admin-page.php:224
 msgid "Run"
-msgstr "Laufen"
+msgstr "Ausführen"
 
 #: templates/admin-page.php:228
 msgid "From the command line:"

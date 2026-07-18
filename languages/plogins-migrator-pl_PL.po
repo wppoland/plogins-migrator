@@ -18,7 +18,7 @@ msgstr ""
 #. Plugin Name of the plugin
 #: plogins-migrator.php
 msgid "Plogins Migrator - Site Migration and Backup"
-msgstr "Plogins Migrator — migracja witryny i tworzenie kopii zapasowych"
+msgstr "Plogins Migrator - migracja witryny i tworzenie kopii zapasowych"
 
 #. Plugin URI of the plugin
 #: plogins-migrator.php
@@ -57,11 +57,11 @@ msgstr "Nie znaleziono kopii zapasowej."
 #: src/Admin/Ajax.php:180 src/Admin/Ajax.php:196 src/Admin/Ajax.php:232
 #: src/Admin/Ajax.php:279 src/Admin/Ajax.php:411 src/Admin/Ajax.php:522
 msgid "Not allowed."
-msgstr "Niedozwolony."
+msgstr "Niedozwolone."
 
 #: src/Admin/Ajax.php:203
 msgid "Bad upload request."
-msgstr "Zła prośba o przesłanie."
+msgstr "Nieprawidłowe żądanie przesłania."
 
 #: src/Admin/Ajax.php:208
 msgid "Invalid upload."
@@ -153,7 +153,7 @@ msgstr "Skanowanie nie powiodło się."
 
 #: src/Admin/Page.php:107
 msgid "files"
-msgstr "akta"
+msgstr "pliki"
 
 #: src/Admin/Page.php:108
 msgid "No backups stored on this site yet."
@@ -161,11 +161,11 @@ msgstr "Na tej stronie nie znajdują się jeszcze żadne kopie zapasowe."
 
 #: src/Admin/Page.php:109
 msgid "Download"
-msgstr "Pobierać"
+msgstr "Pobierz"
 
 #: src/Admin/Page.php:110
 msgid "Restore"
-msgstr "Przywrócić"
+msgstr "Przywróć"
 
 #: src/Admin/Page.php:111
 msgid "Delete"
@@ -276,7 +276,7 @@ msgstr "Przedrostek tabeli"
 
 #: src/Engine/Archive/Inspector.php:57
 msgid "Tables"
-msgstr "Stoły"
+msgstr "Tabele"
 
 #: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:59
 msgid "Multisite"
@@ -332,14 +332,14 @@ msgstr "Miejsce na dysku"
 msgid ""
 "About %1$s free, restore may need ~%2$s. Free up space before restoring."
 msgstr ""
-"Około %1$s za darmo, przywrócenie może wymagać ~%2$s. Zwolnij miejsce przed "
+"Około %1$s wolnego, przywrócenie może wymagać ~%2$s. Zwolnij miejsce przed "
 "przywróceniem."
 
 #. translators: %s: free space
 #: src/Engine/Import/Preflight.php:88
 #, php-format
 msgid "%s free."
-msgstr "%s bezpłatnie."
+msgstr "%s wolnego."
 
 #: src/Engine/Import/Preflight.php:97
 msgid "Writable files"
@@ -422,7 +422,7 @@ msgstr "Wersje wpisów"
 
 #: templates/admin-page.php:47
 msgid "Transients"
-msgstr "Stany nieustalone"
+msgstr "Transienty"
 
 #: templates/admin-page.php:48
 msgid "WooCommerce sessions"
@@ -438,7 +438,7 @@ msgstr "Baza danych (kopia zapasowa samych plików)"
 
 #: templates/admin-page.php:52
 msgid "Files"
-msgstr "Akta"
+msgstr "Pliki"
 
 #: templates/admin-page.php:53
 msgid "Media library (uploads)"
@@ -462,7 +462,7 @@ msgstr "Nieaktywne wtyczki (tylko pozostaw aktywne)"
 
 #: templates/admin-page.php:58
 msgid "Must-use plugins"
-msgstr "Wtyczki, których należy używać"
+msgstr "Wtyczki must-use"
 
 #: templates/admin-page.php:59
 msgid "Cache files"
@@ -589,8 +589,9 @@ msgid ""
 " up before a live run."
 msgstr ""
 "Zmień domenę, adres URL lub ścieżkę w bazie danych tej witryny, bezpiecznie "
-"dla danych serializowanych. Najpierw wykonaj próbę próbną, aby zobaczyć, ile"
-" wierszy ulegnie zmianie. Zrób kopię zapasową przed biegiem na żywo."
+"dla danych serializowanych. Najpierw wykonaj przebieg próbny, aby zobaczyć, "
+"ile wierszy ulegnie zmianie. Zrób kopię zapasową przed uruchomieniem na "
+"żywo."
 
 #: templates/admin-page.php:213
 msgid "Find"
@@ -602,11 +603,11 @@ msgstr "Zamień na"
 
 #: templates/admin-page.php:222
 msgid "Dry run (preview only, writes nothing)"
-msgstr "Praca próbna (tylko podgląd, nic nie zapisuje)"
+msgstr "Przebieg próbny (tylko podgląd, nic nie zapisuje)"
 
 #: templates/admin-page.php:224
 msgid "Run"
-msgstr "Uruchomić"
+msgstr "Uruchom"
 
 #: templates/admin-page.php:228
 msgid "From the command line:"

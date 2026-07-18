@@ -48,7 +48,7 @@ msgstr "https://wppoland.com"
 #: plogins-migrator.php:41
 #, php-format
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
-msgstr "El Migrator requiere PHP %1$s o superior. Estás ejecutando PHP %2$s."
+msgstr "Migrator requiere PHP %1$s o superior. Estás ejecutando PHP %2$s."
 
 #: src/Admin/Ajax.php:166
 msgid "Backup not found."
@@ -85,7 +85,7 @@ msgstr "Archivo no encontrado."
 
 #: src/Admin/Ajax.php:488 src/Admin/Page.php:115
 msgid "Enter the text to search for."
-msgstr "Ingrese el texto a buscar."
+msgstr "Introduce el texto que quieres buscar."
 
 #: src/Admin/Ajax.php:491
 msgid "Search and replace values are identical."
@@ -145,7 +145,7 @@ msgstr ""
 
 #: src/Admin/Page.php:105
 msgid "Scanning…"
-msgstr "Exploración…"
+msgstr "Escaneando…"
 
 #: src/Admin/Page.php:106
 msgid "Scan failed."
@@ -199,11 +199,11 @@ msgstr "La búsqueda y el reemplazo fallaron."
 
 #: src/Admin/Page.php:119
 msgid "Would change"
-msgstr "cambiaria"
+msgstr "Cambiaría"
 
 #: src/Admin/Page.php:120
 msgid "Changed"
-msgstr "cambiado"
+msgstr "Cambiado"
 
 #: src/Admin/Page.php:121
 msgid "Skipped (no primary key):"
@@ -255,7 +255,7 @@ msgstr "Qué añade %s"
 
 #: src/Engine/Archive/Inspector.php:52
 msgid "Source site"
-msgstr "Sitio fuente"
+msgstr "Sitio de origen"
 
 #: src/Engine/Archive/Inspector.php:53
 msgid "Made with"
@@ -276,7 +276,7 @@ msgstr "Prefijo de tabla"
 
 #: src/Engine/Archive/Inspector.php:57
 msgid "Tables"
-msgstr "Mesas"
+msgstr "Tablas"
 
 #: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:59
 msgid "Multisite"
@@ -354,7 +354,7 @@ msgstr ""
 
 #: src/Engine/Import/Preflight.php:108
 msgid "PHP version"
-msgstr "versión PHP"
+msgstr "Versión de PHP"
 
 #. translators: 1: source PHP, 2: this PHP
 #: src/Engine/Import/Preflight.php:111
@@ -395,7 +395,7 @@ msgstr "Preajuste:"
 
 #: templates/admin-page.php:35
 msgid "Full site"
-msgstr "sitio completo"
+msgstr "Sitio completo"
 
 #: templates/admin-page.php:36
 msgid "Database only"
@@ -419,7 +419,7 @@ msgstr "Comentarios no deseados"
 
 #: templates/admin-page.php:46
 msgid "Post revisions"
-msgstr "Publicar revisiones"
+msgstr "Revisiones de entradas"
 
 #: templates/admin-page.php:47
 msgid "Transients"
@@ -591,13 +591,13 @@ msgid ""
 "serialized data. Run a dry run first to see how many rows would change. Back"
 " up before a live run."
 msgstr ""
-"Cambie un dominio, URL o ruta en la base de datos de este sitio, de forma "
-"segura para datos serializados. Primero realice un ensayo para ver cuántas "
-"filas cambiarían. Retroceda antes de una carrera en vivo."
+"Cambia un dominio, URL o ruta en la base de datos de este sitio, de forma "
+"segura para datos serializados. Primero realiza un ensayo para ver cuántas "
+"filas cambiarían. Haz una copia de seguridad antes de una ejecución real."
 
 #: templates/admin-page.php:213
 msgid "Find"
-msgstr "encontrar"
+msgstr "Buscar"
 
 #: templates/admin-page.php:217
 msgid "Replace with"
@@ -609,7 +609,7 @@ msgstr "Ejecución en seco (solo vista previa, no escribe nada)"
 
 #: templates/admin-page.php:224
 msgid "Run"
-msgstr "Correr"
+msgstr "Ejecutar"
 
 #: templates/admin-page.php:228
 msgid "From the command line:"
