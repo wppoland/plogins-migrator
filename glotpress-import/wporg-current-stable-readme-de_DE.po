@@ -1,202 +1,170 @@
-# wp.org Stable Readme translation (de_DE)
+# Translation of Plugins - Migrator &#8211; Site Migration and Backup - Stable Readme (latest release) in German
+# This file is distributed under the same license as the Plugins - Migrator &#8211; Site Migration and Backup - Stable Readme (latest release) package.
 msgid ""
 msgstr ""
-"Project-Id-Version: migrator Stable Readme\n"
-"Last-Translator: wppoland.com <hello@wppoland.com>\n"
-"Language-Team: German <de@li.org>\n"
+"Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - Stable Readme (latest release)\n"
+"PO-Revision-Date: +0000\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: plogins-i18n\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: GlotPress/4.0.3\n"
 
+#. Plugin name.
+#, gp-priority: high
+msgid "Migrator - Site Migration and Backup"
+msgstr "Migrator - Website-Migration und Backup"
+
+#. Short description.
+#, gp-priority: high
 msgid ""
 "Back up, clone and migrate your whole site to one file, then restore it here"
 " or on a new host. URLs and paths are fixed for you. Runs on your server."
 msgstr ""
-"Sichere, klone und migriere deine gesamte Website in eine Datei und stelle "
-"sie hier oder auf einem neuen Host wieder her. URLs und Pfade werden für "
-"dich angepasst. Läuft auf deinem Server."
+"Sichere, klone und migriere deine gesamte Website in eine Datei, dann stelle"
+" sie hier oder auf einem neuen Host wieder her. URLs und Pfade werden für "
+"dich korrigiert. Läuft auf deinem Server."
 
+#. Found in faq list item.
 msgid ""
-"Migrator packs your database and everything in `wp-content` into a single "
-"file you can download, keep as a backup, and restore, on the same site or on"
-" a brand-new install somewhere else. When you restore onto a different "
-"address, Migrator rewrites the old URLs and file paths to the new ones for "
-"you, so the site just works."
+"<strong>Bug reports and feature requests</strong> - <a "
+"href=\"https://github.com/wppoland/plogins-"
+"migrator/issues\">github.com/wppoland/plogins-migrator/issues</a>"
 msgstr ""
-"Migrator packt deine Datenbank und alles in `wp-content` in eine einzelne "
-"Datei, die du herunterladen, als Backup aufbewahren und wiederherstellen "
-"kannst - auf derselben Website oder auf einer brandneuen Installation "
-"woanders. Wenn du unter einer anderen Adresse wiederherstellst, schreibt "
-"Migrator die alten URLs und Dateipfade für dich auf die neuen um, sodass die"
-" Website einfach funktioniert."
+"<strong>Fehlerberichte und Funktionswünsche</strong> - <a "
+"href=\"https://github.com/wppoland/plogins-"
+"migrator/issues\">github.com/wppoland/plogins-migrator/issues</a>"
 
+#. Found in faq list item.
 msgid ""
-"Everything happens on your own server. There is no account to create, no "
-"file size sold back to you, and nothing is ever sent to a third-party "
-"service. Because it is fully open, you can read exactly what it does: the "
-"source lives at https://github.com/wppoland/plogins-migrator, which is also "
-"where to file a bug or request a feature."
+"<strong>Source code</strong> - <a "
+"href=\"https://github.com/wppoland/plogins-"
+"migrator\">github.com/wppoland/plogins-migrator</a>"
 msgstr ""
-"Alles passiert auf deinem eigenen Server. Es gibt kein Konto zum Anlegen, "
-"keine Dateigröße, die dir zurückverkauft wird, und nichts wird jemals an "
-"einen Drittanbieterdienst gesendet. Weil das Projekt vollständig offen ist, "
-"kannst du genau nachlesen, was es tut: Der Quellcode liegt unter "
-"https://github.com/wppoland/plogins-migrator, wo du auch Fehler melden oder "
-"Funktionen vorschlagen kannst."
+"<strong>Quellcode</strong> - <a href=\"https://github.com/wppoland/plogins-"
+"migrator\">github.com/wppoland/plogins-migrator</a>"
 
-msgid "<strong>How it works</strong>"
-msgstr "<strong>So funktioniert es</strong>"
-
+#. Found in faq list item.
 msgid ""
-"1. On the site you want to copy, create a backup. Migrator writes your database to a portable SQL dump and streams every file in `wp-content` into one archive next to it.\n"
-"2. Download that archive (or, on a big site, build it from the command line, see below).\n"
-"3. On the destination, the same site to roll back, or a fresh WordPress install to move to, restore the archive. Migrator imports the database, puts the files back, and rewrites the source site's web address and paths to this one."
+"<strong>Plugin page</strong> - <a href=\"https://plogins.com/plogins-"
+"migrator/\">plogins.com/plogins-migrator/</a>"
 msgstr ""
-"1. Erstelle auf der Website, die du kopieren möchtest, ein Backup. Migrator schreibt deine Datenbank in einen portablen SQL-Dump und streamt jede Datei in `wp-content` in ein Archiv daneben.\n"
-"2. Lade dieses Archiv herunter (oder erstelle es bei einer großen Website über die Befehlszeile - siehe unten).\n"
-"3. Am Ziel - derselben Website zum Zurücksetzen oder einer frischen WordPress-Installation, zu der du wechselst - stelle das Archiv wieder her. Migrator importiert die Datenbank, legt die Dateien zurück und schreibt die Webadresse und Pfade der Quellwebsite auf die hier um."
+"<strong>Plugin-Seite</strong> - <a href=\"https://plogins.com/plogins-"
+"migrator/\">plogins.com/plogins-migrator/</a>"
 
+#. Found in faq list item.
 msgid ""
-"The address rewrite is <strong>safe for serialized data</strong>: Migrator "
-"walks the actual data structures rather than doing a blind text replace, so "
-"the byte-length counts PHP stores inside serialized options and meta stay "
-"correct and nothing breaks."
+"<strong>Documentation</strong> - <a href=\"https://plogins.com/plogins-"
+"migrator/docs/\">plogins.com/plogins-migrator/docs/</a>"
 msgstr ""
-"Das Umschreiben der Adresse ist <strong>sicher für serialisierte "
-"Daten</strong>: Migrator durchläuft die tatsächlichen Datenstrukturen, statt"
-" blind Text zu ersetzen, sodass die Byte-Längen, die PHP in serialisierten "
-"Optionen und Meta speichert, korrekt bleiben und nichts kaputtgeht."
+"<strong>Dokumentation</strong> - <a href=\"https://plogins.com/plogins-"
+"migrator/docs/\">plogins.com/plogins-migrator/docs/</a>"
 
-msgid "<strong>A few things worth knowing</strong>"
-msgstr "<strong>Ein paar Dinge, die du wissen solltest</strong>"
-
+#. Found in description paragraph.
 msgid ""
-"Backups are written to a protected folder (`wp-content/migrator-backups`) "
-"that denies direct web access, and the in-browser download is served only to"
-" logged-in administrators through an authenticated handler, the files are "
-"never exposed at a guessable URL. Each item inside an archive carries a "
-"checksum, so a truncated or corrupted backup is caught before it is ever "
-"restored over a live site."
+"Compare editions and pricing: <a href=\"https://plogins.com/plogins-"
+"migrator-pro/pricing/\">plogins.com/plogins-migrator-pro/pricing/</a>"
 msgstr ""
-"Backups werden in einen geschützten Ordner (`wp-content/migrator-backups`) "
-"geschrieben, der direkten Webzugriff verweigert, und der Download im Browser"
-" wird nur angemeldeten Administratoren über einen authentifizierten Handler "
-"bereitgestellt - die Dateien sind nie unter einer erratbaren URL erreichbar."
-" Jedes Element in einem Archiv trägt eine Prüfsumme, sodass ein "
-"abgeschnittenes oder beschädigtes Backup erkannt wird, bevor es jemals über "
-"eine Live-Website wiederhergestellt wird."
+"Editionen und Preise vergleichen: <a href=\"https://plogins.com/plogins-"
+"migrator-pro/pricing/\">plogins.com/plogins-migrator-pro/pricing/</a>"
 
+#. Found in description paragraph.
 msgid ""
-"Restoring <strong>overwrites</strong> the destination database and files, "
-"that is the point of a restore, so it asks for confirmation and is limited "
-"to administrators. Migrator never overwrites its own plugin folder during a "
-"restore, so it cannot pull the rug out from under itself mid-import."
+"Everything in the free edition stays free and open. Plogins Migrator PRO "
+"starts at 49 EUR per year (PLN shown at checkout)."
 msgstr ""
-"Das Wiederherstellen <strong>überschreibt</strong> die Ziel-Datenbank und "
-"-Dateien - genau darum geht es beim Wiederherstellen -, deshalb fragt es "
-"nach Bestätigung und ist auf Administratoren beschränkt. Migrator "
-"überschreibt während einer Wiederherstellung nie seinen eigenen Plugin-"
-"Ordner, sodass es sich nicht mitten im Import den Boden unter den Füßen "
-"wegziehen kann."
+"Alles in der kostenlosen Edition bleibt kostenlos und offen. Plogins "
+"Migrator PRO beginnt bei 49 EUR pro Jahr (PLN wird an der Kasse angezeigt)."
 
+#. Found in description paragraph.
 msgid ""
-"For large sites where a browser request would time out, every job also runs "
-"from WP-CLI, which has no timeout:"
+"The free edition backs up and migrates your whole site by hand. "
+"<strong>Plogins Migrator PRO</strong> makes it run itself:"
 msgstr ""
-"Bei großen Websites, bei denen eine Browser-Anfrage in ein Timeout laufen "
-"würde, läuft jeder Job auch über WP-CLI, das kein Timeout hat:"
+"Die kostenlose Edition sichert und migriert deine gesamte Website von Hand. "
+"<strong>Plogins Migrator PRO</strong> lässt es von selbst laufen:"
 
-msgid "<strong>What's included</strong>"
-msgstr "<strong>Was enthalten ist</strong>"
-
+#. Found in description list item.
 msgid ""
-"* One-click backup of your database and all of `wp-content` into a single archive\n"
-"* Restore to the same site, or migrate to a new host with automatic, serialization-safe URL and path rewriting\n"
-"* Choose what to leave out: media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables\n"
-"* In-browser export with a progress bar and a direct download, resumable so large sites finish across multiple steps, plus drag-and-drop restore\n"
-"* WP-CLI `export` and `import` commands for sites too large for the browser\n"
-"* A safety snapshot of your database before every restore, rolled back automatically if anything fails\n"
-"* Per-item checksums so a corrupt archive is detected, not restored\n"
-"* Self-hosted: no account, no third-party service, nothing leaves your server"
+"<strong>Full multisite</strong> - back up and migrate a whole network with "
+"correct URL rewriting"
 msgstr ""
-"* Ein-Klick-Backup deiner Datenbank und des gesamten `wp-content` in ein einzelnes Archiv\n"
-"* Wiederherstellung auf derselben Website oder Migration auf einen neuen Host mit automatischem, serialisierungssicherem Umschreiben von URLs und Pfaden\n"
-"* Auswahl, was ausgelassen wird: Medien, Themes, Plugins, Cache, Spam-Kommentare, Beitragsrevisionen, Transients, WooCommerce-Sitzungen oder Action-Scheduler-Tabellen\n"
-"* Export im Browser mit Fortschrittsbalken und direktem Download, fortsetzbar, sodass große Websites in mehreren Schritten fertig werden, plus Wiederherstellung per Drag-and-drop\n"
-"* WP-CLI-Befehle `export` und `import` für Websites, die für den Browser zu groß sind\n"
-"* Ein Sicherheits-Snapshot deiner Datenbank vor jeder Wiederherstellung, der bei einem Fehler automatisch zurückgerollt wird\n"
-"* Prüfsummen pro Element, sodass ein beschädigtes Archiv erkannt, aber nicht wiederhergestellt wird\n"
-"* Self-hosted: kein Konto, kein Drittanbieterdienst, nichts verlässt deinen Server"
+"<strong>Volles Multisite</strong> - ein ganzes Netzwerk mit korrektem URL-"
+"Umschreiben sichern und migrieren"
 
+#. Found in description list item.
 msgid ""
-"1. Upload the plugin to `/wp-content/plugins/migrator`, or install it from Plugins → Add New.\n"
-"2. Activate it. There are no required dependencies.\n"
-"3. Open <strong>Migrator</strong> in the admin menu to create a backup, or use `wp migrator export` from the command line."
+"<strong>Email notifications and activity log</strong> - a silent failure "
+"never slips by"
 msgstr ""
-"1. Lade das Plugin nach `/wp-content/plugins/migrator` hoch oder installiere es über Plugins → Installieren.\n"
-"2. Aktiviere es. Es gibt keine erforderlichen Abhängigkeiten.\n"
-"3. Öffne <strong>Migrator</strong> im Admin-Menü, um ein Backup zu erstellen, oder verwende `wp migrator export` über die Befehlszeile."
+"<strong>E-Mail-Benachrichtigungen und Aktivitätsprotokoll</strong> - ein "
+"stiller Fehler bleibt nie unbemerkt"
 
+#. Found in description list item.
 msgid ""
-"* <strong>Documentation</strong> - https://plogins.com/plogins-migrator/docs/\n"
-"* <strong>Plugin page</strong> - https://plogins.com/plogins-migrator/\n"
-"* <strong>Source code</strong> - https://github.com/wppoland/plogins-migrator\n"
-"* <strong>Bug reports and feature requests</strong> - https://github.com/wppoland/plogins-migrator/issues"
+"<strong>Server-to-server transfer</strong> - move a site between servers "
+"with no manual download"
 msgstr ""
-"* <strong>Dokumentation</strong> - https://plogins.com/de/plogins-migrator/docs/\n"
-"* <strong>Plugin-Seite</strong> - https://plogins.com/de/plogins-migrator/\n"
-"* <strong>Quellcode</strong> - https://github.com/wppoland/plogins-migrator\n"
-"* <strong>Fehlerberichte und Funktionswünsche</strong> - https://github.com/wppoland/plogins-migrator/issues"
+"<strong>Server-zu-Server-Übertragung</strong> - eine Website zwischen "
+"Servern verschieben, ohne manuellen Download"
 
+#. Found in description list item.
 msgid ""
-"Yes. A restore replaces the destination's database and files with the "
-"contents of the archive, that is what restoring a backup means. It is "
-"limited to administrators and asks for confirmation first. Always keep a "
-"separate backup of anything on the destination you want to keep."
+"<strong>Encrypted backups</strong> - password-protected archives, decrypted "
+"on restore"
 msgstr ""
-"Ja. Eine Wiederherstellung ersetzt die Datenbank und Dateien am Ziel durch "
-"den Inhalt des Archivs - genau das bedeutet das Wiederherstellen eines "
-"Backups. Sie ist auf Administratoren beschränkt und fragt zuerst nach "
-"Bestätigung. Bewahre immer ein separates Backup von allem auf, was du am "
-"Ziel behalten möchtest."
+"<strong>Verschlüsselte Backups</strong> - passwortgeschützte Archive, beim "
+"Wiederherstellen entschlüsselt"
 
+#. Found in description list item.
 msgid ""
-"No. When you restore onto a different address, Migrator rewrites the old "
-"site URL and file paths to the new ones, including inside serialized data, "
-"so internal links and settings keep working."
+"<strong>Recovery points</strong> - one-click rollback to a known-good backup"
 msgstr ""
-"Nein. Wenn du unter einer anderen Adresse wiederherstellst, schreibt "
-"Migrator die alte Website-URL und die Dateipfade auf die neuen um, auch "
-"innerhalb serialisierter Daten, sodass interne Links und Einstellungen "
-"weiter funktionieren."
+"<strong>Wiederherstellungspunkte</strong> - Rollback per Klick zu einem als "
+"funktionierend bekannten Backup"
 
+#. Found in description list item.
 msgid ""
-"Use WP-CLI, which has no request time limit: `wp migrator export` to build "
-"the archive and `wp migrator import <file>` to restore it."
+"<strong>Cloud and off-site copies</strong> - S3, R2, Backblaze B2, Wasabi, "
+"FTP/SFTP, WebDAV, Dropbox and Google Drive"
 msgstr ""
-"Verwende WP-CLI, das kein Anfragezeitlimit hat: `wp migrator export`, um das"
-" Archiv zu erstellen, und `wp migrator import <file>`, um es "
-"wiederherzustellen."
+"<strong>Cloud- und externe Kopien</strong> - S3, R2, Backblaze B2, Wasabi, "
+"FTP/SFTP, WebDAV, Dropbox und Google Drive"
 
+#. Found in description list item.
 msgid ""
-"No. Migrator runs entirely on your own server. It creates no account and "
-"contacts no external service. Your backups stay in `wp-content/migrator-"
-"backups` until you download or delete them."
+"<strong>Scheduled and incremental backups</strong> - daily or weekly with "
+"retention; only changed files after a baseline"
 msgstr ""
-"Nein. Migrator läuft vollständig auf deinem eigenen Server. Es legt kein "
-"Konto an und kontaktiert keinen externen Dienst. Deine Backups bleiben in "
-"`wp-content/migrator-backups`, bis du sie herunterlädst oder löschst."
+"<strong>Geplante und inkrementelle Backups</strong> - täglich oder "
+"wöchentlich mit Aufbewahrung; nur geänderte Dateien nach einer Baseline"
 
+#. Found in description list item.
 msgid ""
-"In `wp-content/migrator-backups`, a folder protected from direct web access."
-" Removing the plugin deletes that folder and its contents."
+"Inspect any stored backup before you restore it: source URL, WordPress and "
+"PHP versions, table count, plus pre-restore checks for table prefix, disk "
+"space and writability"
 msgstr ""
-"In `wp-content/migrator-backups`, einem Ordner, der vor direktem Webzugriff "
-"geschützt ist. Entfernst du das Plugin, wird dieser Ordner samt Inhalt "
-"gelöscht."
+"Untersuche jedes gespeicherte Backup, bevor du es wiederherstellst: Quell-"
+"URL, WordPress- und PHP-Versionen, Tabellenanzahl sowie Prüfungen vor der "
+"Wiederherstellung für Tabellenpräfix, Speicherplatz und Schreibbarkeit"
 
+#. Found in description list item.
+msgid ""
+"Serialization-safe search and replace across the database, with a dry-run "
+"preview and a <code>wp migrator replace</code> command, to change a domain, "
+"URL or path safely"
+msgstr ""
+"Serialisierungssichere Suchen-und-Ersetzen-Funktion in der gesamten "
+"Datenbank, mit einer Probelauf-Vorschau und einem <code>wp migrator "
+"replace</code>-Befehl, um eine Domain, URL oder einen Pfad sicher zu ändern"
+
+#. Found in description header.
+msgid "Plogins Migrator PRO"
+msgstr "Plogins Migrator PRO"
+
+#. Found in faq paragraph.
 msgid ""
 "Yes. This plugin is compatible with WordPress Multisite. Network activate it"
 " or activate it on individual sites; each site keeps its own settings and "
@@ -206,89 +174,564 @@ msgstr ""
 "netzwerkweit oder auf einzelnen Websites; jede Website behält ihre eigenen "
 "Einstellungen und Daten."
 
+#. Found in faq paragraph.
 msgid ""
-"1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.\n"
-"2. The file-size explorer: scan wp-content and see each folder's size so you can leave out what you do not need."
+"In <code>wp-content/migrator-backups</code>, a folder protected from direct "
+"web access. Removing the plugin deletes that folder and its contents."
 msgstr ""
-"1. Der Migrator-Bildschirm: Erstelle ein Backup mit Voreinstellungen und Ausschlussoptionen, neben Wiederherstellung und deinen gespeicherten Backups.\n"
-"2. Der Dateigrößen-Explorer: Scanne `wp-content` und sieh dir die Größe jedes Ordners an, damit du weglassen kannst, was du nicht brauchst."
+"In <code>wp-content/migrator-backups</code>, einem Ordner, der vor direktem "
+"Webzugriff geschützt ist. Beim Entfernen des Plugins wird dieser Ordner mit "
+"seinem Inhalt gelöscht."
 
+#. Found in faq paragraph.
+msgid ""
+"No. Migrator runs entirely on your own server. It creates no account and "
+"contacts no external service. Your backups stay in <code>wp-"
+"content/migrator-backups</code> until you download or delete them."
+msgstr ""
+"Nein. Migrator läuft vollständig auf deinem eigenen Server. Es erstellt kein"
+" Konto und kontaktiert keinen externen Dienst. Deine Backups bleiben in "
+"<code>wp-content/migrator-backups</code>, bis du sie herunterlädst oder "
+"löschst."
+
+#. Found in faq paragraph.
+msgid ""
+"Use WP-CLI, which has no request time limit: <code>wp migrator export</code>"
+" to build the archive and <code>wp migrator import &lt;file&gt;</code> to "
+"restore it."
+msgstr ""
+"Verwende WP-CLI, das kein Zeitlimit für Anfragen hat: <code>wp migrator "
+"export</code>, um das Archiv zu erstellen, und <code>wp migrator import "
+"&lt;file&gt;</code>, um es wiederherzustellen."
+
+#. Found in faq paragraph.
+msgid ""
+"No. When you restore onto a different address, Migrator rewrites the old "
+"site URL and file paths to the new ones, including inside serialized data, "
+"so internal links and settings keep working."
+msgstr ""
+"Nein. Wenn du auf einer anderen Adresse wiederherstellst, schreibt Migrator "
+"die alte Website-URL und die Dateipfade auf die neuen um, auch innerhalb "
+"serialisierter Daten, sodass interne Links und Einstellungen weiter "
+"funktionieren."
+
+#. Found in faq paragraph.
+msgid ""
+"Yes. A restore replaces the destination's database and files with the "
+"contents of the archive, that is what restoring a backup means. It is "
+"limited to administrators and asks for confirmation first. Always keep a "
+"separate backup of anything on the destination you want to keep."
+msgstr ""
+"Ja. Eine Wiederherstellung ersetzt die Datenbank und Dateien des Ziels durch"
+" den Inhalt des Archivs, genau das bedeutet das Wiederherstellen eines "
+"Backups. Sie ist auf Administratoren beschränkt und fragt zuerst nach einer "
+"Bestätigung. Bewahre immer ein separates Backup von allem auf dem Ziel auf, "
+"das du behalten möchtest."
+
+#. Found in faq header.
+msgid "Does this plugin work on WordPress Multisite?"
+msgstr "Funktioniert dieses Plugin mit WordPress Multisite?"
+
+#. Found in faq header.
+msgid "Where are my backups stored?"
+msgstr "Wo werden meine Backups gespeichert?"
+
+#. Found in faq header.
+msgid "Does it send my data anywhere?"
+msgstr "Sendet es meine Daten irgendwohin?"
+
+#. Found in faq header.
+msgid "My site is large and the browser export stops. What do I do?"
+msgstr ""
+"Meine Website ist groß und der Browser-Export bricht ab. Was mache ich?"
+
+#. Found in faq header.
+msgid "Will my links break when I move to a new domain?"
+msgstr "Brechen meine Links, wenn ich zu einer neuen Domain umziehe?"
+
+#. Found in faq header.
+msgid "Does restoring delete what is already on the destination?"
+msgstr "Löscht die Wiederherstellung, was bereits auf dem Ziel vorhanden ist?"
+
+#. Found in faq header.
+msgid "Documentation and links"
+msgstr "Dokumentation und Links"
+
+#. Found in installation list item.
+msgid ""
+"Open <strong>Migrator</strong> in the admin menu to create a backup, or use "
+"<code>wp migrator export</code> from the command line."
+msgstr ""
+"Öffne <strong>Migrator</strong> im Admin-Menü, um ein Backup zu erstellen, "
+"oder verwende <code>wp migrator export</code> auf der Kommandozeile."
+
+#. Found in installation list item.
+msgid "Activate it. There are no required dependencies."
+msgstr "Aktiviere es. Es gibt keine erforderlichen Abhängigkeiten."
+
+#. Found in installation list item.
+msgid ""
+"Upload the plugin to <code>/wp-content/plugins/migrator</code>, or install "
+"it from Plugins → Add New."
+msgstr ""
+"Lade das Plugin nach <code>/wp-content/plugins/migrator</code> hoch oder "
+"installiere es über Plugins → Installieren."
+
+#. Found in description paragraph.
 msgid ""
 "Plogins Migrator includes Polish, German and Spanish translations for the "
-"plugin interface. The text domain is `plogins-migrator`, so WordPress.org "
-"language packs can also override or extend these bundled translations."
+"plugin interface. The text domain is <code>plogins-migrator</code>, so "
+"WordPress.org language packs can also override or extend these bundled "
+"translations."
 msgstr ""
 "Plogins Migrator enthält polnische, deutsche und spanische Übersetzungen für"
-" die Plugin-Oberfläche. Die Textdomain ist `plogins-migrator`, sodass "
-"Sprachpakete von WordPress.org diese mitgelieferten Übersetzungen ebenfalls "
-"überschreiben oder erweitern können."
+" die Plugin-Oberfläche. Die Textdomain ist <code>plogins-migrator</code>, "
+"sodass Sprachpakete von WordPress.org diese mitgelieferten Übersetzungen "
+"ebenfalls überschreiben oder erweitern können."
 
+#. Found in description paragraph.
+msgid "<strong>What's included</strong>"
+msgstr "<strong>Was enthalten ist</strong>"
+
+#. Found in description paragraph.
 msgid ""
-"* Added bundled Polish, German and Spanish translations for the plugin "
-"interface."
+"For large sites where a browser request would time out, every job also runs "
+"from WP-CLI, which has no timeout:"
 msgstr ""
-"* Mitgelieferte polnische, deutsche und spanische Übersetzungen für die "
-"Plugin-Oberfläche hinzugefügt."
+"Für große Websites, bei denen eine Browser-Anfrage das Zeitlimit "
+"überschreiten würde, läuft jeder Job auch über WP-CLI, das kein Zeitlimit "
+"hat:"
 
-msgid "* First stable release."
-msgstr "* Erste stabile Version."
-
+#. Found in description paragraph.
 msgid ""
-"* Renamed to Plogins Migrator for WooCommerce for a more distinctive plugin "
-"name."
+"Restoring <strong>overwrites</strong> the destination database and files, "
+"that is the point of a restore, so it asks for confirmation and is limited "
+"to administrators. Migrator never overwrites its own plugin folder during a "
+"restore, so it cannot pull the rug out from under itself mid-import."
 msgstr ""
-"* Umbenannt in Plogins Migrator for WooCommerce für einen unverwechselbaren "
-"Plugin-Namen."
+"Das Wiederherstellen <strong>überschreibt</strong> die Datenbank und Dateien"
+" des Ziels, das ist der Sinn einer Wiederherstellung, deshalb fragt es nach "
+"einer Bestätigung und ist auf Administratoren beschränkt. Migrator "
+"überschreibt während einer Wiederherstellung niemals seinen eigenen Plugin-"
+"Ordner, sodass es sich nicht mitten im Import selbst den Boden unter den "
+"Füßen wegziehen kann."
 
+#. Found in description paragraph.
 msgid ""
-"* Tidier saved-backup rows: the date and size lead, the long file name is a "
+"Backups are written to a protected folder (<code>wp-content/migrator-"
+"backups</code>) that denies direct web access, and the in-browser download "
+"is served only to logged-in administrators through an authenticated handler,"
+" the files are never exposed at a guessable URL. Each item inside an archive"
+" carries a checksum, so a truncated or corrupted backup is caught before it "
+"is ever restored over a live site."
+msgstr ""
+"Backups werden in einen geschützten Ordner (<code>wp-content/migrator-"
+"backups</code>) geschrieben, der direkten Webzugriff verweigert, und der "
+"Download im Browser wird nur angemeldeten Administratoren über einen "
+"authentifizierten Handler bereitgestellt, die Dateien werden niemals unter "
+"einer erratbaren URL offengelegt. Jedes Element in einem Archiv trägt eine "
+"Prüfsumme, sodass ein abgeschnittenes oder beschädigtes Backup erkannt wird,"
+" bevor es jemals über eine Live-Website wiederhergestellt wird."
+
+#. Found in description paragraph.
+msgid "<strong>A few things worth knowing</strong>"
+msgstr "<strong>Ein paar wissenswerte Dinge</strong>"
+
+#. Found in description paragraph.
+msgid ""
+"The address rewrite is <strong>safe for serialized data</strong>: Migrator "
+"walks the actual data structures rather than doing a blind text replace, so "
+"the byte-length counts PHP stores inside serialized options and meta stay "
+"correct and nothing breaks."
+msgstr ""
+"Das Umschreiben der Adresse ist <strong>sicher für serialisierte "
+"Daten</strong>: Migrator durchläuft die tatsächlichen Datenstrukturen, statt"
+" ein blindes Text-Ersetzen durchzuführen, sodass die Byte-Längenangaben, die"
+" PHP innerhalb serialisierter Optionen und Meta speichert, korrekt bleiben "
+"und nichts kaputtgeht."
+
+#. Found in description paragraph.
+msgid "<strong>How it works</strong>"
+msgstr "<strong>Wie es funktioniert</strong>"
+
+#. Found in description paragraph.
+msgid ""
+"Everything happens on your own server. There is no account to create, no "
+"file size sold back to you, and nothing is ever sent to a third-party "
+"service. Because it is fully open, you can read exactly what it does: the "
+"source lives at https://github.com/wppoland/plogins-migrator, which is also "
+"where to file a bug or request a feature."
+msgstr ""
+"Alles passiert auf deinem eigenen Server. Es gibt kein Konto zu erstellen, "
+"keine Dateigröße, die dir zurückverkauft wird, und nichts wird jemals an "
+"einen Drittanbieter-Dienst gesendet. Da es vollständig offen ist, kannst du "
+"genau lesen, was es tut: der Quellcode liegt unter "
+"https://github.com/wppoland/plogins-migrator, wo du auch einen Fehler melden"
+" oder eine Funktion anfragen kannst."
+
+#. Found in description paragraph.
+msgid ""
+"Migrator packs your database and everything in <code>wp-content</code> into "
+"a single file you can download, keep as a backup, and restore, on the same "
+"site or on a brand-new install somewhere else. When you restore onto a "
+"different address, Migrator rewrites the old URLs and file paths to the new "
+"ones for you, so the site just works."
+msgstr ""
+"Migrator packt deine Datenbank und alles in <code>wp-content</code> in eine "
+"einzelne Datei, die du herunterladen, als Backup aufbewahren und "
+"wiederherstellen kannst, auf derselben Website oder auf einer brandneuen "
+"Installation an einem anderen Ort. Wenn du auf einer anderen Adresse "
+"wiederherstellst, schreibt Migrator die alten URLs und Dateipfade für dich "
+"auf die neuen um, sodass die Website einfach funktioniert."
+
+#. Found in description list item.
+msgid ""
+"Self-hosted: no account, no third-party service, nothing leaves your server"
+msgstr ""
+"Selbst gehostet: kein Konto, kein Drittanbieter-Dienst, nichts verlässt "
+"deinen Server"
+
+#. Found in description list item.
+msgid "Per-item checksums so a corrupt archive is detected, not restored"
+msgstr ""
+"Prüfsummen pro Element, sodass ein beschädigtes Archiv erkannt und nicht "
+"wiederhergestellt wird"
+
+#. Found in description list item.
+msgid ""
+"A safety snapshot of your database before every restore, rolled back "
+"automatically if anything fails"
+msgstr ""
+"Ein Sicherheits-Snapshot deiner Datenbank vor jeder Wiederherstellung, "
+"automatisch zurückgerollt, falls etwas fehlschlägt"
+
+#. Found in description list item.
+msgid ""
+"WP-CLI <code>export</code> and <code>import</code> commands for sites too "
+"large for the browser"
+msgstr ""
+"WP-CLI-Befehle <code>export</code> und <code>import</code> für Websites, die"
+" zu groß für den Browser sind"
+
+#. Found in description list item.
+msgid ""
+"In-browser export with a progress bar and a direct download, resumable so "
+"large sites finish across multiple steps, plus drag-and-drop restore"
+msgstr ""
+"Export im Browser mit Fortschrittsbalken und direktem Download, fortsetzbar,"
+" sodass große Websites über mehrere Schritte fertig werden, plus "
+"Wiederherstellung per Drag-and-drop"
+
+#. Found in description list item.
+msgid ""
+"Choose what to leave out: media, themes, plugins, cache, spam comments, post"
+" revisions, transients, WooCommerce sessions or Action Scheduler tables"
+msgstr ""
+"Wähle, was ausgelassen wird: Medien, Themes, Plugins, Cache, Spam-"
+"Kommentare, Beitragsrevisionen, Transients, WooCommerce-Sessions oder "
+"Action-Scheduler-Tabellen"
+
+#. Found in description list item.
+msgid ""
+"Restore to the same site, or migrate to a new host with automatic, "
+"serialization-safe URL and path rewriting"
+msgstr ""
+"Auf derselben Website wiederherstellen oder mit automatischem, "
+"serialisierungssicherem URL- und Pfad-Umschreiben zu einem neuen Host "
+"migrieren"
+
+#. Found in description list item.
+msgid ""
+"One-click backup of your database and all of <code>wp-content</code> into a "
+"single archive"
+msgstr ""
+"Backup deiner Datenbank und des gesamten <code>wp-content</code> per Klick "
+"in ein einzelnes Archiv"
+
+#. Found in description list item.
+msgid ""
+"On the destination, the same site to roll back, or a fresh WordPress install"
+" to move to, restore the archive. Migrator imports the database, puts the "
+"files back, and rewrites the source site's web address and paths to this "
+"one."
+msgstr ""
+"Am Ziel, dieselbe Website zum Zurückrollen oder eine frische WordPress-"
+"Installation zum Umziehen, stelle das Archiv wieder her. Migrator importiert"
+" die Datenbank, legt die Dateien zurück und schreibt die Webadresse und "
+"Pfade der Quell-Website auf diese um."
+
+#. Found in description list item.
+msgid ""
+"Download that archive (or, on a big site, build it from the command line, "
+"see below)."
+msgstr ""
+"Lade dieses Archiv herunter (oder erstelle es auf einer großen Website über "
+"die Kommandozeile, siehe unten)."
+
+#. Found in description list item.
+msgid ""
+"On the site you want to copy, create a backup. Migrator writes your database"
+" to a portable SQL dump and streams every file in <code>wp-content</code> "
+"into one archive next to it."
+msgstr ""
+"Erstelle auf der Website, die du kopieren möchtest, ein Backup. Migrator "
+"schreibt deine Datenbank in einen portablen SQL-Dump und streamt jede Datei "
+"in <code>wp-content</code> daneben in ein Archiv."
+
+#. Found in description header.
+msgid "Translations"
+msgstr "Übersetzungen"
+
+#. Screenshot description.
+msgid ""
+"The file-size explorer: scan wp-content and see each folder's size so you "
+"can leave out what you do not need."
+msgstr ""
+"Der Dateigrößen-Explorer: scanne wp-content und sieh die Größe jedes "
+"Ordners, damit du auslassen kannst, was du nicht brauchst."
+
+#. Screenshot description.
+msgid ""
+"The Migrator screen: create a backup with presets and exclusion options, "
+"alongside restore and your saved backups."
+msgstr ""
+"Der Migrator-Bildschirm: erstelle ein Backup mit Voreinstellungen und "
+"Ausschlussoptionen, neben der Wiederherstellung und deinen gespeicherten "
+"Backups."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Translation quality pass: corrected Polish, German and Spanish (product "
+"names kept in English, legal withdrawal terminology, WooCommerce glossary "
+"and grammar fixes)."
+msgstr ""
+"Qualitätsdurchlauf der Übersetzungen: Polnisch, Deutsch und Spanisch "
+"korrigiert (Produktnamen auf Englisch belassen, rechtliche Widerrufs-"
+"Terminologie, WooCommerce-Glossar und Grammatikkorrekturen)."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid "Documentation: readme links are now labelled links."
+msgstr "Dokumentation: readme-Links sind jetzt beschriftete Links."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid "Shortened display name (dropped the Plogins prefix; slug unchanged)."
+msgstr "Verkürzter Anzeigename (Plogins-Präfix entfernt; Slug unverändert)."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid "Fixed disk-space preflight formatting type handling."
+msgstr "Die Formatierungs-Typbehandlung der Speicherplatz-Vorprüfung behoben."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Added a contextual written migration-help link after a successful backup."
+msgstr ""
+"Einen kontextbezogenen schriftlichen Migrations-Hilfe-Link nach einem "
+"erfolgreichen Backup hinzugefügt."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid "Added a Free vs PRO overview to the readme."
+msgstr "Eine Übersicht Kostenlos vs. PRO zum readme hinzugefügt."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"New: inspect a stored backup before restoring - shows the source URL, "
+"WordPress and PHP versions and table count, and runs pre-restore checks "
+"(table prefix, disk space, writable files)."
+msgstr ""
+"Neu: ein gespeichertes Backup vor der Wiederherstellung untersuchen - zeigt "
+"die Quell-URL, WordPress- und PHP-Versionen und die Tabellenanzahl an und "
+"führt Prüfungen vor der Wiederherstellung durch (Tabellenpräfix, "
+"Speicherplatz, beschreibbare Dateien)."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"New: standalone serialization-safe search and replace (admin tool + dry run "
+"+ <code>wp migrator replace</code>) to change a domain, URL or path without "
+"corrupting serialized data."
+msgstr ""
+"Neu: eigenständige serialisierungssichere Suchen-und-Ersetzen-Funktion "
+"(Admin-Tool + Probelauf + <code>wp migrator replace</code>), um eine Domain,"
+" URL oder einen Pfad zu ändern, ohne serialisierte Daten zu beschädigen."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Safety first: a pre-import database snapshot with automatic rollback if a "
+"restore fails, per-item checksums, and a refusal to import across a "
+"mismatched table prefix."
+msgstr ""
+"Sicherheit zuerst: ein Datenbank-Snapshot vor dem Import mit automatischem "
+"Rollback, falls eine Wiederherstellung fehlschlägt, Prüfsummen pro Element "
+"und eine Verweigerung des Imports bei einem nicht übereinstimmenden "
+"Tabellenpräfix."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"WP-CLI <code>export</code> and <code>import</code> for sites too large for "
+"the browser."
+msgstr ""
+"WP-CLI <code>export</code> und <code>import</code> für Websites, die zu groß"
+" für den Browser sind."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"In-browser resumable export with a progress bar and a direct download, plus "
+"drag-and-drop restore."
+msgstr ""
+"Fortsetzbarer Export im Browser mit Fortschrittsbalken und direktem "
+"Download, plus Wiederherstellung per Drag-and-drop."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Selective backup: leave out media, themes, plugins, cache, spam comments, "
+"post revisions, transients, WooCommerce sessions or Action Scheduler tables."
+msgstr ""
+"Selektives Backup: Medien, Themes, Plugins, Cache, Spam-Kommentare, "
+"Beitragsrevisionen, Transients, WooCommerce-Sessions oder Action-Scheduler-"
+"Tabellen auslassen."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Restore to the same site, or migrate to a new host with serialization-safe "
+"URL and path rewriting."
+msgstr ""
+"Auf derselben Website wiederherstellen oder mit serialisierungssicherem URL-"
+" und Pfad-Umschreiben zu einem neuen Host migrieren."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"One-file backup of the database (tables, views, triggers and stored "
+"routines) and all of <code>wp-content</code>."
+msgstr ""
+"Ein-Datei-Backup der Datenbank (Tabellen, Views, Trigger und Stored "
+"Routines) und des gesamten <code>wp-content</code>."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid "First release."
+msgstr "Erste Veröffentlichung."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Added a file-size explorer to the backup screen: scan wp-content, see each "
+"folder's size and file count, and tick folders or large files to leave out "
+"of the backup. Builds on the existing path exclusions."
+msgstr ""
+"Einen Dateigrößen-Explorer zum Backup-Bildschirm hinzugefügt: scanne wp-"
+"content, sieh die Größe und Dateianzahl jedes Ordners und markiere Ordner "
+"oder große Dateien, die aus dem Backup ausgelassen werden sollen. Baut auf "
+"den bestehenden Pfad-Ausschlüssen auf."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Added one-click presets to the backup screen: Full site, Database only and "
+"Media only set the right exclusions for you."
+msgstr ""
+"Voreinstellungen per Klick zum Backup-Bildschirm hinzugefügt: Vollständige "
+"Website, Nur Datenbank und Nur Medien setzen die richtigen Ausschlüsse für "
+"dich."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Restore straight from a stored backup (gzip backups are unpacked "
+"automatically). The backup file is kept, not consumed."
+msgstr ""
+"Direkt aus einem gespeicherten Backup wiederherstellen (gzip-Backups werden "
+"automatisch entpackt). Die Backup-Datei bleibt erhalten, sie wird nicht "
+"verbraucht."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"New \"Your backups\" section: every backup stored on the site is listed with"
+" its date and size, so you can download, restore or delete it in one click "
+"without leaving the screen."
+msgstr ""
+"Neuer Abschnitt \"Deine Backups\": jedes auf der Website gespeicherte Backup"
+" wird mit Datum und Größe aufgelistet, sodass du es per Klick herunterladen,"
+" wiederherstellen oder löschen kannst, ohne den Bildschirm zu verlassen."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Your saved backups now appear inside the \"Restore a backup\" card, so you "
+"can restore one in place without scrolling past it."
+msgstr ""
+"Deine gespeicherten Backups erscheinen jetzt in der Karte \"Ein Backup "
+"wiederherstellen\", sodass du eines an Ort und Stelle wiederherstellen "
+"kannst, ohne daran vorbeizuscrollen."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Tidier saved-backup rows: the date and size lead, the long file name is a "
 "muted single line that no longer wraps, and the row reflows neatly on narrow"
 " screens."
 msgstr ""
-"* Aufgeräumtere gespeicherte Backup-Zeilen: Datum und Größe stehen vorn, der"
-" lange Dateiname ist eine gedämpfte Einzelzeile, die nicht mehr umbricht, "
-"und die Zeile fließt auf schmalen Bildschirmen sauber um."
+"Aufgeräumtere Zeilen für gespeicherte Backups: Datum und Größe stehen vorne,"
+" der lange Dateiname ist eine gedämpfte einzelne Zeile, die nicht mehr "
+"umbricht, und die Zeile bricht auf schmalen Bildschirmen sauber um."
 
-msgid ""
-"* Your saved backups now appear inside the \"Restore a backup\" card, so you"
-" can restore one in place without scrolling past it."
+#. Found in changelog list item.
+#, gp-priority: low
+msgid "Renamed to Plogins Migrator for a more distinctive plugin name."
 msgstr ""
-"* Deine gespeicherten Backups erscheinen jetzt in der Karte „Backup "
-"wiederherstellen“, sodass du eines direkt wiederherstellen kannst, ohne "
-"darüber hinaus scrollen zu müssen."
+"In Plogins Migrator umbenannt, für einen unverwechselbareren Plugin-Namen."
 
-msgid ""
-"* New \"Your backups\" section: every backup stored on the site is listed with its date and size, so you can download, restore or delete it in one click without leaving the screen.\n"
-"* Restore straight from a stored backup (gzip backups are unpacked automatically). The backup file is kept, not consumed.\n"
-"* Added one-click presets to the backup screen: Full site, Database only and Media only set the right exclusions for you."
-msgstr ""
-"* Neuer Abschnitt „Deine Backups“: Jedes auf der Website gespeicherte Backup wird mit Datum und Größe aufgelistet, sodass du es mit einem Klick herunterladen, wiederherstellen oder löschen kannst, ohne den Bildschirm zu verlassen.\n"
-"* Direkte Wiederherstellung aus einem gespeicherten Backup (gzip-Backups werden automatisch entpackt). Die Backup-Datei bleibt erhalten und wird nicht verbraucht.\n"
-"* Ein-Klick-Voreinstellungen auf dem Backup-Bildschirm hinzugefügt: Vollständige Website, Nur Datenbank und Nur Medien setzen die richtigen Ausschlüsse für dich."
+#. Found in changelog list item.
+#, gp-priority: low
+msgid "First stable release."
+msgstr "Erste stabile Veröffentlichung."
 
+#. Found in changelog list item.
+#, gp-priority: low
 msgid ""
-"* Added a file-size explorer to the backup screen: scan wp-content, see each"
-" folder's size and file count, and tick folders or large files to leave out "
-"of the backup. Builds on the existing path exclusions."
+"Added bundled Polish, German and Spanish translations for the plugin "
+"interface."
 msgstr ""
-"* Dateigrößen-Explorer auf dem Backup-Bildschirm hinzugefügt: Scanne `wp-"
-"content`, sieh dir die Größe und Dateianzahl jedes Ordners an und markiere "
-"Ordner oder große Dateien, die aus dem Backup ausgelassen werden sollen. "
-"Baut auf den vorhandenen Pfadausschlüssen auf."
+"Mitgelieferte polnische, deutsche und spanische Übersetzungen für die "
+"Plugin-Oberfläche hinzugefügt."
 
+#. Found in changelog list item.
+#, gp-priority: low
 msgid ""
-"* First release.\n"
-"* One-file backup of the database (tables, views, triggers and stored routines) and all of `wp-content`.\n"
-"* Restore to the same site, or migrate to a new host with serialization-safe URL and path rewriting.\n"
-"* Selective backup: leave out media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables.\n"
-"* In-browser resumable export with a progress bar and a direct download, plus drag-and-drop restore.\n"
-"* WP-CLI `export` and `import` for sites too large for the browser.\n"
-"* Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix."
+"Hardened the export AJAX handler: the request payload is fully sanitized "
+"before any filter callback runs."
 msgstr ""
-"* Erste Veröffentlichung.\n"
-"* Ein-Datei-Backup der Datenbank (Tabellen, Views, Trigger und gespeicherte Routinen) und des gesamten `wp-content`.\n"
-"* Wiederherstellung auf derselben Website oder Migration auf einen neuen Host mit serialisierungssicherem Umschreiben von URLs und Pfaden.\n"
-"* Selektives Backup: Lass Medien, Themes, Plugins, Cache, Spam-Kommentare, Beitragsrevisionen, Transients, WooCommerce-Sitzungen oder Action-Scheduler-Tabellen weg.\n"
-"* Fortsetzbarer Export im Browser mit Fortschrittsbalken und direktem Download sowie Wiederherstellung per Drag-and-drop.\n"
-"* WP-CLI `export` und `import` für Websites, die für den Browser zu groß sind.\n"
-"* Sicherheit zuerst: Datenbank-Snapshot vor dem Import mit automatischem Rollback bei fehlgeschlagener Wiederherstellung, Prüfsummen pro Element und Verweigerung des Imports bei nicht passendem Tabellenpräfix."
+"Den Export-AJAX-Handler gehärtet: die Anfrage-Nutzlast wird vollständig "
+"bereinigt, bevor ein Filter-Callback ausgeführt wird."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"Clearer name: Plogins Migrator - Site Migration and Backup (it backs up and "
+"migrates the whole site, not only WooCommerce)."
+msgstr ""
+"Klarerer Name: Plogins Migrator - Website-Migration und Backup (es sichert "
+"und migriert die gesamte Website, nicht nur WooCommerce)."
+
+#. Found in changelog list item.
+#, gp-priority: low
+msgid ""
+"New: in-plugin overview of Plogins Migrator PRO (incremental + scheduled "
+"backups, off-site storage, one-click cloud restore) on the admin screen."
+msgstr ""
+"Neu: Plugin-interne Übersicht über Plogins Migrator PRO (inkrementelle + "
+"geplante Backups, externe Speicherung, Cloud-Wiederherstellung per Klick) "
+"auf dem Admin-Bildschirm."
