@@ -4,6 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - Stable Readme (latest release)\n"
 "PO-Revision-Date: 2026-07-14 16:54:59+0000\n"
+"Last-Translator: wppoland.com <hello@wppoland.com>\n"
+"Language-Team: Polish <pl@li.org>\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -172,8 +174,8 @@ msgid ""
 " or activate it on individual sites; each site keeps its own settings and "
 "data."
 msgstr ""
-"Tak. Ta wtyczka jest kompatybilna z WordPress Multisite. Aktywuj ją w sieci "
-"lub aktywuj na poszczególnych witrynach; każda witryna zachowuje własne "
+"Tak. Ta wtyczka jest kompatybilna z WordPress Multisite. Włącz ją w sieci "
+"lub włącz na poszczególnych witrynach; każda witryna zachowuje własne "
 "ustawienia i dane."
 
 #. Found in faq paragraph.
@@ -268,7 +270,7 @@ msgstr ""
 
 #. Found in installation list item.
 msgid "Activate it. There are no required dependencies."
-msgstr "Aktywuj ją. Nie ma wymaganych zależności."
+msgstr "Włącz ją. Nie ma wymaganych zależności."
 
 #. Found in installation list item.
 msgid ""
