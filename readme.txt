@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.5
+Stable tag: 1.2.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -105,6 +105,19 @@ In `wp-content/migrator-backups`, a folder protected from direct web access. Rem
 
 Yes. This plugin is compatible with WordPress Multisite. Network activate it or activate it on individual sites; each site keeps its own settings and data.
 
+= How does Migrator compare to Duplicator and All-in-One WP Migration? =
+
+All three back up, clone and migrate WordPress, and all three run on your own server. The differences worth knowing, comparing the free editions:
+
+* **Size limits**: Migrator's free edition has no artificial size limit. All-in-One WP Migration limits imports in its free version and sells a paid Unlimited extension to remove that cap. Duplicator's free edition has no advertised size cap either.
+* **Serialization-safe URL rewriting**: all three do it.
+* **Exclusions and stored-backup management**: free in Migrator and in Duplicator; part of the paid tier for All-in-One WP Migration.
+* **Scheduling, incremental backups, cloud storage and multisite**: paid in all three (Migrator PRO, Duplicator Pro, paid All-in-One WP Migration extensions).
+* **WP-CLI**: Migrator ships `wp migrator export`, `import` and `replace` in the free version.
+* **Licensing**: Migrator is GPLv2 and fully open source, including PRO.
+
+Competitor details as of July 2026; check the vendors' own sites for their current features and pricing.
+
 == Screenshots ==
 
 1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.
@@ -115,6 +128,9 @@ Yes. This plugin is compatible with WordPress Multisite. Network activate it or 
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.6 =
+* Readme: added a factual comparison with Duplicator and All-in-One WP Migration.
 
 = 1.2.5 =
 * Security: hardened backup workspace path handling against traversal (defense in depth).
