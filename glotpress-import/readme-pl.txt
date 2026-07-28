@@ -12,23 +12,23 @@ Twórz kopie zapasowe, klonuj i migruj całą witrynę do jednego pliku, a nast�
 
 == Description ==
 
-Migrator pakuje Twoją bazę danych i całą zawartość `wp-content` do jednego pliku, który możesz pobrać, zachować jako kopię zapasową i przywrócić — na tej samej witrynie albo na zupełnie nowej instalacji w innym miejscu. Gdy przywracasz pod innym adresem, Migrator przepisuje za Ciebie stare adresy URL i ścieżki plików na nowe, dzięki czemu witryna po prostu działa.
+Migrator pakuje Twoją bazę danych i całą zawartość `wp-content` do jednego pliku, który możesz pobrać, zachować jako kopię zapasową i przywrócić, na tej samej witrynie albo na zupełnie nowej instalacji w innym miejscu. Gdy przywracasz pod innym adresem, Migrator przepisuje za Ciebie stare adresy URL i ścieżki plików na nowe, dzięki czemu witryna po prostu działa.
 
 Wszystko dzieje się na Twoim własnym serwerze. Nie musisz zakładać konta, nikt nie sprzedaje Ci z powrotem miejsca na pliki i nic nigdy nie jest wysyłane do usługi zewnętrznej. Ponieważ projekt jest w pełni otwarty, możesz dokładnie sprawdzić, co robi: kod źródłowy znajduje się na https://github.com/wppoland/plogins-migrator, gdzie zgłosisz też błąd lub poprosisz o nową funkcję.
 
 <strong>Jak to działa</strong>
 
 1. Na witrynie, którą chcesz skopiować, utwórz kopię zapasową. Migrator zapisuje Twoją bazę danych do przenośnego zrzutu SQL i strumieniowo pakuje każdy plik z `wp-content` do jednego archiwum obok niego.
-2. Pobierz to archiwum (albo, na dużej witrynie, zbuduj je z wiersza poleceń — patrz niżej).
-3. W miejscu docelowym — tej samej witrynie do przywrócenia albo świeżej instalacji WordPressa, na którą się przenosisz — przywróć archiwum. Migrator importuje bazę danych, odkłada pliki na miejsce i przepisuje adres oraz ścieżki witryny źródłowej na te z bieżącej.
+2. Pobierz to archiwum (albo, na dużej witrynie, zbuduj je z wiersza poleceń, patrz niżej).
+3. W miejscu docelowym, tej samej witrynie do przywrócenia albo świeżej instalacji WordPressa, na którą się przenosisz, przywróć archiwum. Migrator importuje bazę danych, odkłada pliki na miejsce i przepisuje adres oraz ścieżki witryny źródłowej na te z bieżącej.
 
 Przepisywanie adresu jest <strong>bezpieczne dla danych serializowanych</strong>: Migrator przechodzi po rzeczywistych strukturach danych, zamiast wykonywać ślepe zastępowanie tekstu, dzięki czemu liczniki długości w bajtach, które PHP przechowuje wewnątrz serializowanych opcji i metadanych, pozostają poprawne i nic się nie psuje.
 
 <strong>Kilka rzeczy, które warto wiedzieć</strong>
 
-Kopie zapasowe są zapisywane do chronionego folderu (`wp-content/migrator-backups`), który blokuje bezpośredni dostęp z sieci, a pobieranie w przeglądarce jest udostępniane wyłącznie zalogowanym administratorom przez uwierzytelniony mechanizm — pliki nigdy nie są dostępne pod możliwym do odgadnięcia adresem URL. Każdy element wewnątrz archiwum ma sumę kontrolną, więc uszkodzona lub obcięta kopia zapasowa zostanie wykryta, zanim kiedykolwiek zostanie przywrócona na działającą witrynę.
+Kopie zapasowe są zapisywane do chronionego folderu (`wp-content/migrator-backups`), który blokuje bezpośredni dostęp z sieci, a pobieranie w przeglądarce jest udostępniane wyłącznie zalogowanym administratorom przez uwierzytelniony mechanizm, pliki nigdy nie są dostępne pod możliwym do odgadnięcia adresem URL. Każdy element wewnątrz archiwum ma sumę kontrolną, więc uszkodzona lub obcięta kopia zapasowa zostanie wykryta, zanim kiedykolwiek zostanie przywrócona na działającą witrynę.
 
-Przywracanie <strong>nadpisuje</strong> bazę danych i pliki w miejscu docelowym — o to właśnie chodzi w przywracaniu — dlatego prosi o potwierdzenie i jest ograniczone do administratorów. Migrator nigdy nie nadpisuje własnego folderu wtyczki podczas przywracania, więc nie może w trakcie importu wyciągnąć sobie gruntu spod nóg.
+Przywracanie <strong>nadpisuje</strong> bazę danych i pliki w miejscu docelowym, o to właśnie chodzi w przywracaniu, dlatego prosi o potwierdzenie i jest ograniczone do administratorów. Migrator nigdy nie nadpisuje własnego folderu wtyczki podczas przywracania, więc nie może w trakcie importu wyciągnąć sobie gruntu spod nóg.
 
 W przypadku dużych witryn, gdzie żądanie przeglądarki przekroczyłoby limit czasu, każde zadanie działa również z WP-CLI, które nie ma limitu czasu:
 
@@ -64,7 +64,7 @@ W przypadku dużych witryn, gdzie żądanie przeglądarki przekroczyłoby limit 
 
 = Does restoring delete what is already on the destination? =
 
-Tak. Przywracanie zastępuje bazę danych i pliki w miejscu docelowym zawartością archiwum — to właśnie oznacza przywrócenie kopii zapasowej. Jest ograniczone do administratorów i najpierw prosi o potwierdzenie. Zawsze zachowuj osobną kopię zapasową wszystkiego, co chcesz zachować w miejscu docelowym.
+Tak. Przywracanie zastępuje bazę danych i pliki w miejscu docelowym zawartością archiwum, to właśnie oznacza przywrócenie kopii zapasowej. Jest ograniczone do administratorów i najpierw prosi o potwierdzenie. Zawsze zachowuj osobną kopię zapasową wszystkiego, co chcesz zachować w miejscu docelowym.
 
 = Will my links break when I move to a new domain? =
 
@@ -80,7 +80,7 @@ Nie. Migrator działa w całości na Twoim własnym serwerze. Nie zakłada konta
 
 = Where are my backups stored? =
 
-W `wp-content/migrator-backups` — folderze chronionym przed bezpośrednim dostępem z sieci. Usunięcie wtyczki kasuje ten folder wraz z zawartością.
+W `wp-content/migrator-backups`, folderze chronionym przed bezpośrednim dostępem z sieci. Usunięcie wtyczki kasuje ten folder wraz z zawartością.
 
 
 = Does this plugin work on WordPress Multisite? =
