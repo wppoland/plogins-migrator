@@ -3,7 +3,7 @@ name: Release
 # Auto-release on version bump: a push to main that raises the Stable tag above
 # the live wp.org version deploys via the shared reusable workflow. The gate also
 # requires a NON-EMPTY live version, so it stays inert until the plugin is first
-# published on wp.org (the initial trunk commit is done manually — wp.org denies
+# published on wp.org (the initial trunk commit is done manually, wp.org denies
 # creating assets/tags in the same commit as the first trunk). workflow_dispatch
 # = manual/dry-run.
 

@@ -1,8 +1,8 @@
-# Translation of Plugins - Migrator &#8211; Site Migration and Backup - Stable Readme (latest release) in Polish
-# This file is distributed under the same license as the Plugins - Migrator &#8211; Site Migration and Backup - Stable Readme (latest release) package.
+# Translation of Plugins - Migrator, Site Migration and Backup - Stable Readme (latest release) in Polish
+# This file is distributed under the same license as the Plugins - Migrator, Site Migration and Backup - Stable Readme (latest release) package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - Stable Readme (latest release)\n"
+"Project-Id-Version: Plugins - Migrator, Site Migration and Backup - Stable Readme (latest release)\n"
 "PO-Revision-Date: 2026-07-14 16:54:59+0000\n"
 "Last-Translator: motylanogha <szatkowski.mariusz@gmail.com>\n"
 "Language-Team: Polish <pl@li.org>\n"
