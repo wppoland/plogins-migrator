@@ -1,10 +1,10 @@
-=== Plogins Migrator - Site Migration and Backup ===
+=== Migrator - Site Migration and Backup ===
 Contributors: motylanogha
 Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.2.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,7 +44,25 @@ For large sites where a browser request would time out, every job also runs from
 * WP-CLI `export` and `import` commands for sites too large for the browser
 * A safety snapshot of your database before every restore, rolled back automatically if anything fails
 * Per-item checksums so a corrupt archive is detected, not restored
+* Serialization-safe search and replace across the database, with a dry-run preview and a `wp migrator replace` command, to change a domain, URL or path safely
+* Inspect any stored backup before you restore it: source URL, WordPress and PHP versions, table count, plus pre-restore checks for table prefix, disk space and writability
 * Self-hosted: no account, no third-party service, nothing leaves your server
+
+== Plogins Migrator PRO ==
+
+The free edition backs up and migrates your whole site by hand. **Plogins Migrator PRO** makes it run itself:
+
+* **Scheduled and incremental backups** - daily or weekly with retention; only changed files after a baseline
+* **Cloud and off-site copies** - S3, R2, Backblaze B2, Wasabi, FTP/SFTP, WebDAV, Dropbox and Google Drive
+* **Recovery points** - one-click rollback to a known-good backup
+* **Encrypted backups** - password-protected archives, decrypted on restore
+* **Server-to-server transfer** - move a site between servers with no manual download
+* **Email notifications and activity log** - a silent failure never slips by
+* **Full multisite** - back up and migrate a whole network with correct URL rewriting
+
+Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year (PLN shown at checkout).
+
+Compare editions and pricing: [plogins.com/plogins-migrator-pro/pricing/](https://plogins.com/plogins-migrator-pro/pricing/)
 
 == Installation ==
 
@@ -56,10 +74,10 @@ For large sites where a browser request would time out, every job also runs from
 
 = Documentation and links =
 
-* **Documentation** - https://plogins.com/plogins-migrator/docs/
-* **Plugin page** - https://plogins.com/plogins-migrator/
-* **Source code** - https://github.com/wppoland/plogins-migrator
-* **Bug reports and feature requests** - https://github.com/wppoland/plogins-migrator/issues
+* **Documentation** - [plogins.com/plogins-migrator/docs/](https://plogins.com/plogins-migrator/docs/)
+* **Plugin page** - [plogins.com/plogins-migrator/](https://plogins.com/plogins-migrator/)
+* **Source code** - [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator)
+* **Bug reports and feature requests** - [github.com/wppoland/plogins-migrator/issues](https://github.com/wppoland/plogins-migrator/issues)
 
 
 = Does restoring delete what is already on the destination? =
@@ -87,6 +105,19 @@ In `wp-content/migrator-backups`, a folder protected from direct web access. Rem
 
 Yes. This plugin is compatible with WordPress Multisite. Network activate it or activate it on individual sites; each site keeps its own settings and data.
 
+= How does Migrator compare to Duplicator and All-in-One WP Migration? =
+
+All three back up, clone and migrate WordPress, and all three run on your own server. The differences worth knowing, comparing the free editions:
+
+* **Size limits**: Migrator's free edition has no artificial size limit. All-in-One WP Migration limits imports in its free version and sells a paid Unlimited extension to remove that cap. Duplicator's free edition has no advertised size cap either.
+* **Serialization-safe URL rewriting**: all three do it.
+* **Exclusions and stored-backup management**: free in Migrator and in Duplicator; part of the paid tier for All-in-One WP Migration.
+* **Scheduling, incremental backups, cloud storage and multisite**: paid in all three (Migrator PRO, Duplicator Pro, paid All-in-One WP Migration extensions).
+* **WP-CLI**: Migrator ships `wp migrator export`, `import` and `replace` in the free version.
+* **Licensing**: Migrator is GPLv2 and fully open source, including PRO.
+
+Competitor details as of July 2026; check the vendors' own sites for their current features and pricing.
+
 == Screenshots ==
 
 1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.
@@ -97,6 +128,35 @@ Yes. This plugin is compatible with WordPress Multisite. Network activate it or 
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.7 =
+* Translations: completed Polish, German and Spanish for the PRO upgrade panel.
+
+= 1.2.6 =
+* Readme: added a factual comparison with Duplicator and All-in-One WP Migration.
+
+= 1.2.5 =
+* Security: hardened backup workspace path handling against traversal (defense in depth).
+
+= 1.2.4 =
+* Translation quality pass: corrected Polish, German and Spanish (product names kept in English, legal withdrawal terminology, WooCommerce glossary and grammar fixes).
+
+= 1.2.3 =
+* Documentation: readme links are now labelled links.
+
+= 1.2.2 =
+* Shortened display name (dropped the Plogins prefix; slug unchanged).
+
+= 1.2.1 =
+* Added a contextual written migration-help link after a successful backup.
+* Fixed disk-space preflight formatting type handling.
+
+= 1.2.0 =
+* New: standalone serialization-safe search and replace (admin tool + dry run + `wp migrator replace`) to change a domain, URL or path without corrupting serialized data.
+* New: inspect a stored backup before restoring - shows the source URL, WordPress and PHP versions and table count, and runs pre-restore checks (table prefix, disk space, writable files).
+
+= 1.1.1 =
+* Added a Free vs PRO overview to the readme.
 
 = 1.1.0 =
 * New: in-plugin overview of Plogins Migrator PRO (incremental + scheduled backups, off-site storage, one-click cloud restore) on the admin screen.

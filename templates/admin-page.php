@@ -145,6 +145,15 @@ defined('ABSPATH') || exit;
 				<a class="button button-primary" id="migrator-export-download" href="#" download>
 					<?php esc_html_e('Download backup', 'plogins-migrator'); ?>
 				</a>
+				<p class="migrator-service-cta" id="migrator-service-cta" hidden>
+					<strong><?php esc_html_e('Moving a complex store?', 'plogins-migrator'); ?></strong>
+					<?php esc_html_e('If the backup is ready but the migration needs staging, checkout checks or an integration plan, send the scope in writing.', 'plogins-migrator'); ?>
+					<a
+						href="https://wppoland.com/en/contact/?type=other&amp;source=plogins%3Aplogins-migrator%3Apost-backup&amp;service=Migrator%20implementation&amp;message=Source%20site%3A%0A%0ADestination%20host%20or%20domain%3A%0A%0AStore%20and%20critical%20integrations%3A%0A%0AExpected%20migration%20window%3A"
+						target="_blank"
+						rel="noopener noreferrer"
+					><?php esc_html_e('Request written migration help', 'plogins-migrator'); ?></a>
+				</p>
 			</div>
 		</section>
 
@@ -193,6 +202,31 @@ defined('ABSPATH') || exit;
 			<p class="migrator-card__desc migrator-card__cli">
 				<?php esc_html_e('Large site? Restore from the command line, it has no time limit:', 'plogins-migrator'); ?>
 				<br><code>wp migrator import &lt;file&gt;.migrator</code>
+			</p>
+		</section>
+
+		<section class="migrator-card" aria-labelledby="migrator-sr-heading">
+			<h2 id="migrator-sr-heading" class="migrator-card__heading"><?php esc_html_e('Search & replace', 'plogins-migrator'); ?></h2>
+			<p class="migrator-card__desc"><?php esc_html_e('Change a domain, URL or path across this site\'s database, safely for serialized data. Run a dry run first to see how many rows would change. Back up before a live run.', 'plogins-migrator'); ?></p>
+			<div class="migrator-sr">
+				<label class="migrator-sr__field">
+					<span><?php esc_html_e('Find', 'plogins-migrator'); ?></span>
+					<input type="text" id="migrator-sr-search" class="regular-text" placeholder="https://old-domain.com">
+				</label>
+				<label class="migrator-sr__field">
+					<span><?php esc_html_e('Replace with', 'plogins-migrator'); ?></span>
+					<input type="text" id="migrator-sr-replace" class="regular-text" placeholder="https://new-domain.com">
+				</label>
+				<label class="migrator-sr__dry">
+					<input type="checkbox" id="migrator-sr-dry" checked>
+					<?php esc_html_e('Dry run (preview only, writes nothing)', 'plogins-migrator'); ?>
+				</label>
+				<button type="button" class="button button-primary" id="migrator-sr-run"><?php esc_html_e('Run', 'plogins-migrator'); ?></button>
+				<p class="migrator-sr__result" id="migrator-sr-result" aria-live="polite"></p>
+			</div>
+			<p class="migrator-card__desc migrator-card__cli">
+				<?php esc_html_e('From the command line:', 'plogins-migrator'); ?>
+				<br><code>wp migrator replace &lt;from&gt; &lt;to&gt; --dry-run</code>
 			</p>
 		</section>
 			</div>

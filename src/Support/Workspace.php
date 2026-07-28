@@ -34,10 +34,15 @@ final class Workspace
             return $base;
         }
 
-        $relative = ltrim(str_replace('\\', '/', $relative), '/');
-        $relative = str_replace('../', '', $relative);
+        // Drop empty, current, and parent segments so no traversal survives. A
+        // single non-recursive str_replace('../', '') is bypassable (e.g.
+        // '....//' collapses to '../'); filtering per segment is not.
+        $segments = array_filter(
+            explode('/', str_replace('\\', '/', $relative)),
+            static fn (string $s): bool => '' !== $s && '.' !== $s && '..' !== $s
+        );
 
-        return $base . '/' . $relative;
+        return $base . '/' . implode('/', $segments);
     }
 
     /**

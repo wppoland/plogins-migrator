@@ -12,23 +12,23 @@ Sichere, klone und migriere deine gesamte Website in eine Datei und stelle sie h
 
 == Description ==
 
-Migrator packt deine Datenbank und alles in `wp-content` in eine einzelne Datei, die du herunterladen, als Backup aufbewahren und wiederherstellen kannst – auf derselben Website oder auf einer brandneuen Installation woanders. Wenn du unter einer anderen Adresse wiederherstellst, schreibt Migrator die alten URLs und Dateipfade für dich auf die neuen um, sodass die Website einfach funktioniert.
+Migrator packt deine Datenbank und alles in `wp-content` in eine einzelne Datei, die du herunterladen, als Backup aufbewahren und wiederherstellen kannst, auf derselben Website oder auf einer brandneuen Installation woanders. Wenn du unter einer anderen Adresse wiederherstellst, schreibt Migrator die alten URLs und Dateipfade für dich auf die neuen um, sodass die Website einfach funktioniert.
 
 Alles passiert auf deinem eigenen Server. Es gibt kein Konto zum Anlegen, keine Dateigröße, die dir zurückverkauft wird, und nichts wird jemals an einen Drittanbieterdienst gesendet. Weil das Projekt vollständig offen ist, kannst du genau nachlesen, was es tut: Der Quellcode liegt unter https://github.com/wppoland/plogins-migrator, wo du auch Fehler melden oder Funktionen vorschlagen kannst.
 
 <strong>So funktioniert es</strong>
 
 1. Erstelle auf der Website, die du kopieren möchtest, ein Backup. Migrator schreibt deine Datenbank in einen portablen SQL-Dump und streamt jede Datei in `wp-content` in ein Archiv daneben.
-2. Lade dieses Archiv herunter (oder erstelle es bei einer großen Website über die Befehlszeile – siehe unten).
-3. Am Ziel – derselben Website zum Zurücksetzen oder einer frischen WordPress-Installation, zu der du wechselst – stelle das Archiv wieder her. Migrator importiert die Datenbank, legt die Dateien zurück und schreibt die Webadresse und Pfade der Quellwebsite auf die hier um.
+2. Lade dieses Archiv herunter (oder erstelle es bei einer großen Website über die Befehlszeile, siehe unten).
+3. Am Ziel, derselben Website zum Zurücksetzen oder einer frischen WordPress-Installation, zu der du wechselst, stelle das Archiv wieder her. Migrator importiert die Datenbank, legt die Dateien zurück und schreibt die Webadresse und Pfade der Quellwebsite auf die hier um.
 
 Das Umschreiben der Adresse ist <strong>sicher für serialisierte Daten</strong>: Migrator durchläuft die tatsächlichen Datenstrukturen, statt blind Text zu ersetzen, sodass die Byte-Längen, die PHP in serialisierten Optionen und Meta speichert, korrekt bleiben und nichts kaputtgeht.
 
 <strong>Ein paar Dinge, die du wissen solltest</strong>
 
-Backups werden in einen geschützten Ordner (`wp-content/migrator-backups`) geschrieben, der direkten Webzugriff verweigert, und der Download im Browser wird nur angemeldeten Administratoren über einen authentifizierten Handler bereitgestellt – die Dateien sind nie unter einer erratbaren URL erreichbar. Jedes Element in einem Archiv trägt eine Prüfsumme, sodass ein abgeschnittenes oder beschädigtes Backup erkannt wird, bevor es jemals über eine Live-Website wiederhergestellt wird.
+Backups werden in einen geschützten Ordner (`wp-content/migrator-backups`) geschrieben, der direkten Webzugriff verweigert, und der Download im Browser wird nur angemeldeten Administratoren über einen authentifizierten Handler bereitgestellt, die Dateien sind nie unter einer erratbaren URL erreichbar. Jedes Element in einem Archiv trägt eine Prüfsumme, sodass ein abgeschnittenes oder beschädigtes Backup erkannt wird, bevor es jemals über eine Live-Website wiederhergestellt wird.
 
-Das Wiederherstellen <strong>überschreibt</strong> die Ziel-Datenbank und -Dateien – genau darum geht es beim Wiederherstellen –, deshalb fragt es nach Bestätigung und ist auf Administratoren beschränkt. Migrator überschreibt während einer Wiederherstellung nie seinen eigenen Plugin-Ordner, sodass es sich nicht mitten im Import den Boden unter den Füßen wegziehen kann.
+Das Wiederherstellen <strong>überschreibt</strong> die Ziel-Datenbank und -Dateien, genau darum geht es beim Wiederherstellen, , deshalb fragt es nach Bestätigung und ist auf Administratoren beschränkt. Migrator überschreibt während einer Wiederherstellung nie seinen eigenen Plugin-Ordner, sodass es sich nicht mitten im Import den Boden unter den Füßen wegziehen kann.
 
 Bei großen Websites, bei denen eine Browser-Anfrage in ein Timeout laufen würde, läuft jeder Job auch über WP-CLI, das kein Timeout hat:
 
@@ -64,7 +64,7 @@ Bei großen Websites, bei denen eine Browser-Anfrage in ein Timeout laufen würd
 
 = Does restoring delete what is already on the destination? =
 
-Ja. Eine Wiederherstellung ersetzt die Datenbank und Dateien am Ziel durch den Inhalt des Archivs – genau das bedeutet das Wiederherstellen eines Backups. Sie ist auf Administratoren beschränkt und fragt zuerst nach Bestätigung. Bewahre immer ein separates Backup von allem auf, was du am Ziel behalten möchtest.
+Ja. Eine Wiederherstellung ersetzt die Datenbank und Dateien am Ziel durch den Inhalt des Archivs, genau das bedeutet das Wiederherstellen eines Backups. Sie ist auf Administratoren beschränkt und fragt zuerst nach Bestätigung. Bewahre immer ein separates Backup von allem auf, was du am Ziel behalten möchtest.
 
 = Will my links break when I move to a new domain? =
 

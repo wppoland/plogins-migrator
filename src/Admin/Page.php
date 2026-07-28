@@ -110,6 +110,15 @@ final class Page implements HasHooks
                 'restore'       => __('Restore', 'plogins-migrator'),
                 'deleteWord'    => __('Delete', 'plogins-migrator'),
                 'confirmDelete' => __('Delete this backup? This cannot be undone.', 'plogins-migrator'),
+                'inspect'       => __('Details', 'plogins-migrator'),
+                'inspectFailed' => __('Could not read this backup.', 'plogins-migrator'),
+                'srNoSearch'    => __('Enter the text to search for.', 'plogins-migrator'),
+                'srConfirm'     => __('This changes your database now. Make a backup first. Continue?', 'plogins-migrator'),
+                'srRunning'     => __('Working…', 'plogins-migrator'),
+                'srFailed'      => __('Search and replace failed.', 'plogins-migrator'),
+                'srWould'       => __('Would change', 'plogins-migrator'),
+                'srMade'        => __('Changed', 'plogins-migrator'),
+                'srSkipped'     => __('Skipped (no primary key):', 'plogins-migrator'),
             ],
         ]);
     }
