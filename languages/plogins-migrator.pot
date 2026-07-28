@@ -26,7 +26,9 @@ msgstr ""
 
 #. Description of the plugin
 #: plogins-migrator.php
-msgid "Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup."
+msgid ""
+"Back up, clone and migrate your WordPress site to a new host. One file, drag "
+"and drop, no technical setup."
 msgstr ""
 
 #. Author of the plugin
@@ -49,12 +51,8 @@ msgstr ""
 msgid "Backup not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:180
-#: src/Admin/Ajax.php:196
-#: src/Admin/Ajax.php:232
-#: src/Admin/Ajax.php:279
-#: src/Admin/Ajax.php:411
-#: src/Admin/Ajax.php:522
+#: src/Admin/Ajax.php:180 src/Admin/Ajax.php:196 src/Admin/Ajax.php:232
+#: src/Admin/Ajax.php:279 src/Admin/Ajax.php:411 src/Admin/Ajax.php:522
 msgid "Not allowed."
 msgstr ""
 
@@ -82,8 +80,7 @@ msgstr ""
 msgid "File not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:488
-#: src/Admin/Page.php:115
+#: src/Admin/Ajax.php:488 src/Admin/Page.php:115
 msgid "Enter the text to search for."
 msgstr ""
 
@@ -99,8 +96,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/Page.php:60
-#: templates/admin-page.php:13
+#: src/Admin/Page.php:60 templates/admin-page.php:13
 msgid "Migrator"
 msgstr ""
 
@@ -137,7 +133,9 @@ msgid "Restore failed."
 msgstr ""
 
 #: src/Admin/Page.php:104
-msgid "This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?"
+msgid ""
+"This overwrites the current site with the backup. A safety copy of the "
+"database is taken first. Continue?"
 msgstr ""
 
 #: src/Admin/Page.php:105
@@ -226,8 +224,7 @@ msgstr ""
 msgid "Do more with %s"
 msgstr ""
 
-#: src/Admin/ProUpsell.php:146
-#: src/Admin/ProUpsell.php:175
+#: src/Admin/ProUpsell.php:146 src/Admin/ProUpsell.php:175
 msgid "Upgrade to PRO"
 msgstr ""
 
@@ -265,8 +262,7 @@ msgstr ""
 msgid "PHP"
 msgstr ""
 
-#: src/Engine/Archive/Inspector.php:56
-#: src/Engine/Import/Preflight.php:38
+#: src/Engine/Archive/Inspector.php:56 src/Engine/Import/Preflight.php:38
 #: src/Engine/Import/Preflight.php:49
 msgid "Table prefix"
 msgstr ""
@@ -275,13 +271,11 @@ msgstr ""
 msgid "Tables"
 msgstr ""
 
-#: src/Engine/Archive/Inspector.php:58
-#: src/Engine/Import/Preflight.php:59
+#: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:59
 msgid "Multisite"
 msgstr ""
 
-#: src/Engine/Archive/Inspector.php:58
-#: src/Engine/Archive/Inspector.php:61
+#: src/Engine/Archive/Inspector.php:58 src/Engine/Archive/Inspector.php:61
 msgid "Yes"
 msgstr ""
 
@@ -300,7 +294,9 @@ msgstr ""
 #. translators: 1: source prefix, 2: this site's prefix
 #: src/Engine/Import/Preflight.php:41
 #, php-format
-msgid "Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be refused until this site's $table_prefix in wp-config.php matches."
+msgid ""
+"Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be "
+"refused until this site's $table_prefix in wp-config.php matches."
 msgstr ""
 
 #. translators: %s: table prefix
@@ -310,18 +306,20 @@ msgid "Matches (%s)."
 msgstr ""
 
 #: src/Engine/Import/Preflight.php:60
-msgid "This archive or this site is a network. A network-to-network restore needs Migrator Pro; the free edition will refuse it."
+msgid ""
+"This archive or this site is a network. A network-to-network restore needs "
+"Migrator Pro; the free edition will refuse it."
 msgstr ""
 
-#: src/Engine/Import/Preflight.php:76
-#: src/Engine/Import/Preflight.php:87
+#: src/Engine/Import/Preflight.php:76 src/Engine/Import/Preflight.php:87
 msgid "Disk space"
 msgstr ""
 
 #. translators: 1: free space, 2: estimated needed
 #: src/Engine/Import/Preflight.php:79
 #, php-format
-msgid "About %1$s free, restore may need ~%2$s. Free up space before restoring."
+msgid ""
+"About %1$s free, restore may need ~%2$s. Free up space before restoring."
 msgstr ""
 
 #. translators: %s: free space
@@ -345,11 +343,14 @@ msgstr ""
 #. translators: 1: source PHP, 2: this PHP
 #: src/Engine/Import/Preflight.php:111
 #, php-format
-msgid "Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer PHP may not run here."
+msgid ""
+"Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer "
+"PHP may not run here."
 msgstr ""
 
 #: templates/admin-page.php:19
-msgid "Back up your site or move it to a new host, one file, no technical setup."
+msgid ""
+"Back up your site or move it to a new host, one file, no technical setup."
 msgstr ""
 
 #: templates/admin-page.php:27
@@ -357,7 +358,9 @@ msgid "Create a backup"
 msgstr ""
 
 #: templates/admin-page.php:30
-msgid "Package your database and files into a single archive you can download and restore anywhere."
+msgid ""
+"Package your database and files into a single archive you can download and "
+"restore anywhere."
 msgstr ""
 
 #: templates/admin-page.php:33
@@ -457,7 +460,9 @@ msgid "Scan files by size"
 msgstr ""
 
 #: templates/admin-page.php:101
-msgid "Browse your wp-content folder by size and tick anything you do not need in the backup, for example a large cache, logs, or another plugin's stored data."
+msgid ""
+"Browse your wp-content folder by size and tick anything you do not need in "
+"the backup, for example a large cache, logs, or another plugin's stored data."
 msgstr ""
 
 #: templates/admin-page.php:106
@@ -489,7 +494,9 @@ msgid "Moving a complex store?"
 msgstr ""
 
 #: templates/admin-page.php:150
-msgid "If the backup is ready but the migration needs staging, checkout checks or an integration plan, send the scope in writing."
+msgid ""
+"If the backup is ready but the migration needs staging, checkout checks or "
+"an integration plan, send the scope in writing."
 msgstr ""
 
 #: templates/admin-page.php:155
@@ -501,7 +508,10 @@ msgid "Restore a backup"
 msgstr ""
 
 #: templates/admin-page.php:165
-msgid "Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive, keep a backup of anything you want to keep."
+msgid ""
+"Drop a Migrator archive here to restore it. This overwrites the current "
+"database (and files) with the archive, keep a backup of anything you want to "
+"keep."
 msgstr ""
 
 #: templates/admin-page.php:169
@@ -541,7 +551,10 @@ msgid "Search & replace"
 msgstr ""
 
 #: templates/admin-page.php:210
-msgid "Change a domain, URL or path across this site's database, safely for serialized data. Run a dry run first to see how many rows would change. Back up before a live run."
+msgid ""
+"Change a domain, URL or path across this site's database, safely for "
+"serialized data. Run a dry run first to see how many rows would change. Back "
+"up before a live run."
 msgstr ""
 
 #: templates/admin-page.php:213

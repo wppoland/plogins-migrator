@@ -28,11 +28,11 @@ msgstr "https://plogins.com/de/plogins-migrator/"
 #. Description of the plugin
 #: plogins-migrator.php
 msgid ""
-"Back up, clone and migrate your WordPress site to a new host. One file, drag"
-" and drop, no technical setup."
+"Back up, clone and migrate your WordPress site to a new host. One file, drag "
+"and drop, no technical setup."
 msgstr ""
-"Sichern, klonen und migriere deine WordPress-Site auf einen neuen Host. Eine"
-" Datei, Drag-and-Drop, keine technische Einrichtung."
+"Sichern, klonen und migriere deine WordPress-Site auf einen neuen Host. Eine "
+"Datei, Drag-and-Drop, keine technische Einrichtung."
 
 #. Author of the plugin
 #: plogins-migrator.php
@@ -486,12 +486,11 @@ msgstr "Scanne Dateien nach Größe"
 #: templates/admin-page.php:101
 msgid ""
 "Browse your wp-content folder by size and tick anything you do not need in "
-"the backup, for example a large cache, logs, or another plugin's stored "
-"data."
+"the backup, for example a large cache, logs, or another plugin's stored data."
 msgstr ""
-"Durchsuche deinen wp-content-Ordner nach Größe und markiere alles, was du im"
-" Backup nicht benötigst, zum Beispiel einen großen Cache, Protokolle oder "
-"die gespeicherten Daten eines anderen Plugins."
+"Durchsuche deinen wp-content-Ordner nach Größe und markiere alles, was du im "
+"Backup nicht benötigst, zum Beispiel einen großen Cache, Protokolle oder die "
+"gespeicherten Daten eines anderen Plugins."
 
 #: templates/admin-page.php:106
 msgid "Compression"
@@ -541,12 +540,12 @@ msgstr "Stelle ein Backup wieder her"
 #: templates/admin-page.php:165
 msgid ""
 "Drop a Migrator archive here to restore it. This overwrites the current "
-"database (and files) with the archive, keep a backup of anything you want to"
-" keep."
+"database (and files) with the archive, keep a backup of anything you want to "
+"keep."
 msgstr ""
-"Lege hier ein Migrator-Archiv ab, um es wiederherzustellen. Dadurch wird die"
-" aktuelle Datenbank (und die Dateien) mit dem Archiv überschrieben. Erstelle"
-" ein Backup von allem, was du behalten möchtest."
+"Lege hier ein Migrator-Archiv ab, um es wiederherzustellen. Dadurch wird die "
+"aktuelle Datenbank (und die Dateien) mit dem Archiv überschrieben. Erstelle "
+"ein Backup von allem, was du behalten möchtest."
 
 #: templates/admin-page.php:169
 msgid "Drag a .migrator file here, or"
@@ -570,8 +569,7 @@ msgstr "Fortschritt wiederherstellen"
 
 #: templates/admin-page.php:197
 msgid "Or restore one already stored on this site"
-msgstr ""
-"Oder stelle eine bereits auf dieser Site gespeicherte Datei wieder her"
+msgstr "Oder stelle eine bereits auf dieser Site gespeicherte Datei wieder her"
 
 #: templates/admin-page.php:198
 msgid "Backups saved on this site. Download, restore or delete them here."
@@ -592,12 +590,12 @@ msgstr "Suchen und ersetzen"
 #: templates/admin-page.php:210
 msgid ""
 "Change a domain, URL or path across this site's database, safely for "
-"serialized data. Run a dry run first to see how many rows would change. Back"
-" up before a live run."
+"serialized data. Run a dry run first to see how many rows would change. Back "
+"up before a live run."
 msgstr ""
-"Ändere eine Domäne, URL oder einen Pfad in der Datenbank dieser Site, sicher"
-" für serialisierte Daten. Führe zunächst einen Probelauf durch, um zu sehen,"
-" wie viele Zeilen sich ändern würden. Sichere vor einem Live-Lauf."
+"Ändere eine Domäne, URL oder einen Pfad in der Datenbank dieser Site, sicher "
+"für serialisierte Daten. Führe zunächst einen Probelauf durch, um zu sehen, "
+"wie viele Zeilen sich ändern würden. Sichere vor einem Live-Lauf."
 
 #: templates/admin-page.php:213
 msgid "Find"
