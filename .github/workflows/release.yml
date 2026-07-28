@@ -3,7 +3,7 @@ name: Release
 # Auto-release on version bump: a push to main that raises the Stable tag above
 # the live wp.org version deploys via the shared reusable workflow. The gate also
 # requires a NON-EMPTY live version, so it stays inert until the plugin is first
-# published on wp.org (the initial trunk commit is done manually — wp.org denies
+# published on wp.org (the initial trunk commit is done manually, wp.org denies
 # creating assets/tags in the same commit as the first trunk). workflow_dispatch
 # = manual/dry-run.
 
@@ -48,7 +48,7 @@ jobs:
     if: ${{ needs.gate.outputs.go == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: wppoland/workflows/.github/workflows/_release-free.yml@v1
     with:
-      slug: migrator
+      slug: plogins-migrator
       wporg-slug: plogins-migrator
       has-js: false
       dry-run: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry-run) || false }}

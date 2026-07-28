@@ -6,9 +6,13 @@ namespace Migrator\Admin;
 
 use Migrator\Contract\HasHooks;
 use Migrator\Engine\Archive\Compressor;
+use Migrator\Engine\Archive\Inspector;
+use Migrator\Engine\Db\SearchReplace;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\ExportPipeline;
 use Migrator\Engine\Import\Importer;
+use Migrator\Engine\Import\Preflight;
+use Migrator\Engine\Transform\SerializedReplacer;
 use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
@@ -49,6 +53,8 @@ final class Ajax implements HasHooks
         add_action('wp_ajax_migrator_backups_list', [$this, 'backupsList']);
         add_action('wp_ajax_migrator_restore_backup', [$this, 'restoreBackup']);
         add_action('wp_ajax_migrator_delete_backup', [$this, 'deleteBackup']);
+        add_action('wp_ajax_migrator_inspect', [$this, 'inspect']);
+        add_action('wp_ajax_migrator_search_replace', [$this, 'searchReplace']);
     }
 
     /**
@@ -429,6 +435,82 @@ final class Ajax implements HasHooks
             fclose($handle);
         }
         exit;
+    }
+
+    /**
+     * Inspect a stored backup without restoring it: read its manifest and run
+     * the pre-restore checks, so the admin can see what a backup contains and
+     * whether it will restore cleanly here before overwriting the live site.
+     */
+    public function inspect(): void
+    {
+        $this->guard();
+
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
+        $name = isset($_POST['file']) ? sanitize_file_name(wp_unslash((string) $_POST['file'])) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+        $path = $this->confinedBackup($name);
+
+        try {
+            $compressed = Compressor::isCompressed($path);
+            $manifest   = Inspector::manifest($path, $compressed);
+            wp_send_json_success([
+                'summary'   => Inspector::summary($manifest),
+                'preflight' => Preflight::check($manifest, (int) filesize($path), $compressed),
+            ]);
+        } catch (\Throwable $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Serialization-safe search and replace across this install's tables. A
+     * standalone utility (also used internally by the restore URL rewrite):
+     * change a domain, path or any literal string without corrupting serialized
+     * option and meta values. Supports a dry run that counts but writes nothing.
+     */
+    public function searchReplace(): void
+    {
+        $this->guard();
+
+        global $wpdb;
+
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
+        // Values are literal search/replace text (a URL, a path). They are never
+        // echoed and $wpdb->update() parameterises them; sanitize_text_field keeps
+        // them safe while leaving URLs and paths intact.
+        $from   = isset($_POST['search']) ? sanitize_text_field(wp_unslash((string) $_POST['search'])) : '';
+        $to     = isset($_POST['replace']) ? sanitize_text_field(wp_unslash((string) $_POST['replace'])) : '';
+        $dryRun = ! empty($_POST['dry_run']);
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+
+        if ('' === $from) {
+            wp_send_json_error(['message' => __('Enter the text to search for.', 'plogins-migrator')], 400);
+        }
+        if ($from === $to) {
+            wp_send_json_error(['message' => __('Search and replace values are identical.', 'plogins-migrator')], 400);
+        }
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
+        // Only this install's own tables (prefix-scoped), never unrelated tables
+        // that may share the database.
+        $like = $wpdb->esc_like($wpdb->prefix) . '%';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $tables = $wpdb->get_col($wpdb->prepare('SHOW TABLES LIKE %s', $like));
+
+        $engine = new SearchReplace($wpdb, new SerializedReplacer($from, $to));
+        $result = $engine->run(array_map('strval', (array) $tables), $dryRun);
+
+        wp_send_json_success([
+            'dryRun'  => $dryRun,
+            'tables'  => $result['tables'],
+            'rows'    => $result['rows'],
+            'changes' => $result['changes'],
+            'skipped' => $result['skipped'],
+        ]);
     }
 
     private function guard(): void

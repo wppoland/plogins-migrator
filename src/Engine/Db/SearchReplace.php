@@ -29,10 +29,11 @@ final class SearchReplace
 
     /**
      * @param string[] $tables
+     * @param bool     $dryRun When true, count what would change but write nothing.
      *
      * @return array{tables: int, rows: int, changes: int, skipped: string[]}
      */
-    public function run(array $tables): array
+    public function run(array $tables, bool $dryRun = false): array
     {
         $rowsSeen = 0;
         $changes  = 0;
@@ -79,11 +80,13 @@ final class SearchReplace
                     }
 
                     if ([] !== $update) {
-                        $where = [];
-                        foreach ($pks as $pk) {
-                            $where[$pk] = $row[$pk];
+                        if (! $dryRun) {
+                            $where = [];
+                            foreach ($pks as $pk) {
+                                $where[$pk] = $row[$pk];
+                            }
+                            $this->db->update($table, $update, $where);
                         }
-                        $this->db->update($table, $update, $where);
                         $changes++;
                     }
                 }
