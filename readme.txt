@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.9
+Stable tag: 1.2.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -103,7 +103,7 @@ In `wp-content/migrator-backups`, a folder protected from direct web access. Rem
 
 = Does this plugin work on WordPress Multisite? =
 
-Yes. This plugin is compatible with WordPress Multisite. Network activate it or activate it on individual sites; each site keeps its own settings and data.
+It runs on Multisite: network activate it or activate it on individual sites, and each site keeps its own settings and data. Restoring a network is a different matter. The free edition refuses an import when either the archive or the target site is a network, so network migration needs the Migrator Pro add-on.
 
 = How does Migrator compare to Duplicator and All-in-One WP Migration? =
 
@@ -128,6 +128,10 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.10 =
+* Docs: the Multisite answer said the plugin is Multisite compatible without saying that a network restore is refused in the free edition. It now says so, and points at the Pro add-on for network migration.
+
 
 = 1.2.9 =
 * Fixed: restoring into a subdirectory doubled the new address (https://site.com/shop/shop). A site's home and site address are normally the same string, and it was rewritten twice.
