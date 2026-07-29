@@ -350,6 +350,11 @@ final class Importer
      * Build ordered from/to replacement pairs. Longer paths first so a parent
      * path never partially rewrites a child.
      *
+     * A source's home and siteurl hold the same string on almost every site, and
+     * the pairs are applied in order, so listing it twice would rewrite a value
+     * that was already rewritten: importing into a subdirectory would leave
+     * https://new/sub/sub. Each distinct source appears once.
+     *
      * @param array{home:string,siteurl:string,content:string,abspath:string} $source
      * @param array{home:string,siteurl:string,content:string,abspath:string} $target
      *
@@ -360,7 +365,7 @@ final class Importer
         $from = [];
         $to   = [];
         foreach (['home', 'siteurl', 'content', 'abspath'] as $key) {
-            if ('' !== $source[$key] && $source[$key] !== $target[$key]) {
+            if ('' !== $source[$key] && $source[$key] !== $target[$key] && ! in_array($source[$key], $from, true)) {
                 $from[] = $source[$key];
                 $to[]   = $target[$key];
             }
