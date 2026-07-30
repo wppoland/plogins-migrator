@@ -22,20 +22,12 @@ return [
     ],
     'features'   => [
         [
-            'en' => ['title' => 'Scheduled and incremental backups', 'desc' => 'Daily or weekly backups with retention; incremental mode stores only changed files on a full baseline.'],
-            'pl' => ['title' => 'Harmonogram i kopie przyrostowe', 'desc' => 'Codzienne lub tygodniowe kopie z retencją; tryb przyrostowy zapisuje tylko zmienione pliki na pełnej bazie.'],
+            'en' => ['title' => 'Scheduled and incremental backups', 'desc' => 'Daily or weekly backups with retention. Incremental mode stores only the files that changed, and every archive still carries the full database.'],
+            'pl' => ['title' => 'Harmonogram i kopie przyrostowe', 'desc' => 'Codzienne lub tygodniowe kopie z retencją. Tryb przyrostowy zapisuje tylko zmienione pliki, a baza danych trafia do archiwum w całości za każdym razem.'],
         ],
         [
             'en' => ['title' => 'Recovery points', 'desc' => 'A list of known-good backups with one-click rollback. A point is captured automatically after every successful backup or on demand, and remembers the site URL and database prefix.'],
             'pl' => ['title' => 'Punkty przywracania', 'desc' => 'Lista sprawdzonych kopii z rollbackiem jednym kliknięciem. Punkt tworzy się automatycznie po każdej udanej kopii lub na żądanie i zapamiętuje adres oraz prefiks bazy.'],
-        ],
-        [
-            'en' => ['title' => 'Email notifications', 'desc' => 'Get an email when a scheduled backup completes or fails, so a silent failure never slips by.'],
-            'pl' => ['title' => 'Powiadomienia e-mail', 'desc' => 'E-mail po zakończeniu lub nieudanej kopii zaplanowanej, żeby cicha awaria nie umknęła.'],
-        ],
-        [
-            'en' => ['title' => 'Activity log', 'desc' => 'A newest-first record of backups, restores, off-site copies and recovery points.'],
-            'pl' => ['title' => 'Dziennik aktywności', 'desc' => 'Zapis kopii, przywracań, kopii poza witryną i punktów przywracania, od najnowszych.'],
         ],
         [
             'en' => ['title' => 'Cloud and off-site copies', 'desc' => 'S3-compatible storage with presets (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), FTP/FTPS, SFTP, WebDAV (Nextcloud, ownCloud), Dropbox, Google Drive, and a local or mounted folder.'],
@@ -46,16 +38,12 @@ return [
             'pl' => ['title' => 'Transfer serwer-serwer', 'desc' => 'Przeciągnij witrynę z jednego serwera na drugi bez ręcznego pobierania pliku.'],
         ],
         [
-            'en' => ['title' => 'Encrypted backups', 'desc' => 'Password-protected backups; the archive is decrypted on the fly when you restore.'],
-            'pl' => ['title' => 'Szyfrowane kopie', 'desc' => 'Kopie chronione hasłem; przy przywracaniu archiwum jest deszyfrowane w locie.'],
+            'en' => ['title' => 'Deploy to a new server', 'desc' => 'A standalone installer downloads WordPress core, extracts the files, imports the database, rewrites URLs and writes wp-config.php. It can also fetch the backup itself from a link, including a presigned S3, R2 or Dropbox URL.'],
+            'pl' => ['title' => 'Wdrożenie na pusty serwer', 'desc' => 'Samodzielny instalator pobiera rdzeń WordPressa, rozpakowuje pliki, importuje bazę, przepisuje adresy i zapisuje wp-config.php. Kopię może też pobrać sam z linku, w tym z podpisanego adresu S3, R2 lub Dropbox.'],
         ],
         [
-            'en' => ['title' => 'Full multisite', 'desc' => 'Back up and migrate a whole multisite network, with correct URL rewriting.'],
-            'pl' => ['title' => 'Pełny multisite', 'desc' => 'Kopia i migracja całej sieci multisite, z poprawnym przepisaniem adresów.'],
-        ],
-        [
-            'en' => ['title' => 'Deploy to a new server', 'desc' => 'A standalone installer downloads WordPress core, extracts the files, imports the database, rewrites URLs and writes wp-config.php.'],
-            'pl' => ['title' => 'Wdrożenie na pusty serwer', 'desc' => 'Samodzielny instalator pobiera rdzeń WordPressa, rozpakowuje pliki, importuje bazę, przepisuje adresy i zapisuje wp-config.php.'],
+            'en' => ['title' => 'Table sync', 'desc' => 'Pick database tables from a backup and import only those into the live site. Push content from staging without rolling back the orders, customers and comments that arrived in the meantime. Preview what would change first, and the chosen tables are dumped before anything is written.'],
+            'pl' => ['title' => 'Synchronizacja tabel', 'desc' => 'Wybierz tabele bazy danych z kopii zapasowej i wgraj do działającej witryny tylko je. Przenieś treści ze środowiska testowego bez cofania zamówień, klientów i komentarzy, które pojawiły się w międzyczasie. Najpierw zobaczysz podgląd zmian, a wybrane tabele są zrzucane, zanim cokolwiek zostanie zapisane.'],
         ],
     ],
 ];

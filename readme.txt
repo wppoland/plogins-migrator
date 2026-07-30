@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.10
+Stable tag: 1.2.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,13 +52,14 @@ For large sites where a browser request would time out, every job also runs from
 
 The free edition backs up and migrates your whole site by hand. **Plogins Migrator PRO** makes it run itself:
 
-* **Scheduled and incremental backups** - daily or weekly with retention; only changed files after a baseline
+* **Scheduled and incremental backups** - daily or weekly with retention; incremental stores only the files that changed, and every archive still carries the whole database
 * **Cloud and off-site copies** - S3, R2, Backblaze B2, Wasabi, FTP/SFTP, WebDAV, Dropbox and Google Drive
 * **Recovery points** - one-click rollback to a known-good backup
 * **Encrypted backups** - password-protected archives, decrypted on restore
 * **Server-to-server transfer** - move a site between servers with no manual download
+* **Table sync** - import chosen database tables from a backup into a live site and leave the rest alone
 * **Email notifications and activity log** - a silent failure never slips by
-* **Full multisite** - back up and migrate a whole network with correct URL rewriting
+* **Multisite, network to network** - back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
 
 Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year (PLN shown at checkout).
 
@@ -128,6 +129,9 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.11 =
+* The PRO notice in the admin, and the PRO section of this readme, now list what Migrator Pro actually ships, including table sync, and say plainly that incremental backups cover files while every archive still carries the whole database. Multisite is described as network to network, which is what the admin does.
 
 = 1.2.10 =
 * Docs: the Multisite answer said the plugin is Multisite compatible without saying that a network restore is refused in the free edition. It now says so, and points at the Pro add-on for network migration.
