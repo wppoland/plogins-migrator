@@ -48,6 +48,8 @@ For large sites where a browser request would time out, every job also runs from
 * Inspect any stored backup before you restore it: source URL, WordPress and PHP versions, table count, plus pre-restore checks for table prefix, disk space and writability
 * Self-hosted: no account, no third-party service, nothing leaves your server
 
+Reporting a security issue: email hello@wppoland.com, and under our [coordinated disclosure policy](https://wppoland.com/en/security-policy/) we confirm within two business days, assess within five, and patch a critical issue within seven days of confirming it.
+
 == Plogins Migrator PRO ==
 
 The free edition backs up and migrates your whole site by hand. **Plogins Migrator PRO** makes it run itself:
