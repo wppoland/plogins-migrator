@@ -145,7 +145,7 @@ final class Dumper
      * @param resource               $handle
      * @param array<string, string>  $where  Optional table => WHERE clause to
      *                                        filter out disposable rows.
-     * @param string[]               $skip   Tables to omit entirely.
+     * @param string[]               $skip   Tables and views to omit entirely.
      */
     public function dumpAll(array $tables, $handle, array $where = [], array $skip = []): void
     {
@@ -165,7 +165,13 @@ final class Dumper
         }
 
         // Views are created after every base table, since they reference them.
+        // The exclusion list is built from SHOW TABLES, which lists views next to
+        // base tables, so a merchant could tick a view and still find its
+        // definition in the archive. The skip list applies here too.
         foreach ($this->views() as $view) {
+            if (in_array($view, $skip, true)) {
+                continue;
+            }
             $this->dumpView($view, $handle);
         }
 

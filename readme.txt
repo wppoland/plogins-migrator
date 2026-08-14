@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.11
+Stable tag: 1.2.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -131,6 +131,9 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.12 =
+* Fixed: ticking a database view under "Exclude specific database tables" now leaves it out of the backup. The list offers views alongside tables, but only tables were being skipped, so a ticked view still ended up in the archive.
 
 = 1.2.11 =
 * The PRO notice in the admin, and the PRO section of this readme, now list what Migrator Pro actually ships, including table sync, and say plainly that incremental backups cover files while every archive still carries the whole database. Multisite is described as network to network, which is what the admin does.
