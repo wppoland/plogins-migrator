@@ -123,7 +123,8 @@ final class ExportOptions
     }
 
     /**
-     * Tables to skip entirely (structure + data), given the site prefix.
+     * Tables to skip entirely (structure + data), given the site prefix. The
+     * admin list is built from SHOW TABLES, so a name here can also be a view.
      *
      * @return string[]
      */
