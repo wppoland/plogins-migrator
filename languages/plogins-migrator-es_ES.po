@@ -1,19 +1,14 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Migrator 0.3.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/migrator\n"
-"POT-Creation-Date: 2026-07-13T11:03:26+00:00\n"
-"PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
-"Last-Translator: motylanogha <szatkowski.mariusz@gmail.com>\n"
-"Language-Team: Spanish <es@li.org>\n"
-"Language: es_ES\n"
+"PO-Revision-Date: 2026-07-15 09:54:08+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Domain: plogins-migrator\n"
-"X-Generator: WP-CLI 2.12.0\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: GlotPress/4.0.3\n"
+"Language: es\n"
+"Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - Stable (latest release)\n"
 
 #. Plugin Name of the plugin
 #: plogins-migrator.php
@@ -23,7 +18,7 @@ msgstr "Plogins Migrator - Migración y copia de seguridad del sitio"
 #. Plugin URI of the plugin
 #: plogins-migrator.php
 msgid "https://plogins.com/plogins-migrator/"
-msgstr "https://plogins.com/es/plogins-migrator/"
+msgstr "https://plogins.com/plogins-migrator/"
 
 #. Description of the plugin
 #: plogins-migrator.php
@@ -48,7 +43,7 @@ msgstr "https://wppoland.com"
 #: plogins-migrator.php:41
 #, php-format
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
-msgstr "Migrator requiere PHP %1$s o superior. Estás ejecutando PHP %2$s."
+msgstr "El Migrator requiere PHP %1$s o superior. Estás ejecutando PHP %2$s."
 
 #: src/Admin/Ajax.php:166
 msgid "Backup not found."
@@ -65,7 +60,7 @@ msgstr "Solicitud de carga incorrecta."
 
 #: src/Admin/Ajax.php:208
 msgid "Invalid upload."
-msgstr "Carga no válida."
+msgstr "Subida no válida."
 
 #: src/Admin/Ajax.php:216
 msgid "Could not store upload."
@@ -73,7 +68,7 @@ msgstr "No se pudo almacenar la carga."
 
 #: src/Admin/Ajax.php:242
 msgid "Uploaded archive not found."
-msgstr "Archivo cargado no encontrado."
+msgstr "Archivo subido no encontrado."
 
 #: src/Admin/Ajax.php:270
 msgid "Invalid upload id."
@@ -85,7 +80,7 @@ msgstr "Archivo no encontrado."
 
 #: src/Admin/Ajax.php:488 src/Admin/Page.php:115
 msgid "Enter the text to search for."
-msgstr "Introduce el texto que quieres buscar."
+msgstr "Introduce el texto a buscar."
 
 #: src/Admin/Ajax.php:491
 msgid "Search and replace values are identical."
@@ -145,11 +140,11 @@ msgstr ""
 
 #: src/Admin/Page.php:105
 msgid "Scanning…"
-msgstr "Escaneando…"
+msgstr "Explorando…"
 
 #: src/Admin/Page.php:106
 msgid "Scan failed."
-msgstr "El escaneo falló."
+msgstr "La exploración ha fallado."
 
 #: src/Admin/Page.php:107
 msgid "files"
@@ -185,9 +180,7 @@ msgstr "No se pudo leer esta copia de seguridad."
 
 #: src/Admin/Page.php:116
 msgid "This changes your database now. Make a backup first. Continue?"
-msgstr ""
-"Esto cambia tu base de datos ahora. Primero haz una copia de seguridad. "
-"¿Continuar?"
+msgstr "Esto cambia tu base de datos ahora. Haz una copia de seguridad primero. ¿Continuar?"
 
 #: src/Admin/Page.php:117
 msgid "Working…"
@@ -195,7 +188,7 @@ msgstr "Trabajando…"
 
 #: src/Admin/Page.php:118
 msgid "Search and replace failed."
-msgstr "La búsqueda y el reemplazo fallaron."
+msgstr "La búsqueda y reemplazo falló."
 
 #: src/Admin/Page.php:119
 msgid "Would change"
@@ -207,13 +200,13 @@ msgstr "Cambiado"
 
 #: src/Admin/Page.php:121
 msgid "Skipped (no primary key):"
-msgstr "Omitido (sin clave principal):"
+msgstr "Omitido (sin clave primaria):"
 
 #. translators: %d: yearly price in PLN
 #: src/Admin/ProUpsell.php:74
 #, php-format
 msgid "od %d zł/rok"
-msgstr "desde %d PLN/año"
+msgstr "desde %d zł/año"
 
 #. translators: 1: currency symbol, 2: yearly price
 #: src/Admin/ProUpsell.php:79
@@ -233,7 +226,7 @@ msgstr "Haz más con %s"
 
 #: src/Admin/ProUpsell.php:146 src/Admin/ProUpsell.php:175
 msgid "Upgrade to PRO"
-msgstr "Mejorar a PRO"
+msgstr "Actualizar a PRO"
 
 #: src/Admin/ProUpsell.php:148
 msgid "Dismiss this notice"
@@ -241,17 +234,17 @@ msgstr "Descartar este aviso"
 
 #: src/Admin/ProUpsell.php:165
 msgid "Unlock every PRO feature"
-msgstr "Desbloquea todas las funciones PRO"
+msgstr "Desbloquea todas las características PRO"
 
 #: src/Admin/ProUpsell.php:178
 msgid "one licence, every PRO feature"
-msgstr "una licencia, todas las funciones PRO"
+msgstr "una licencia, todas las características PRO"
 
 #. translators: %s: PRO edition name
 #: src/Admin/ProUpsell.php:197
 #, php-format
 msgid "What %s adds"
-msgstr "Qué añade %s"
+msgstr "Lo que %s añade"
 
 #: src/Engine/Archive/Inspector.php:52
 msgid "Source site"
@@ -339,17 +332,15 @@ msgstr ""
 #: src/Engine/Import/Preflight.php:88
 #, php-format
 msgid "%s free."
-msgstr "%s gratis."
+msgstr "%s libre."
 
 #: src/Engine/Import/Preflight.php:97
 msgid "Writable files"
-msgstr "Archivos grabables"
+msgstr "Archivos escribibles"
 
 #: src/Engine/Import/Preflight.php:98
 msgid "wp-content is not writable by the web server. File restore will fail."
-msgstr ""
-"El servidor web no puede escribir en wp-content. La restauración del archivo "
-"fallará."
+msgstr "wp-content no es escribible por el servidor web. La restauración de archivos fallará."
 
 #: src/Engine/Import/Preflight.php:108
 msgid "PHP version"
@@ -418,7 +409,7 @@ msgstr "Comentarios no deseados"
 
 #: templates/admin-page.php:46
 msgid "Post revisions"
-msgstr "Revisiones de entradas"
+msgstr "Publicar revisiones"
 
 #: templates/admin-page.php:47
 msgid "Transients"
@@ -454,15 +445,15 @@ msgstr "Temas inactivos (mantener solo activo)"
 
 #: templates/admin-page.php:56
 msgid "All plugins"
-msgstr "Todos los complementos"
+msgstr "Todos los plugins"
 
 #: templates/admin-page.php:57
 msgid "Inactive plugins (keep active only)"
-msgstr "Complementos inactivos (mantener solo activos)"
+msgstr "Plugins inactivos (mantener solo los activos)"
 
 #: templates/admin-page.php:58
 msgid "Must-use plugins"
-msgstr "Complementos imprescindibles"
+msgstr "Plugins de uso obligatorio"
 
 #: templates/admin-page.php:59
 msgid "Cache files"
@@ -478,7 +469,7 @@ msgstr "Excluir archivos y carpetas específicos (opcional)"
 
 #: templates/admin-page.php:98
 msgid "Scan files by size"
-msgstr "Escanear archivos por tamaño"
+msgstr "Explorar archivos por tamaño"
 
 #: templates/admin-page.php:101
 msgid ""
@@ -515,7 +506,7 @@ msgstr "Descargar copia de seguridad"
 
 #: templates/admin-page.php:149
 msgid "Moving a complex store?"
-msgstr "¿Vas a migrar una tienda compleja?"
+msgstr "¿Moviendo una tienda compleja?"
 
 #: templates/admin-page.php:150
 msgid ""
@@ -528,7 +519,7 @@ msgstr ""
 
 #: templates/admin-page.php:155
 msgid "Request written migration help"
-msgstr "Solicitar ayuda por escrito para la migración"
+msgstr "Solicitar ayuda de migración por escrito"
 
 #: templates/admin-page.php:162
 msgid "Restore a backup"
@@ -546,7 +537,7 @@ msgstr ""
 
 #: templates/admin-page.php:169
 msgid "Drag a .migrator file here, or"
-msgstr "Arrastre un archivo .migrator aquí, o"
+msgstr "Arrastra un archivo .migrator aquí, o"
 
 #: templates/admin-page.php:171
 msgid "Choose a file"
@@ -570,14 +561,11 @@ msgstr "O restaurar uno ya almacenado en este sitio"
 
 #: templates/admin-page.php:198
 msgid "Backups saved on this site. Download, restore or delete them here."
-msgstr ""
-"Copias de seguridad guardadas en este sitio. Descárgalos, restáuralos o "
-"elimínalos aquí."
+msgstr "Copias de seguridad guardadas en este sitio. Descárgalos, restáuralos o elimínalos aquí."
 
 #: templates/admin-page.php:203
 msgid "Large site? Restore from the command line, it has no time limit:"
-msgstr ""
-"¿Sitio grande? Restaurar desde línea de comando, no tiene límite de tiempo:"
+msgstr "¿Sitio grande? Restaura desde la línea de comandos, no tiene límite de tiempo:"
 
 #: templates/admin-page.php:209
 msgid "Search & replace"
@@ -603,7 +591,7 @@ msgstr "Reemplazar con"
 
 #: templates/admin-page.php:222
 msgid "Dry run (preview only, writes nothing)"
-msgstr "Ejecución en seco (solo vista previa, no escribe nada)"
+msgstr "Ejecución de prueba (solo vista previa, no escribe nada)"
 
 #: templates/admin-page.php:224
 msgid "Run"
@@ -611,4 +599,4 @@ msgstr "Ejecutar"
 
 #: templates/admin-page.php:228
 msgid "From the command line:"
-msgstr "Desde la línea de comando:"
+msgstr "Desde la línea de comandos:"
