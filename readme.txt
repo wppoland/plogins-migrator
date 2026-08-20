@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.12
+Stable tag: 1.2.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,7 +63,7 @@ The free edition backs up and migrates your whole site by hand. **Plogins Migrat
 * **Email notifications and activity log** - a silent failure never slips by
 * **Multisite, network to network** - back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
 
-Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year (PLN shown at checkout).
+Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year, billed in EUR.
 
 Compare editions and pricing: [plogins.com/plogins-migrator-pro/pricing/](https://plogins.com/plogins-migrator-pro/pricing/)
 
@@ -131,6 +131,9 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.13 =
+* Fixed: the PRO pricing line claimed a PLN price would appear during purchase. Purchases settle in EUR, so the line now says the price is billed in EUR.
 
 = 1.2.12 =
 * Fixed: ticking a database view under "Exclude specific database tables" now leaves it out of the backup. The list offers views alongside tables, but only tables were being skipped, so a ticked view still ended up in the archive.

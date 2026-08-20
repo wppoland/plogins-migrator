@@ -74,10 +74,10 @@ msgstr ""
 #. Found in description paragraph.
 msgid ""
 "Everything in the free edition stays free and open. Plogins Migrator PRO "
-"starts at 49 EUR per year (PLN shown at checkout)."
+"starts at 49 EUR per year, billed in EUR."
 msgstr ""
 "Alles in der kostenlosen Edition bleibt kostenlos und offen. Plogins "
-"Migrator PRO beginnt bei 49 EUR pro Jahr (PLN wird an der Kasse angezeigt)."
+"Migrator PRO beginnt bei 49 EUR pro Jahr, Abrechnung in EUR."
 
 #. Found in description paragraph.
 msgid ""
