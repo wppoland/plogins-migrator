@@ -15,7 +15,6 @@ return [
     'sellable'   => true,
     'price_from' => 49,
     'currency'   => 'EUR',
-    'price_pln'  => 215,
     'lead'       => [
         'en' => 'Everything you need to make backups run themselves and migrations safe. Every feature ships in the current release.',
         'pl' => 'Wszystko, czego potrzeba, żeby kopie działały same, a przenosiny były bezpieczne. Każda funkcja jest w bieżącym wydaniu.',
