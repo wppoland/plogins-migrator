@@ -52,25 +52,25 @@ Reporting a security issue: email hello@wppoland.com, and under our [coordinated
 
 == How Migrator compares ==
 
-All six plugins named here back up and migrate WordPress. What separates them is the free edition, so everything below is about free tiers only. Every entry was checked against vendor pricing pages and vendor documentation on 29 July 2026.
+All six plugins named here back up and migrate WordPress. What separates them is what you get without paying, so the grid reads the free edition of each. Every entry was checked against vendor pricing pages and vendor documentation on 29 July 2026.
 
-The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **Dupl** is Duplicator, **WPvivid**, **Updraft** is UpdraftPlus, **WPMigr** is WP Migrate. A cell reads **yes** if the free edition does it, **paid** if the same vendor sells it in a paid tier or add-on, **no** if it is not offered at all, **part** if only partly, and **?** if the vendor does not say.
+The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **Dupl** is Duplicator, **WPvivid**, **Updraft** is UpdraftPlus, **WPMigr** is WP Migrate. A cell reads **yes** if the free edition does it, **paid** if that vendor sells it in a paid tier or add-on, **no** if the vendor does not offer it at any price, **part** if only partly, and **?** if the vendor does not say. A row of **paid** is a paywall, not a missing feature; **no** is the one that means the thing does not exist.
 
                                Migrator   AIO   Dupl  WPvivid  Updraft  WPMigr
     --------------------------------------------------------------------------
-    Full backup and migration       yes   yes    yes      yes      yes    part
-    No size cap in the plugin       yes    no     no      yes      yes       ?
-    Scheduled backups                no  paid   paid      yes      yes      no
-    Cloud or FTP destination         no    no     no      yes      yes      no
-    Incremental backups              no  paid     no     paid     paid      no
-    Encrypted archives               no   yes     no     paid     paid       ?
-    Server to server transfer        no  paid   paid      yes     paid    paid
-    Multisite network restore        no  paid   paid     paid     paid    part
-    Imports chosen tables            no     ?     no     paid     paid      no
+    Full backup + migration         yes   yes    yes      yes      yes    part
+    No size cap, free tier          yes    no     no      yes      yes       ?
+    Scheduled backups              paid  paid   paid      yes      yes      no
+    Cloud or FTP destination       paid  paid   paid      yes      yes      no
+    Incremental backups            paid  paid     no     paid     paid      no
+    Encrypted archives             paid   yes   paid     part     part       ?
+    Server to server transfer      paid  paid   paid      yes     paid    paid
+    Multisite net. restore         paid  paid   paid     part     paid    paid
+    Imports chosen tables          paid     ?     no     paid     paid    paid
 
 **Where Migrator is ahead in free.** No size limit beyond what your own server allows, and a database snapshot taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback.
 
-**Where Migrator is behind in free.** No scheduling, no cloud or FTP destination, no encrypted archives and no server-to-server transfer. WPvivid and UpdraftPlus give you scheduling and cloud storage for nothing. Those features sit in Plogins Migrator PRO, so if you need them free, one of those two is the better fit.
+**Where Migrator is behind in free.** Scheduling, cloud and FTP destinations, encrypted archives and server-to-server transfer are all in Plogins Migrator PRO. WPvivid and UpdraftPlus hand you scheduling and cloud storage for nothing, so if that is what you are after and you do not want to pay, one of those two is the better fit.
 
 = All-in-One WP Migration =
 
