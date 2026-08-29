@@ -3,10 +3,10 @@
  * Plugin Name:       Migrator - Site Migration and Backup
  * Plugin URI:        https://plogins.com/plogins-migrator/
  * Description:        Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup.
- * Version:           1.2.14
+ * Version:           1.2.15
  * Requires at least: 6.5
  * Requires PHP:      8.1
- * Tested up to:      7.0
+ * Tested up to:      7.1
  * Author:            WPPoland.com
  * Author URI:        https://wppoland.com
  * License:           GPL-2.0-or-later

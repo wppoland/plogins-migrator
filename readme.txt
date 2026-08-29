@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.14
+Stable tag: 1.2.15
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -131,6 +131,10 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.15 =
+* Fixed: the backup directory's .htaccess carried only the Apache 2.2 form of the deny rule. Apache 2.4 does not understand it without mod_access_compat, so on those servers the directory holding full database dumps had no server-level protection, leaving only the random token in the filename, which is a backstop for hosts that ignore .htaccess and not a replacement for the rule. Both forms are now written, each behind its own IfModule. An existing installation is corrected the next time the workspace is prepared.
+* Fixed: addresses stored without a scheme, in the "//host/wp-content/..." form, matched none of the replacement pairs and survived a restore still pointing at the site the backup came from. They are now rewritten with the rest.
 
 = 1.2.14 =
 * Fixed the PRO promo on the settings screen quoting a price in PLN. PRO is priced and charged in EUR, so an admin on a Polish site was shown a zloty amount and then billed in euro, and the zloty figure was a fixed conversion that drifted from the real charge as the rate moved. The promo now shows the euro price that is actually taken.
