@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.14
+Stable tag: 1.2.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,51 @@ For large sites where a browser request would time out, every job also runs from
 
 Reporting a security issue: email hello@wppoland.com, and under our [coordinated disclosure policy](https://wppoland.com/en/security-policy/) we confirm within two business days, assess within five, and patch a critical issue within seven days of confirming it.
 
+== How Migrator compares ==
+
+All six plugins named here back up and migrate WordPress. What separates them is what you get without paying, so the grid reads the free edition of each. Every entry was checked against vendor pricing pages and vendor documentation on 29 July 2026.
+
+The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **Dupl** is Duplicator, **WPvivid**, **Updraft** is UpdraftPlus, **WPMigr** is WP Migrate. A cell reads **yes** if the free edition does it, **paid** if that vendor sells it in a paid tier or add-on, **no** if the vendor does not offer it at any price, **part** if only partly, and **?** if the vendor does not say. A row of **paid** is a paywall, not a missing feature; **no** is the one that means the thing does not exist.
+
+                               Migrator   AIO   Dupl  WPvivid  Updraft  WPMigr
+    --------------------------------------------------------------------------
+    Full backup + migration         yes   yes    yes      yes      yes    part
+    No size cap, free tier          yes    no     no      yes      yes       ?
+    Scheduled backups              paid  paid   paid      yes      yes      no
+    Cloud or FTP destination       paid  paid   paid      yes      yes      no
+    Incremental backups            paid  paid     no     paid     paid      no
+    Encrypted archives             paid   yes   paid     part     part       ?
+    Server to server transfer      paid  paid   paid      yes     paid    paid
+    Multisite net. restore         paid  paid   paid     part     paid    paid
+    Imports chosen tables          paid     ?     no     paid     paid    paid
+    Paid plan, from               EUR49   $69    $99      $49      $70     $49
+
+**Where Migrator is ahead in free.** No size limit beyond what your own server allows, and a database snapshot taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback. The free edition is complete on its own terms: it backs up and migrates a whole site, by hand, with nothing held back and no account to create.
+
+**What PRO adds.** Scheduling, cloud and FTP destinations, incremental backups, encrypted archives, recovery points, server-to-server transfer, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
+
+= All-in-One WP Migration =
+
+Exports to a single `.wpress` file, and its AES-256 password-protected export is in the free plugin, which is one thing Migrator keeps in PRO. The free export is bounded by your host's PHP limits; lifting them is the Unlimited extension at $69/yr. Multisite is a separate add-on at $319/yr.
+
+= Duplicator =
+
+Builds a package plus an installer. The vendor publishes a 4 GB ceiling for the free edition, and 500 MB on the DupArchive engine. Scheduling, recovery points and importing start at $99/yr.
+
+= WPvivid =
+
+The strongest free tier here for automation: scheduled backups with one retention rule, Dropbox, Google Drive, S3, OneDrive, DO Spaces, FTP and SFTP as destinations, and server-to-server transfer with a migration key. Archives split at 200 MB. The vendor states databases cannot be backed up incrementally, encryption in Pro covers the database only, and table-level merging is sold as a separate product.
+
+= UpdraftPlus =
+
+Free scheduling from every 2 hours up to monthly, with Google Drive, Dropbox, S3, Rackspace, FTP, Swift and email as destinations. Archives split at 400 MB. Multisite, incremental file backups and database encryption are Premium, $70 to $399/yr excluding VAT.
+
+= WP Migrate =
+
+Lite exports a ZIP and does not import at all. Moving files between live sites, and push and pull, are paid, $49 to $219 for the first year. No tier offers a cloud or FTP destination.
+
+Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion is implied. List prices and tier limits change without notice, so confirm on the vendor's own page before you buy. Migrator itself is free under GPLv2 with no account to create; PRO is 49 to 149 EUR per year.
+
 == Plogins Migrator PRO ==
 
 The free edition backs up and migrates your whole site by hand. **Plogins Migrator PRO** makes it run itself:
@@ -62,6 +107,8 @@ The free edition backs up and migrates your whole site by hand. **Plogins Migrat
 * **Table sync** - import chosen database tables from a backup into a live site and leave the rest alone
 * **Email notifications and activity log** - a silent failure never slips by
 * **Multisite, network to network** - back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
+* **Reset a site to a clean install** - take a staging site back to fresh WordPress without reinstalling: a safety backup first, then the tables dropped, a clean install, and the address, title and administrator password put back. Single sites only, not networks
+* **White label** - replace the menu name with your own, point the upgrade link elsewhere and hide the purchase prompt, so a client sees the tool under your brand
 
 Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year, billed in EUR.
 
@@ -131,6 +178,13 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.16 =
+* Fixed: the plugin recorded 1.2.13 as its own version inside every archive it wrote, because the version constant had been left behind when the header was bumped. The number is stamped into the manifest of each backup and also busts the admin asset cache, so an archive said it came from an older plugin than the one that made it. The constant is now checked against the header when the package is built, so it cannot drift again.
+
+= 1.2.15 =
+* Fixed: the backup directory's .htaccess carried only the Apache 2.2 form of the deny rule. Apache 2.4 does not understand it without mod_access_compat, so on those servers the directory holding full database dumps had no server-level protection, leaving only the random token in the filename, which is a backstop for hosts that ignore .htaccess and not a replacement for the rule. Both forms are now written, each behind its own IfModule. An existing installation is corrected the next time the workspace is prepared.
+* Fixed: addresses stored without a scheme, in the "//host/wp-content/..." form, matched none of the replacement pairs and survived a restore still pointing at the site the backup came from. They are now rewritten with the rest.
 
 = 1.2.14 =
 * Fixed the PRO promo on the settings screen quoting a price in PLN. PRO is priced and charged in EUR, so an admin on a Polish site was shown a zloty amount and then billed in euro, and the zloty figure was a fixed conversion that drifted from the real charge as the rate moved. The promo now shows the euro price that is actually taken.
