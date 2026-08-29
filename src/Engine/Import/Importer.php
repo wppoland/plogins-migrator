@@ -371,6 +371,71 @@ final class Importer
             }
         }
 
+        foreach ($this->schemelessPairs($from, $to) as $old => $new) {
+            $from[] = $old;
+            $to[]   = $new;
+        }
+
         return [$from, $to];
+    }
+
+    /**
+     * Scheme-relative leftovers: "//old.example/wp-content/..." is a real URL in
+     * the wild (PeepSo caches its reaction icons that way) and none of the pairs
+     * above match it, because they all carry a scheme. Dropping the scheme also
+     * catches a mixed-scheme site, "http://old" contains "//old", so one pair
+     * rewrites the host and leaves whatever scheme was there.
+     *
+     * These are appended, never prepended: str_replace applies pairs in order,
+     * so by the time "//old" runs, every full URL has already become "//new" and
+     * only the genuinely scheme-less occurrences are still there to match.
+     *
+     * That ordering has one hole. When the old host is a *prefix* of the new one
+     * (old-host.t moving to old-host.test), "//old-host.t" still matches the
+     * "//old-host.test" an earlier pair just wrote, and the value is rewritten
+     * twice into old-host.testest. Such a pair is dropped: a scheme-relative URL
+     * left pointing at the old host is recoverable, a mangled one is not.
+     * ponytail: fixing that case properly needs a single-pass replacer instead of
+     * sequential str_replace, worth doing only if a real move hits it.
+     *
+     * @param string[] $from
+     * @param string[] $to
+     *
+     * @return array<string, string> old scheme-less prefix => new one
+     */
+    private function schemelessPairs(array $from, array $to): array
+    {
+        $pairs = [];
+        foreach ($from as $i => $url) {
+            $old = $this->schemeless($url);
+            $new = $this->schemeless($to[$i] ?? '');
+            if (null === $old || null === $new || $old === $new) {
+                continue;
+            }
+            // Never shadow a full-URL pair, and keep the first mapping for a host.
+            if (in_array($old, $from, true) || isset($pairs[$old])) {
+                continue;
+            }
+            // Would re-match something an earlier pair already wrote.
+            foreach ($to as $written) {
+                if (str_contains($written, $old)) {
+                    continue 2;
+                }
+            }
+            $pairs[$old] = $new;
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * Strip the scheme from a URL, keeping the leading "//". Returns null for a
+     * value that is not a URL at all (abspath is a filesystem path).
+     */
+    private function schemeless(string $url): ?string
+    {
+        $pos = strpos($url, '://');
+
+        return false === $pos ? null : substr($url, $pos + 1);
     }
 }
