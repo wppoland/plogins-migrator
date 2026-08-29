@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.15
+Stable tag: 1.2.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,10 +67,11 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
     Server to server transfer      paid  paid   paid      yes     paid    paid
     Multisite net. restore         paid  paid   paid     part     paid    paid
     Imports chosen tables          paid     ?     no     paid     paid    paid
+    Paid plan, from               EUR49   $69    $99      $49      $70     $49
 
-**Where Migrator is ahead in free.** No size limit beyond what your own server allows, and a database snapshot taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback.
+**Where Migrator is ahead in free.** No size limit beyond what your own server allows, and a database snapshot taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback. The free edition is complete on its own terms: it backs up and migrates a whole site, by hand, with nothing held back and no account to create.
 
-**Where Migrator is behind in free.** Scheduling, cloud and FTP destinations, encrypted archives and server-to-server transfer are all in Plogins Migrator PRO. WPvivid and UpdraftPlus hand you scheduling and cloud storage for nothing, so if that is what you are after and you do not want to pay, one of those two is the better fit.
+**What PRO adds.** Scheduling, cloud and FTP destinations, incremental backups, encrypted archives, recovery points, server-to-server transfer, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
 
 = All-in-One WP Migration =
 
@@ -106,6 +107,8 @@ The free edition backs up and migrates your whole site by hand. **Plogins Migrat
 * **Table sync** - import chosen database tables from a backup into a live site and leave the rest alone
 * **Email notifications and activity log** - a silent failure never slips by
 * **Multisite, network to network** - back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
+* **Reset a site to a clean install** - take a staging site back to fresh WordPress without reinstalling: a safety backup first, then the tables dropped, a clean install, and the address, title and administrator password put back. Single sites only, not networks
+* **White label** - replace the menu name with your own, point the upgrade link elsewhere and hide the purchase prompt, so a client sees the tool under your brand
 
 Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year, billed in EUR.
 
@@ -175,6 +178,9 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.16 =
+* Fixed: the plugin recorded 1.2.13 as its own version inside every archive it wrote, because the version constant had been left behind when the header was bumped. The number is stamped into the manifest of each backup and also busts the admin asset cache, so an archive said it came from an older plugin than the one that made it. The constant is now checked against the header when the package is built, so it cannot drift again.
 
 = 1.2.15 =
 * Fixed: the backup directory's .htaccess carried only the Apache 2.2 form of the deny rule. Apache 2.4 does not understand it without mod_access_compat, so on those servers the directory holding full database dumps had no server-level protection, leaving only the random token in the filename, which is a backstop for hosts that ignore .htaccess and not a replacement for the rule. Both forms are now written, each behind its own IfModule. An existing installation is corrected the next time the workspace is prepared.
