@@ -50,6 +50,36 @@ For large sites where a browser request would time out, every job also runs from
 
 Reporting a security issue: email hello@wppoland.com, and under our [coordinated disclosure policy](https://wppoland.com/en/security-policy/) we confirm within two business days, assess within five, and patch a critical issue within seven days of confirming it.
 
+== How Migrator compares ==
+
+All six plugins named here back up and migrate WordPress. What separates them is the free edition, so these notes are about free tiers only. Every claim was checked against vendor pricing pages and vendor documentation on 29 July 2026. List prices and tier limits change without notice, so confirm on the vendor's own page before you buy. Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion is implied.
+
+**Where Migrator is ahead in free.** There is no size limit beyond what your own server allows, and a database snapshot is taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback.
+
+**Where Migrator is behind in free.** No scheduling, no cloud or FTP destination, no encrypted archives and no server-to-server transfer. WPvivid and UpdraftPlus give you scheduling and cloud storage for nothing. Those features sit in Plogins Migrator PRO, so if you need them free, one of those two is the better fit.
+
+= All-in-One WP Migration =
+
+Exports to a single `.wpress` file, and its AES-256 password-protected export is in the free plugin, which is one thing Migrator keeps in PRO. The free export is bounded by your host's PHP limits; lifting them is the Unlimited extension at $69/yr. Multisite is a separate add-on at $319/yr.
+
+= Duplicator =
+
+Builds a package plus an installer. The vendor publishes a 4 GB ceiling for the free edition, and 500 MB on the DupArchive engine. Scheduling, recovery points and importing start at $99/yr.
+
+= WPvivid =
+
+The strongest free tier here for automation: scheduled backups with one retention rule, Dropbox, Google Drive, S3, OneDrive, DO Spaces, FTP and SFTP as destinations, and server-to-server transfer with a migration key. Archives split at 200 MB. The vendor states databases cannot be backed up incrementally, and table-level merging is sold as a separate product.
+
+= UpdraftPlus =
+
+Free scheduling from every 2 hours up to monthly, with Google Drive, Dropbox, S3, Rackspace, FTP, Swift and email as destinations. Archives split at 400 MB. Multisite, incremental file backups and database encryption are Premium, $70 to $399/yr excluding VAT.
+
+= WP Migrate =
+
+Lite exports a ZIP and does not import at all. Moving files between live sites, and push and pull, are paid, $49 to $219 for the first year. No tier offers a cloud or FTP destination.
+
+Migrator itself is free under GPLv2 with no account to create. PRO is 49 to 149 EUR per year.
+
 == Plogins Migrator PRO ==
 
 The free edition backs up and migrates your whole site by hand. **Plogins Migrator PRO** makes it run itself:
