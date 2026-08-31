@@ -262,8 +262,10 @@ final class ExportOptions
             $active[] = $root . '/' . strtok((string) $plugin, '/');
         }
         // Never prune Migrator itself.
-        $active[] = $root . '/migrator';
-        $active[] = $root . '/migrator-pro';
+        $active[] = $root . '/' . dirname(plugin_basename(\Migrator\PLUGIN_FILE));
+        if (defined('Migrator\\Pro\\PLUGIN_FILE')) {
+            $active[] = $root . '/' . dirname(plugin_basename(constant('Migrator\\Pro\\PLUGIN_FILE')));
+        }
 
         $dirs = glob($root . '/*', GLOB_ONLYDIR) ?: [];
         $skip = [];

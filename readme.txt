@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.16
+Stable tag: 1.2.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -116,7 +116,7 @@ Compare editions and pricing: [plogins.com/plogins-migrator-pro/pricing/](https:
 
 == Installation ==
 
-1. Upload the plugin to `/wp-content/plugins/migrator`, or install it from Plugins → Add New.
+1. Upload the plugin to `/wp-content/plugins/plogins-migrator`, or install it from Plugins → Add New.
 2. Activate it. There are no required dependencies.
 3. Open **Migrator** in the admin menu to create a backup, or use `wp migrator export` from the command line.
 
@@ -178,6 +178,10 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.2.17 =
+* Fixed: the safeguard that is supposed to stop a restore writing over Migrator's own plugin folder had never worked. It compared against the folder name the plugin used before it was renamed, so on every current installation nothing matched, and restoring an older backup could extract an older copy of the plugin over the code that was running the restore. The folder names are now taken from the installation itself, so a future rename cannot break it again.
+* Fixed: the same stale names were used to decide which plugin folders an export must never prune.
 
 = 1.2.16 =
 * Fixed: the plugin recorded 1.2.13 as its own version inside every archive it wrote, because the version constant had been left behind when the header was bumped. The number is stamped into the manifest of each backup and also busts the admin asset cache, so an archive said it came from an older plugin than the one that made it. The constant is now checked against the header when the package is built, so it cannot drift again.

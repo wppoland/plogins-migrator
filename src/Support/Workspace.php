@@ -17,7 +17,11 @@ defined('ABSPATH') || exit;
  */
 final class Workspace
 {
-    private const DIR_NAME = 'migrator-backups';
+    /**
+     * The backups folder under wp-content. Public because the importer derives
+     * its never-overwrite list from it rather than repeating the string.
+     */
+    public const DIR_NAME = 'migrator-backups';
 
     private ?string $base = null;
 

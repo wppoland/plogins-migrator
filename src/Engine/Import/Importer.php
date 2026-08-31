@@ -35,11 +35,38 @@ defined('ABSPATH') || exit;
  */
 final class Importer
 {
-    private const PROTECTED_PREFIXES = [
-        'wp-content/plugins/migrator/',
-        'wp-content/plugins/migrator-pro/',
-        'wp-content/migrator-backups/',
-    ];
+    /**
+     * Archive paths a restore must never write over, derived rather than typed.
+     *
+     * These used to be three hardcoded strings, and two of them were the folder
+     * names this plugin had before it was renamed. The archive stores entries as
+     * `wp-content/<rel>`, so on a real install the plugin's own files arrive as
+     * `wp-content/plugins/plogins-migrator/...` and matched none of them. The
+     * guard the class docblock promises has therefore never fired, and a restore
+     * has been free to extract an older copy of the plugin over the code running
+     * the restore.
+     *
+     * @return list<string>
+     */
+    private function protectedPrefixes(): array
+    {
+        $prefixes = ['wp-content/' . Workspace::DIR_NAME . '/'];
+
+        foreach (['Migrator\\PLUGIN_FILE', 'Migrator\\Pro\\PLUGIN_FILE'] as $constant) {
+            $file = defined($constant) ? constant($constant) : null;
+
+            if (! is_string($file) || '' === $file) {
+                continue;
+            }
+
+            $dir = dirname(plugin_basename($file));
+            if ('' !== $dir && '.' !== $dir) {
+                $prefixes[] = 'wp-content/plugins/' . $dir . '/';
+            }
+        }
+
+        return $prefixes;
+    }
 
     public function __construct(
         private Workspace $workspace,
@@ -305,7 +332,7 @@ final class Importer
      */
     private function extract(string $archivePath, Reader $reader): bool
     {
-        foreach (self::PROTECTED_PREFIXES as $prefix) {
+        foreach ($this->protectedPrefixes() as $prefix) {
             if (str_starts_with($archivePath, $prefix)) {
                 return false;
             }
