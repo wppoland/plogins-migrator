@@ -83,7 +83,7 @@ Builds a package plus an installer. The vendor publishes a 4 GB ceiling for the 
 
 = WPvivid =
 
-The strongest free tier here for automation: scheduled backups with one retention rule, Dropbox, Google Drive, S3, OneDrive, DO Spaces, FTP and SFTP as destinations, and server-to-server transfer with a migration key. Archives split at 200 MB. The vendor states databases cannot be backed up incrementally, encryption in Pro covers the database only, and table-level merging is sold as a separate product.
+Scheduled backups with one retention rule, Dropbox, Google Drive, S3, OneDrive, DO Spaces, FTP and SFTP as destinations, and server-to-server transfer with a migration key. Archives split at 200 MB. The vendor states databases cannot be backed up incrementally, encryption in Pro covers the database only, and table-level merging is sold as a separate product.
 
 = UpdraftPlus =
 
