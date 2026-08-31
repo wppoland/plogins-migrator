@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.18
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -60,8 +60,8 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
     --------------------------------------------------------------------------
     Full backup + migration         yes   yes    yes      yes      yes    part
     No size cap, free tier          yes    no     no      yes      yes       ?
-    Scheduled backups              paid  paid   paid      yes      yes      no
-    Cloud or FTP destination       paid  paid   paid      yes      yes      no
+    Scheduled backups               yes  paid   paid      yes      yes      no
+    Cloud or FTP destination        yes  paid   paid      yes      yes      no
     Incremental backups            paid  paid     no     paid     paid      no
     Encrypted archives             paid   yes   paid     part     part       ?
     Server to server transfer      paid  paid   paid      yes     paid    paid
@@ -69,9 +69,9 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
     Imports chosen tables          paid     ?     no     paid     paid    paid
     Paid plan, from               EUR49   $69    $99      $49      $70     $49
 
-**Where Migrator is ahead in free.** No size limit beyond what your own server allows, and a database snapshot taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback. The free edition is complete on its own terms: it backs up and migrates a whole site, by hand, with nothing held back and no account to create.
+**Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback. Automation is not the paid tier here: a shop that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
 
-**What PRO adds.** Scheduling, cloud and FTP destinations, incremental backups, encrypted archives, recovery points, server-to-server transfer, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
+**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV, Dropbox, Google Drive), incremental backups, encrypted archives, recovery points, server-to-server transfer, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
 
 = All-in-One WP Migration =
 
@@ -97,10 +97,10 @@ Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion i
 
 == Plogins Migrator PRO ==
 
-The free edition backs up and migrates your whole site by hand. **Plogins Migrator PRO** makes it run itself:
+The free edition backs up on a schedule and copies each backup off the server. **Plogins Migrator PRO** is for putting those copies further away, keeping more of them, and getting back faster:
 
-* **Scheduled and incremental backups** - daily or weekly with retention; incremental stores only the files that changed, and every archive still carries the whole database
-* **Cloud and off-site copies** - S3, R2, Backblaze B2, Wasabi, FTP/SFTP, WebDAV, Dropbox and Google Drive
+* **Cloud destinations** - S3, R2, Backblaze B2, Wasabi, SFTP, WebDAV, Dropbox and Google Drive, on top of the FTP and folder destinations the free edition ships
+* **Incremental backups** - store only the files that changed between fulls, with retention that keeps whole chains so a base is never orphaned
 * **Recovery points** - one-click rollback to a known-good backup
 * **Encrypted backups** - password-protected archives, decrypted on restore
 * **Server-to-server transfer** - move a site between servers with no manual download
@@ -178,6 +178,14 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator includes Polish, German and Spanish translations for the plugin interface. The text domain is `plogins-migrator`, so WordPress.org language packs can also override or extend these bundled translations.
 
 == Changelog ==
+
+= 1.3.0 =
+* Added: **scheduled backups are now free.** Daily or weekly, with a retention rule, running unattended through WordPress cron and using the same engine as a manual backup.
+* Added: **off-site copies are now free.** Every backup can be copied to an FTP or FTPS server, or to a folder outside the web root such as a mounted drive or NAS. A backup that lives only on the machine it protects is not a backup.
+* Added: a destination registry, so an add-on contributes further destinations through the `migrator/backup_destinations` filter instead of the free plugin knowing about them.
+* Changed: the free plugin no longer stores settings it cannot act on. A backup strategy or an encryption passphrase belongs to whatever implements them.
+* Fixed: deactivating the paid add-on used to clear the backup cron event, which stopped the site's backups. Scheduling belongs to this plugin now, so it keeps running.
+* Note for existing Migrator PRO users: your schedule, retention, exclusions and off-site credentials carry over automatically, including the passwords. Nothing needs re-entering.
 
 = 1.2.18 =
 * Fixed: the package no longer ships its own translation files. WordPress.org builds language packs from translate.wordpress.org, and a bundled catalogue shadows that pack, so a translation corrected upstream could not reach you until the next release. Your language now comes from the language pack, which is the copy that stays current.
