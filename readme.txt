@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -178,6 +178,9 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.3.2 =
+* "Tested up to" was declared in the plugin header as well as in this readme. WordPress.org reads the readme; declaring it in two places is how a listing ends up advertising a compatibility claim nobody wrote. The header line is gone, the readme is unchanged.
 
 = 1.3.1 =
 * The translation template was regenerated. 57 strings added to the plugin since the template was last built were missing from it, so no translator could reach them in any language, and 2 strings the plugin no longer uses have been dropped. Nothing you see changes; what a translator can see does.
