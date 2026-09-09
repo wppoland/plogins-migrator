@@ -145,7 +145,12 @@ final class Importer
              */
             $supported = (bool) apply_filters('migrator/multisite_supported', false, $archiveMultisite, is_multisite());
             if (! $supported) {
-                throw new \RuntimeException('Migrator: multisite backups need the Migrator Pro add-on for a network-to-network restore. This archive or this site is a multisite network.');
+                // States the limitation without naming a paid edition. The
+                // network rewrite this restore needs (wp_blogs and wp_site
+                // domains and paths) is genuinely not in this package, so
+                // refusing is honest, but a free plugin's own code should
+                // not read as an upsell in a thrown exception.
+                throw new \RuntimeException('Migrator: this restore crosses a multisite boundary. Restoring a network backup rewrites the network tables to the destination domain, which this plugin does not do, so the import was stopped rather than left half applied.');
             }
         }
 
