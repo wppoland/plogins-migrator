@@ -180,6 +180,7 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 == Changelog ==
 
 = 1.3.2 =
+* Changed: the message shown when a restore crosses a multisite boundary now states the limitation instead of naming the paid add-on. The restore is still refused, because rewriting the network tables to the destination domain is genuinely not part of this plugin, but a free plugin's own error text should not read as an upsell.
 * "Tested up to" was declared in the plugin header as well as in this readme. WordPress.org reads the readme; declaring it in two places is how a listing ends up advertising a compatibility claim nobody wrote. The header line is gone, the readme is unchanged.
 
 = 1.3.1 =
