@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -178,6 +178,9 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.3.3 =
+* Fixed: deleting the plugin left the per-user "dismiss" flag from the PRO notice in the database. Uninstall now removes it for every user, not just the one who dismissed it.
 
 = 1.3.2 =
 * Changed: the message shown when a restore crosses a multisite boundary now states the limitation instead of naming the paid add-on. The restore is still refused, because rewriting the network tables to the destination domain is genuinely not part of this plugin, but a free plugin's own error text should not read as an upsell.
