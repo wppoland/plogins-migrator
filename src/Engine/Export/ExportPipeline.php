@@ -99,7 +99,17 @@ final class ExportPipeline
         }
         $total = 0;
         foreach ($this->scanner($options)->scan($this->contentDir()) as $file) {
-            fwrite($list, $file['rel'] . "\n");
+            $line = $file['rel'] . "\n";
+            // The list IS the backup's contents. A short write here drops files
+            // from it while $total still counts them, so the job reports a file
+            // count the archive does not contain and nobody finds out until a
+            // restore is missing something.
+            if (fwrite($list, $line) !== strlen($line)) {
+                fclose($list);
+                $writer->close();
+
+                throw new \RuntimeException('Migrator: could not write the file list, the disk is most likely full.');
+            }
             $total++;
         }
         fclose($list);

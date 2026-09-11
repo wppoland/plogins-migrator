@@ -209,8 +209,18 @@ final class Importer
                     do_action('migrator/after_database_import', ['source' => $source, 'target' => $target], $manifest, $this->db);
                 } catch (\Throwable $e) {
                     $log('Import failed, restoring the previous database…');
-                    $this->restoreDatabase($rollback);
+                    $restored = $this->restoreDatabase($rollback);
                     $reader->close();
+                    if (! $restored) {
+                        $log('The rollback did not complete. The previous database is in ' . $rollback);
+
+                        throw new \RuntimeException(esc_html(
+                            'Migrator: the import failed AND the rollback failed, so the database is in a partly imported state. '
+                            . 'The dump of the previous database is kept at ' . $rollback . ' and must be restored by hand. '
+                            . $e->getMessage()
+                        ));
+                    }
+
                     throw new \RuntimeException(esc_html(
                         'Migrator: import failed and the database was rolled back to its previous state. ' . $e->getMessage()
                     ));
@@ -261,20 +271,29 @@ final class Importer
     }
 
     /**
-     * Best-effort restore of the rollback dump after a failed import.
+     * Restore the rollback dump after a failed import.
+     *
+     * Returns false when the database is NOT back to its previous state. The
+     * caller has to say which of the two happened: "rolled back" and "half
+     * imported, rollback also failed" are different emergencies, and telling a
+     * merchant the first when the second is true sends them away from a site
+     * that needs them.
      */
-    private function restoreDatabase(string $path): void
+    private function restoreDatabase(string $path): bool
     {
         if (! is_readable($path)) {
-            return;
+            return false;
         }
         try {
             (new SqlExecutor($this->db))->runFile($path);
         } catch (\Throwable $e) {
-            // Nothing more we can safely do; the rollback file is kept for manual recovery.
-            return;
+            // Keep the rollback file: it is now the only copy of the previous
+            // database, and manual recovery needs it.
+            return false;
         }
         wp_delete_file($path);
+
+        return true;
     }
 
     private function importDatabase(Reader $reader, callable $log): int
@@ -284,8 +303,21 @@ final class Importer
         if (false === $handle) {
             throw new \RuntimeException('Migrator: cannot open temp file for SQL import.');
         }
-        $reader->streamTo(static function (string $chunk) use ($handle): void {
-            fwrite($handle, $chunk);
+        // A discarded fwrite() return is how a restore silently truncates. On a
+        // disk that fills up mid-stream, fwrite writes what fits and reports the
+        // short count; the SQL file then ends at a chunk boundary and executes
+        // cleanly up to that point, so the merchant is told the import succeeded
+        // while the tail of their database was never written.
+        $reader->streamTo(static function (string $chunk) use ($handle, $tmp): void {
+            $written = fwrite($handle, $chunk);
+            if (false === $written || $written < strlen($chunk)) {
+                fclose($handle);
+
+                throw new \RuntimeException(
+                    'Migrator: could not write the whole SQL dump to ' . $tmp
+                    . '. The disk is most likely full. Nothing has been imported.'
+                );
+            }
         });
         fclose($handle);
 
@@ -370,10 +402,23 @@ final class Importer
         if (false === $handle) {
             return false;
         }
-        $reader->streamTo(static function (string $chunk) use ($handle): void {
-            fwrite($handle, $chunk);
+        // Same trap as the SQL stream: a short write leaves a truncated file on
+        // disk and this used to return true for it, so a half-written image,
+        // theme file or PHP file was restored and reported as a success.
+        $short = false;
+        $reader->streamTo(static function (string $chunk) use ($handle, &$short): void {
+            $written = fwrite($handle, $chunk);
+            if (false === $written || $written < strlen($chunk)) {
+                $short = true;
+            }
         });
         fclose($handle);
+
+        if ($short) {
+            wp_delete_file($target);
+
+            return false;
+        }
 
         return true;
     }

@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.3
+Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,10 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 == Changelog ==
 
+= 1.3.4 =
+* Fixed: a restore could stop part way through and still report success. When the disk filled up while the backup was being unpacked, the write stopped where it ran out of room and nothing said so, so the database was restored up to that point and the rest was silently missing. The same applied to every file taken out of the archive, and to the list of files written into a new backup. All three now stop and tell you the disk is full instead of finishing quietly.
+* Fixed: when an import failed and the attempt to put the previous database back ALSO failed, the message still said the database had been rolled back. It now says the site is in a partly imported state and gives the path of the dump that has to be restored by hand.
+
 = 1.3.3 =
 * Fixed: deleting the plugin left the per-user "dismiss" flag from the PRO notice in the database. Uninstall now removes it for every user, not just the one who dismissed it.
 
@@ -297,3 +301,8 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * In-browser resumable export with a progress bar and a direct download, plus drag-and-drop restore.
 * WP-CLI `export` and `import` for sites too large for the browser.
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
+
+== Upgrade Notice ==
+
+= 1.3.4 =
+Fixes a restore that could finish silently truncated on a full disk, and a rollback failure that reported itself as a successful rollback. Update before your next restore.
