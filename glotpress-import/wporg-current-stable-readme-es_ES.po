@@ -279,10 +279,10 @@ msgstr "Actívalo. No hay dependencias necesarias."
 #. Found in installation list item.
 msgid ""
 "Upload the plugin to <code>/wp-content/plugins/migrator</code>, or install "
-"it from Plugins → Add New."
+"it from Plugins > Add New."
 msgstr ""
 "Sube el plugin a <code>/wp-content/plugins/migrator</code>, o instálalo "
-"desde Plugins → Añadir nuevo."
+"desde Plugins > Añadir nuevo."
 
 #. Found in description paragraph.
 msgid ""

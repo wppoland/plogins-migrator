@@ -24,9 +24,9 @@ defined('ABSPATH') || exit;
  * this runs in time-boxed slices so it survives the request timeout on large
  * sites:
  *
- *   start()  → write signature, manifest and the database dump; enumerate the
+ *   start()  > write signature, manifest and the database dump; enumerate the
  *              files to a list; leave the archive open-ended (no end marker).
- *   step()   → append a time-boxed batch of files; when the list is exhausted,
+ *   step()   > append a time-boxed batch of files; when the list is exhausted,
  *              write the end marker and finish.
  *
  * Each appended file is a complete, checksummed entry, so an interrupted export

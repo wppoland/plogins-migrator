@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.4
+Stable tag: 1.3.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -116,7 +116,7 @@ Compare editions and pricing: [plogins.com/plogins-migrator-pro/pricing/](https:
 
 == Installation ==
 
-1. Upload the plugin to `/wp-content/plugins/plogins-migrator`, or install it from Plugins → Add New.
+1. Upload the plugin to `/wp-content/plugins/plogins-migrator`, or install it from Plugins > Add New.
 2. Activate it. There are no required dependencies.
 3. Open **Migrator** in the admin menu to create a backup, or use `wp migrator export` from the command line.
 
@@ -178,6 +178,10 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.3.5 =
+* Fixed: the PRO upgrade promo kept selling to people who had already bought the paid edition. Only the banner could be dismissed, so the sidebar promo and the locked feature cards followed a paying customer around for good. The promo now checks whether the paid edition is active and steps aside when it is.
+* Fixed: arrow glyphs in the admin menu paths, and in the strings handed to translators. An arrow inside a translatable string makes the glyph every translator's problem and changes the layout in any locale that drops it.
 
 = 1.3.4 =
 * Fixed: a restore could stop part way through and still report success. When the disk filled up while the backup was being unpacked, the write stopped where it ran out of room and nothing said so, so the database was restored up to that point and the rest was silently missing. The same applied to every file taken out of the archive, and to the list of files written into a new backup. All three now stop and tell you the disk is full instead of finishing quietly.

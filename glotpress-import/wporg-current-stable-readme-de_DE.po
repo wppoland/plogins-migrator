@@ -274,10 +274,10 @@ msgstr "Aktiviere es. Es gibt keine erforderlichen Abhängigkeiten."
 #. Found in installation list item.
 msgid ""
 "Upload the plugin to <code>/wp-content/plugins/migrator</code>, or install "
-"it from Plugins → Add New."
+"it from Plugins > Add New."
 msgstr ""
 "Lade das Plugin nach <code>/wp-content/plugins/migrator</code> hoch oder "
-"installiere es über Plugins → Installieren."
+"installiere es über Plugins > Installieren."
 
 #. Found in description paragraph.
 msgid ""
