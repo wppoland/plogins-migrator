@@ -275,10 +275,10 @@ msgstr "Włącz ją. Nie ma wymaganych zależności."
 #. Found in installation list item.
 msgid ""
 "Upload the plugin to <code>/wp-content/plugins/migrator</code>, or install "
-"it from Plugins → Add New."
+"it from Plugins > Add New."
 msgstr ""
 "Prześlij wtyczkę do <code>/wp-content/plugins/migrator</code>, lub "
-"zainstaluj ją z Wtyczki → Dodaj nową."
+"zainstaluj ją z Wtyczki > Dodaj nową."
 
 #. Found in description paragraph.
 msgid ""

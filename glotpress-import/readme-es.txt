@@ -48,7 +48,7 @@ En sitios grandes donde una petición del navegador agotaría el tiempo, cada tr
 
 == Installation ==
 
-1. Sube el plugin a `/wp-content/plugins/migrator` o instálalo desde Plugins → Añadir nuevo.
+1. Sube el plugin a `/wp-content/plugins/migrator` o instálalo desde Plugins > Añadir nuevo.
 2. Actívalo. No hay dependencias obligatorias.
 3. Abre <strong>Migrator</strong> en el menú de administración para crear una copia de seguridad o usa `wp migrator export` desde la línea de comandos.
 
