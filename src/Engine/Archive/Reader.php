@@ -61,9 +61,17 @@ final class Reader
             $this->remaining = 0;
         }
 
+        // A finished archive always ends with the four-byte end marker, so
+        // running out of file instead is not the end of the archive: it is an
+        // archive that was cut short while it was being written. Treating that
+        // as a clean end is how a half-written backup restores as if it were
+        // whole, with everything after the cut silently absent.
         $lenBytes = (string) fread($this->handle, 4);
         if (strlen($lenBytes) < 4) {
-            return null;
+            throw new \RuntimeException(
+                'Migrator: this archive ends part way through, so it is not a complete backup. '
+                . 'The run that wrote it was cut short (execution time, memory, or a full disk).'
+            );
         }
 
         /** @var array{1: int} $unpacked */
@@ -74,6 +82,12 @@ final class Reader
         }
 
         $headerJson = (string) fread($this->handle, $headerLen);
+        if (strlen($headerJson) < $headerLen) {
+            throw new \RuntimeException(
+                'Migrator: this archive ends part way through an entry, so it is not a complete backup. '
+                . 'The run that wrote it was cut short (execution time, memory, or a full disk).'
+            );
+        }
         /** @var array<string, mixed> $header */
         $header = json_decode($headerJson, true) ?: [];
         $entry  = Entry::fromHeader($header);

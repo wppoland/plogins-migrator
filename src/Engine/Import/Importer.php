@@ -313,10 +313,10 @@ final class Importer
             if (false === $written || $written < strlen($chunk)) {
                 fclose($handle);
 
-                throw new \RuntimeException(
+                throw new \RuntimeException(esc_html(
                     'Migrator: could not write the whole SQL dump to ' . $tmp
                     . '. The disk is most likely full. Nothing has been imported.'
-                );
+                ));
             }
         });
         fclose($handle);

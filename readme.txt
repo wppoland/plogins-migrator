@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.5
+Stable tag: 1.3.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -178,6 +178,13 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.3.6 =
+* Fixed: a backup could quietly leave rows out of the database dump. Every table was read in pages counted from the start of the table, so when anything deleted a row behind the reader (an expiring transient, a WooCommerce session, an abandoned cart), every later row moved up one place and the row sitting on the next page boundary was never read. It was missing from the backup and nothing reported it. Tables are now read in primary key order, each page starting after the last key already read, which no concurrent delete can move.
+* Fixed: a table with no primary key cannot be read that way, so it is still paged by position. Its row count is now taken before and after the read: if the table shrank while it was being dumped, the backup stops with an error naming the table instead of finishing and handing you an archive that quietly lacks rows.
+* Fixed: a backup that was killed part way through (execution time, memory, closing the browser tab on Run now) left half an archive behind under the final backup name. The backups screen listed it, the retention rule counted it as one of the copies to keep, and the good backup it pushed off the end was the one deleted. A run now builds under a temporary name and takes the real one only once the archive is finished, and the leavings of runs that died are cleared out.
+* Fixed: an archive that had been cut short was read as if it were simply a smaller archive. A complete archive ends with an end marker, but running out of file instead was treated as the same thing, so a backup killed while it was being written could be restored with everything after the cut silently absent. Reading one now stops and says the archive is incomplete.
+* Changed: a scheduled backup no longer runs under the host's default execution time limit. Building a whole site archive and copying it off-site takes longer than that on any site large enough to need backups.
 
 = 1.3.5 =
 * Fixed: the PRO upgrade promo kept selling to people who had already bought the paid edition. Only the banner could be dismissed, so the sidebar promo and the locked feature cards followed a paying customer around for good. The promo now checks whether the paid edition is active and steps aside when it is.

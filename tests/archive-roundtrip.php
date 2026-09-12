@@ -142,6 +142,30 @@ try {
 }
 check('corrupted entry is caught by checksum verification', $detected);
 
+// ---- a truncated archive is not mistaken for a shorter one ----
+// A run killed mid-write leaves the file with no end marker. Read to the end and
+// the reader must say so, rather than reporting the entries it did manage to
+// reach as the whole backup.
+foreach ([64, 4096, filesize($archive) - 4] as $cut) {
+    $cutPath = $tmp . '/cut-' . $cut . '.migrator';
+    copy($archive, $cutPath);
+    $fh = fopen($cutPath, 'r+b');
+    ftruncate($fh, (int) $cut);
+    fclose($fh);
+
+    $caught = false;
+    try {
+        $rt = new Reader($cutPath);
+        while (($e = $rt->nextEntry()) !== null) {
+            $rt->skip();
+        }
+        $rt->close();
+    } catch (\RuntimeException $ex) {
+        $caught = str_contains($ex->getMessage(), 'ends part way through');
+    }
+    check("an archive truncated at {$cut} bytes is reported, not read as complete", $caught);
+}
+
 // ---- a clean archive passes full verification ----
 $clean = true;
 try {

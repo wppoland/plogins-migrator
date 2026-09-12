@@ -49,6 +49,14 @@ final class BackupRunner
     {
         $this->workspace->ensure();
 
+        // A whole-site archive plus an off-site upload runs inline here, for the
+        // cron event and for the Run now button alike, and neither gets more
+        // than the host's default execution time unless it asks. On a site big
+        // enough to need backups, that limit is reached mid-archive.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
         $status = null;
 
         if ($allowStrategies) {
@@ -95,14 +103,25 @@ final class BackupRunner
     {
         global $wpdb;
 
-        try {
-            $exporter    = new Exporter($this->workspace, new Dumper($wpdb));
-            $destination = $this->destination();
-            $result      = $exporter->export($destination, null, $schedule->options());
+        $this->discardAbandoned();
+        $working = '';
 
-            $archivePath = (string) $result['path'];
-            $pp          = $this->postProcess($archivePath, $schedule, $allowStrategies);
-            $archivePath = $pp['path'];
+        try {
+            $exporter = new Exporter($this->workspace, new Dumper($wpdb));
+
+            // Build under a name retention does not recognise, and only take the
+            // scheduled name once the archive is finished and post-processed. A
+            // run killed part way through (execution time, memory, the browser
+            // tab closing on Run now) leaves half an archive behind, and under
+            // the final name that half counts as one of the kept backups: the
+            // screen lists it, retention counts it, and the good backup it
+            // pushes off the end is the one deleted.
+            $working = $this->workingPath();
+
+            $result = $exporter->export($working, null, $schedule->options());
+
+            $pp          = $this->postProcess($working, $schedule, $allowStrategies);
+            $archivePath = $this->publish($working, $pp['path']);
 
             $kept = $this->prune($schedule->retention);
 
@@ -120,6 +139,10 @@ final class BackupRunner
                 'message'    => '',
             ] + $pp['extra'];
         } catch (\Throwable $e) {
+            if ('' !== $working && is_file($working)) {
+                wp_delete_file($working);
+            }
+
             return [
                 'time'    => time(),
                 'ok'      => false,
@@ -297,6 +320,53 @@ final class BackupRunner
         }
 
         return min(count($archives), $retention);
+    }
+
+    /**
+     * Where a run builds its archive before it is finished. Deliberately outside
+     * the `*-scheduled-*.migrator*` pattern retention and the backups screen
+     * look for, so an unfinished file is invisible to both.
+     */
+    private function workingPath(): string
+    {
+        return $this->workspace->path(
+            sprintf('building-%s-%s.part', gmdate('Ymd-His'), wp_generate_password(8, false))
+        );
+    }
+
+    /**
+     * Give the finished archive its scheduled name, keeping whatever suffix
+     * post-processing added (`.gz`, and `.enc` from the paid add-on).
+     */
+    private function publish(string $working, string $processed): string
+    {
+        $suffix = str_starts_with($processed, $working) ? substr($processed, strlen($working)) : '';
+        $final  = $this->destination() . $suffix;
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+        if (! rename($processed, $final)) {
+            throw new \RuntimeException('Migrator: the backup was built but could not be moved into place.');
+        }
+
+        return $final;
+    }
+
+    /**
+     * Delete the leavings of runs that were killed before they finished. They
+     * can never be completed (no run resumes another's file) and a half-written
+     * archive of a large site is large, so left alone they fill the disk.
+     *
+     * The pattern carries a trailing wildcard because post-processing appends to
+     * the working name (`.gz`, `.enc`), so a run that died after compressing
+     * left a file the bare `.part` pattern never saw.
+     */
+    private function discardAbandoned(): void
+    {
+        foreach (glob($this->workspace->path('building-*.part*')) ?: [] as $path) {
+            if ((int) filemtime($path) < time() - DAY_IN_SECONDS) {
+                wp_delete_file($path);
+            }
+        }
     }
 
     /**
