@@ -4,7 +4,7 @@ Tags: backup, migration, clone, restore, wp-cli
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.6
+Stable tag: 1.3.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -178,6 +178,10 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.3.7 =
+* Fixed: a restore only found out that an archive had been cut short part way through reading it, by which time the database had already been replaced. An archive is now checked for the end marker a finished backup carries before the restore touches anything, so an unfinished one is refused with the site left as it was.
+* Fixed: the copy of the database taken before a restore was deleted the moment the import of the database finished, so anything that failed after that point left the site part restored with nothing to go back to. That copy is now kept until the whole restore is through, and if a restore does stop after the database was replaced the error says what state the site is in, where the copy of the previous database is, and what to do with it.
 
 = 1.3.6 =
 * Fixed: a backup could quietly leave rows out of the database dump. Every table was read in pages counted from the start of the table, so when anything deleted a row behind the reader (an expiring transient, a WooCommerce session, an abandoned cart), every later row moved up one place and the row sitting on the next page boundary was never read. It was missing from the backup and nothing reported it. Tables are now read in primary key order, each page starting after the last key already read, which no concurrent delete can move.

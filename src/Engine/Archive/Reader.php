@@ -51,6 +51,32 @@ final class Reader
     }
 
     /**
+     * Whether the file ends with the end marker the writer puts there last.
+     *
+     * Reads four bytes from the tail, so it answers "was this archive finished"
+     * before a restore has touched anything, instead of half way through one.
+     * It is a pre-flight, not a proof: a cut that happens to land on four zero
+     * bytes passes it, and it says nothing about the middle of the file. The
+     * per-entry checks in {@see nextEntry()} and the checksums stay the backstop.
+     *
+     * Takes a path rather than working on the open handle because the callers
+     * that need it ask before they open anything, and because a stream wrapper
+     * (compressed archives, as the Inspector reads them) cannot seek to the end.
+     */
+    public static function endsWithMarker(string $path): bool
+    {
+        $handle = fopen($path, 'rb');
+        if (false === $handle) {
+            return false;
+        }
+        $sought = fseek($handle, -4, SEEK_END);
+        $tail   = -1 === $sought ? '' : (string) fread($handle, 4);
+        fclose($handle);
+
+        return pack('N', 0) === $tail;
+    }
+
+    /**
      * Advance to the next entry. Skips any unconsumed content of the previous
      * entry first. Returns null at end of archive.
      */

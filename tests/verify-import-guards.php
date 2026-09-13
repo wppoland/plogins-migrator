@@ -60,7 +60,28 @@ $check('zip-slip entry is blocked (no write outside wp-content)', ! file_exists(
 @unlink($evil);
 @unlink($zPath);
 
-// 3. Safety backup is created and cleaned up on a successful DB import.
+// 3. An archive cut short must be refused BEFORE the database is replaced.
+// The database entry comes before the files, so finding the cut during the read
+// finds it too late: the site is already standing on the archive's database.
+$tPath = $ws->path('guard-truncated.migrator');
+$w = new Writer($tPath);
+$w->addString(Manifest::NAME, (string) wp_json_encode($baseManifest), Entry::TYPE_MANIFEST);
+$w->addString('wp-content/uploads/guard-cut.txt', 'content that never finished being written');
+$w->finish();
+file_put_contents($tPath, substr((string) file_get_contents($tPath), 0, -9)); // Cut the end marker off.
+$stale = glob($ws->path('rollback-*.sql')) ?: [];
+$refused = false;
+try {
+    (new Importer($ws, $wpdb))->import($tPath, true);
+} catch (\Throwable $e) {
+    $refused = str_contains($e->getMessage(), 'never finished');
+}
+$check('an archive cut short is refused, not restored half way', $refused);
+$check('and nothing was touched, so no safety dump was taken', (glob($ws->path('rollback-*.sql')) ?: []) === $stale);
+$check('and the cut archive extracted no files', ! file_exists(WP_CONTENT_DIR . '/uploads/guard-cut.txt'));
+@unlink($tPath);
+
+// 4. Safety backup is created and cleaned up on a successful DB import.
 $before = glob($ws->path('rollback-*.sql')) ?: [];
 $check('no stale rollback files before', count($before) === 0);
 
