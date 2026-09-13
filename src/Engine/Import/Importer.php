@@ -108,6 +108,19 @@ final class Importer
      */
     private function runImport(string $archivePath, bool $importFiles, callable $log): array
     {
+        // An archive cut short while it was being written is otherwise found out
+        // part way through the restore, which is too late: the database entry
+        // comes before the files, so by then it has been replaced. The end marker
+        // is four bytes at the tail of a finished archive, so ask for it now,
+        // while refusing still costs the site nothing.
+        if (! Reader::endsWithMarker($archivePath)) {
+            throw new \RuntimeException(
+                'Migrator: this archive was never finished, so it is not a complete backup. The run that wrote it '
+                . 'was cut short (execution time, memory, or a full disk). Nothing has been imported, this site is '
+                . 'untouched. Restore from a backup that finished.'
+            );
+        }
+
         $reader = new Reader($archivePath);
 
         $first = $reader->nextEntry();
@@ -173,71 +186,105 @@ final class Importer
         $tablesRepl = 0;
         $files      = 0;
 
-        while (($entry = $reader->nextEntry()) !== null) {
-            if (Exporter::DB_ENTRY === $entry->path) {
-                // Safety net: snapshot the current database so a failed import
-                // (DDL auto-commits, so DROP/CREATE cannot be transaction-rolled
-                // back) can be reverted instead of leaving a dead site.
-                $rollback = $this->backupDatabase($log);
+        // The dump of the database as it was, kept until the WHOLE restore is
+        // through. Deleting it the moment the SQL was in left anything that
+        // failed later (a checksum, a truncation the tail check cannot see)
+        // standing on a replaced database with nothing to go back to.
+        $replacedDbDump = null;
 
-                try {
-                    $statements = $this->importDatabase($reader, $log);
+        try {
+            while (($entry = $reader->nextEntry()) !== null) {
+                if (Exporter::DB_ENTRY === $entry->path) {
+                    // Safety net: snapshot the current database so a failed import
+                    // (DDL auto-commits, so DROP/CREATE cannot be transaction-rolled
+                    // back) can be reverted instead of leaving a dead site.
+                    $rollback = $this->backupDatabase($log);
 
-                    [$from, $to] = $this->replacements($source, $target);
-                    if ([] !== $from) {
-                        /** @var string[] $tables */
-                        $tables     = array_map('strval', (array) $manifest->get('tables'));
-                        $search     = new SearchReplace($this->db, new SerializedReplacer($from, $to));
-                        $result     = $search->run($tables);
-                        $replaced   = $result['changes'];
-                        $tablesRepl = $result['tables'];
-                        $log(sprintf('Rewrote URLs/paths in %d rows across %d tables.', $replaced, $tablesRepl));
-                    }
+                    try {
+                        $statements = $this->importDatabase($reader, $log);
 
-                    /**
-                     * Fires after the database is imported and the standard
-                     * URL/path rewrite has run, while the safety backup is still
-                     * in place. A handler that throws triggers the rollback. Used
-                     * by the Pro add-on to fix up multisite network tables
-                     * (wp_blogs / wp_site) that hold bare host names the URL
-                     * rewrite cannot reach.
-                     *
-                     * @param array{source: array, target: array} $context Source and target identities.
-                     * @param Manifest                            $manifest The archive manifest.
-                     * @param \wpdb                               $db       The database handle.
-                     */
-                    do_action('migrator/after_database_import', ['source' => $source, 'target' => $target], $manifest, $this->db);
-                } catch (\Throwable $e) {
-                    $log('Import failed, restoring the previous database…');
-                    $restored = $this->restoreDatabase($rollback);
-                    $reader->close();
-                    if (! $restored) {
-                        $log('The rollback did not complete. The previous database is in ' . $rollback);
+                        [$from, $to] = $this->replacements($source, $target);
+                        if ([] !== $from) {
+                            /** @var string[] $tables */
+                            $tables     = array_map('strval', (array) $manifest->get('tables'));
+                            $search     = new SearchReplace($this->db, new SerializedReplacer($from, $to));
+                            $result     = $search->run($tables);
+                            $replaced   = $result['changes'];
+                            $tablesRepl = $result['tables'];
+                            $log(sprintf('Rewrote URLs/paths in %d rows across %d tables.', $replaced, $tablesRepl));
+                        }
+
+                        /**
+                         * Fires after the database is imported and the standard
+                         * URL/path rewrite has run, while the safety backup is still
+                         * in place. A handler that throws triggers the rollback. Used
+                         * by the Pro add-on to fix up multisite network tables
+                         * (wp_blogs / wp_site) that hold bare host names the URL
+                         * rewrite cannot reach.
+                         *
+                         * @param array{source: array, target: array} $context Source and target identities.
+                         * @param Manifest                            $manifest The archive manifest.
+                         * @param \wpdb                               $db       The database handle.
+                         */
+                        do_action('migrator/after_database_import', ['source' => $source, 'target' => $target], $manifest, $this->db);
+                    } catch (\Throwable $e) {
+                        $log('Import failed, restoring the previous database…');
+                        $restored = $this->restoreDatabase($rollback);
+                        $reader->close();
+                        if (! $restored) {
+                            $log('The rollback did not complete. The previous database is in ' . $rollback);
+
+                            throw new \RuntimeException(esc_html(
+                                'Migrator: the import failed AND the rollback failed, so the database is in a partly imported state. '
+                                . 'The dump of the previous database is kept at ' . $rollback . ' and must be restored by hand. '
+                                . $e->getMessage()
+                            ));
+                        }
 
                         throw new \RuntimeException(esc_html(
-                            'Migrator: the import failed AND the rollback failed, so the database is in a partly imported state. '
-                            . 'The dump of the previous database is kept at ' . $rollback . ' and must be restored by hand. '
-                            . $e->getMessage()
+                            'Migrator: import failed and the database was rolled back to its previous state. ' . $e->getMessage()
                         ));
                     }
 
-                    throw new \RuntimeException(esc_html(
-                        'Migrator: import failed and the database was rolled back to its previous state. ' . $e->getMessage()
-                    ));
-                }
-
-                wp_delete_file($rollback);
-            } elseif (Exporter::ROUTINES_ENTRY === $entry->path) {
-                $this->importRoutines($reader->readContents(), $log);
-            } elseif (str_starts_with($entry->path, 'wp-content/')) {
-                if ($importFiles && $this->extract($entry->path, $reader)) {
-                    $files++;
+                    $replacedDbDump = $rollback;
+                } elseif (Exporter::ROUTINES_ENTRY === $entry->path) {
+                    $this->importRoutines($reader->readContents(), $log);
+                } elseif (str_starts_with($entry->path, 'wp-content/')) {
+                    if ($importFiles && $this->extract($entry->path, $reader)) {
+                        $files++;
+                    } else {
+                        $reader->skip();
+                    }
                 } else {
                     $reader->skip();
                 }
-            } else {
-                $reader->skip();
             }
+        } catch (\Throwable $e) {
+            $reader->close();
+
+            if (null === $replacedDbDump) {
+                throw $e;
+            }
+
+            // The database is already the archive's and the files got only as
+            // far as the read did. Rolling the database back on its own would
+            // pair the old database with the new files that were written before
+            // the stop, so state what the site is standing on and hand over the
+            // dump that makes either choice possible.
+            throw new \RuntimeException(esc_html(sprintf(
+                'Migrator: the restore stopped after the database had already been replaced, so this site is now part restored: '
+                . 'the database is the one from the archive, %1$d files came across in full, the file it stopped on may be part '
+                . 'written, and the rest of the archive was not read. The database as it was before is dumped at %2$s: import '
+                . 'that file to put the database back, or restore again from a backup that finished. Do one of the two before '
+                . 'letting visitors in. %3$s',
+                $files,
+                $replacedDbDump,
+                $e->getMessage()
+            )));
+        }
+
+        if (null !== $replacedDbDump) {
+            wp_delete_file($replacedDbDump);
         }
 
         $reader->close();
