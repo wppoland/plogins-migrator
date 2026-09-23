@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Migrator 0.3.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/migrator\n"
-"POT-Creation-Date: 2026-07-13T11:03:26+00:00\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
+"POT-Creation-Date: 2026-09-09T17:34:30+00:00\n"
 "PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
 "Last-Translator: motylanogha <szatkowski.mariusz@gmail.com>\n"
 "Language-Team: German <de@li.org>\n"
@@ -17,8 +17,8 @@ msgstr ""
 
 #. Plugin Name of the plugin
 #: plogins-migrator.php
-msgid "Plogins Migrator - Site Migration and Backup"
-msgstr "Plogins Migrator - Site-Migration und Backup"
+msgid "Migrator - Site Migration and Backup"
+msgstr ""
 
 #. Plugin URI of the plugin
 #: plogins-migrator.php
@@ -45,7 +45,7 @@ msgid "https://wppoland.com"
 msgstr "https://wppoland.com"
 
 #. translators: 1: Required PHP version, 2: Current PHP version
-#: plogins-migrator.php:41
+#: plogins-migrator.php:40
 #, php-format
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr "Migrator erfordert PHP %1$s oder höher. Du verwendest PHP %2$s."
@@ -209,49 +209,112 @@ msgstr "Geändert"
 msgid "Skipped (no primary key):"
 msgstr "Übersprungen (kein Primärschlüssel):"
 
-#. translators: %d: yearly price in PLN
-#: src/Admin/ProUpsell.php:74
-#, php-format
-msgid "od %d zł/rok"
-msgstr "ab %d PLN/Jahr"
-
 #. translators: 1: currency symbol, 2: yearly price
-#: src/Admin/ProUpsell.php:79
+#: src/Admin/ProUpsell.php:75
 #, php-format
 msgid "from %1$s%2$d/yr"
 msgstr "ab %1$s%2$d/Jahr"
 
-#: src/Admin/ProUpsell.php:111
+#: src/Admin/ProUpsell.php:107
 msgid "Permission denied."
 msgstr "Zugriff verweigert."
 
 #. translators: %s: PRO edition name
-#: src/Admin/ProUpsell.php:141
+#: src/Admin/ProUpsell.php:137
 #, php-format
 msgid "Do more with %s"
 msgstr "Mehr erreichen mit %s"
 
-#: src/Admin/ProUpsell.php:146 src/Admin/ProUpsell.php:175
+#: src/Admin/ProUpsell.php:142 src/Admin/ProUpsell.php:171
 msgid "Upgrade to PRO"
 msgstr "Auf PRO upgraden"
 
-#: src/Admin/ProUpsell.php:148
+#: src/Admin/ProUpsell.php:144
 msgid "Dismiss this notice"
 msgstr "Diesen Hinweis ausblenden"
 
-#: src/Admin/ProUpsell.php:165
+#: src/Admin/ProUpsell.php:161
 msgid "Unlock every PRO feature"
 msgstr "Alle PRO-Funktionen freischalten"
 
-#: src/Admin/ProUpsell.php:178
+#: src/Admin/ProUpsell.php:174
 msgid "one licence, every PRO feature"
 msgstr "eine Lizenz, alle PRO-Funktionen"
 
 #. translators: %s: PRO edition name
-#: src/Admin/ProUpsell.php:197
+#: src/Admin/ProUpsell.php:193
 #, php-format
 msgid "What %s adds"
 msgstr "Was %s hinzufügt"
+
+#: src/Backup/Schedule.php:133
+msgid "Once a day (Migrator)"
+msgstr ""
+
+#: src/Backup/Schedule.php:137
+msgid "Once a week (Migrator)"
+msgstr ""
+
+#: src/Backup/Scheduler.php:55 src/Backup/Scheduler.php:56
+#: templates/schedule-page.php:36
+msgid "Scheduled Backups"
+msgstr ""
+
+#: src/Backup/Scheduler.php:111 src/Backup/Scheduler.php:206
+msgid "You are not allowed to do this."
+msgstr ""
+
+#: src/Backup/Scheduler.php:250 templates/admin-page.php:53
+msgid "Media library (uploads)"
+msgstr "Mediathek (Uploads)"
+
+#: src/Backup/Scheduler.php:251 templates/admin-page.php:54
+msgid "All themes"
+msgstr "Alle Themes"
+
+#: src/Backup/Scheduler.php:252 templates/admin-page.php:55
+msgid "Inactive themes (keep active only)"
+msgstr "Inaktive Themes (nur aktiv bleiben)"
+
+#: src/Backup/Scheduler.php:253 templates/admin-page.php:56
+msgid "All plugins"
+msgstr "Alle Plugins"
+
+#: src/Backup/Scheduler.php:254 templates/admin-page.php:57
+msgid "Inactive plugins (keep active only)"
+msgstr "Inaktive Plugins (nur aktiv halten)"
+
+#: src/Backup/Scheduler.php:255 templates/admin-page.php:58
+msgid "Must-use plugins"
+msgstr "Unverzichtbare Plugins"
+
+#: src/Backup/Scheduler.php:256 templates/admin-page.php:59
+msgid "Cache files"
+msgstr "Cache-Dateien"
+
+#: src/Backup/Scheduler.php:257 templates/admin-page.php:45
+msgid "Spam comments"
+msgstr "Spam-Kommentare"
+
+#: src/Backup/Scheduler.php:258 templates/admin-page.php:46
+msgid "Post revisions"
+msgstr "Beitragsrevisionen"
+
+#: src/Backup/Scheduler.php:259 templates/admin-page.php:47
+msgid "Transients"
+msgstr "Transienten"
+
+#: src/Backup/Scheduler.php:260 templates/admin-page.php:48
+msgid "WooCommerce sessions"
+msgstr "WooCommerce-Sitzungen"
+
+#: src/Backup/Scheduler.php:261 templates/admin-page.php:49
+msgid "Action Scheduler tables"
+msgstr "Aktionsplaner-Tabellen"
+
+#: src/Backup/Scheduler.php:262 templates/admin-page.php:50
+msgid "Database (files-only backup)"
+msgstr "Datenbank (nur Dateisicherung)"
 
 #: src/Engine/Archive/Inspector.php:52
 msgid "Source site"
@@ -368,6 +431,66 @@ msgstr ""
 "ausgeführt. Code, der auf neuerem PHP basiert, kann hier möglicherweise "
 "nicht ausgeführt werden."
 
+#: src/Storage/DestinationRegistry.php:36
+msgid "Folder on this server"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:41
+msgid "Absolute path"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:48
+msgid "FTP or FTPS"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:50
+msgid "Requires the PHP FTP extension, which this server does not have."
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:52
+msgid "Host"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:53
+msgid "Port"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:54
+msgid "Username"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:55
+msgid "Password"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:56
+msgid "Remote directory"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:57
+msgid "Passive mode"
+msgstr ""
+
+#: src/Storage/DestinationRegistry.php:58
+msgid "Use FTPS (explicit TLS)"
+msgstr ""
+
+#: src/Storage/FtpDestination.php:46
+msgid "FTPS server"
+msgstr ""
+
+#: src/Storage/FtpDestination.php:46
+msgid "FTP server"
+msgstr ""
+
+#: src/Storage/FtpDestination.php:151
+msgid "FTP login failed: check the username and password."
+msgstr ""
+
+#: src/Storage/LocalFolderDestination.php:32
+msgid "Local or mounted folder"
+msgstr ""
+
 #: templates/admin-page.php:19
 msgid ""
 "Back up your site or move it to a new host, one file, no technical setup."
@@ -407,7 +530,7 @@ msgstr "Nur Datenbank"
 msgid "Media only"
 msgstr "Nur Medien"
 
-#: templates/admin-page.php:41
+#: templates/admin-page.php:41 templates/schedule-page.php:75
 msgid "What to leave out (optional)"
 msgstr "Was du weglassen möchtest (optional)"
 
@@ -415,61 +538,9 @@ msgstr "Was du weglassen möchtest (optional)"
 msgid "Database"
 msgstr "Datenbank"
 
-#: templates/admin-page.php:45
-msgid "Spam comments"
-msgstr "Spam-Kommentare"
-
-#: templates/admin-page.php:46
-msgid "Post revisions"
-msgstr "Beitragsrevisionen"
-
-#: templates/admin-page.php:47
-msgid "Transients"
-msgstr "Transienten"
-
-#: templates/admin-page.php:48
-msgid "WooCommerce sessions"
-msgstr "WooCommerce-Sitzungen"
-
-#: templates/admin-page.php:49
-msgid "Action Scheduler tables"
-msgstr "Aktionsplaner-Tabellen"
-
-#: templates/admin-page.php:50
-msgid "Database (files-only backup)"
-msgstr "Datenbank (nur Dateisicherung)"
-
 #: templates/admin-page.php:52
 msgid "Files"
 msgstr "Dateien"
-
-#: templates/admin-page.php:53
-msgid "Media library (uploads)"
-msgstr "Mediathek (Uploads)"
-
-#: templates/admin-page.php:54
-msgid "All themes"
-msgstr "Alle Themes"
-
-#: templates/admin-page.php:55
-msgid "Inactive themes (keep active only)"
-msgstr "Inaktive Themes (nur aktiv bleiben)"
-
-#: templates/admin-page.php:56
-msgid "All plugins"
-msgstr "Alle Plugins"
-
-#: templates/admin-page.php:57
-msgid "Inactive plugins (keep active only)"
-msgstr "Inaktive Plugins (nur aktiv halten)"
-
-#: templates/admin-page.php:58
-msgid "Must-use plugins"
-msgstr "Unverzichtbare Plugins"
-
-#: templates/admin-page.php:59
-msgid "Cache files"
-msgstr "Cache-Dateien"
 
 #: templates/admin-page.php:83
 msgid "Exclude specific database tables (optional)"
@@ -492,7 +563,7 @@ msgstr ""
 "Backup nicht benötigst, zum Beispiel einen großen Cache, Protokolle oder die "
 "gespeicherten Daten eines anderen Plugins."
 
-#: templates/admin-page.php:106
+#: templates/admin-page.php:106 templates/schedule-page.php:86
 msgid "Compression"
 msgstr "Komprimierung"
 
@@ -616,3 +687,167 @@ msgstr "Ausführen"
 #: templates/admin-page.php:228
 msgid "From the command line:"
 msgstr "Von der Befehlszeile:"
+
+#: templates/schedule-page.php:23
+msgid "Schedule saved."
+msgstr ""
+
+#: templates/schedule-page.php:24
+msgid "Backup created."
+msgstr ""
+
+#: templates/schedule-page.php:25
+msgid "Backup failed. See the status below."
+msgstr ""
+
+#: templates/schedule-page.php:39
+msgid ""
+"Back up this site automatically on a schedule and keep the most recent "
+"copies. Backups run unattended through WordPress cron, using the same engine "
+"as a manual backup."
+msgstr ""
+
+#: templates/schedule-page.php:53
+msgid "Schedule"
+msgstr ""
+
+#: templates/schedule-page.php:57
+msgid "Run automatic backups"
+msgstr ""
+
+#: templates/schedule-page.php:61
+msgid "How often"
+msgstr ""
+
+#: templates/schedule-page.php:63
+msgid "Every day"
+msgstr ""
+
+#: templates/schedule-page.php:64
+msgid "Every week"
+msgstr ""
+
+#: templates/schedule-page.php:69
+msgid "Backups to keep"
+msgstr ""
+
+#: templates/schedule-page.php:71
+msgid "Older scheduled backups beyond this count are deleted automatically."
+msgstr ""
+
+#: templates/schedule-page.php:89
+msgid "Compress backups with gzip (smaller files)"
+msgstr ""
+
+#: templates/schedule-page.php:101 templates/schedule-page.php:209
+msgid "Off-site copy"
+msgstr ""
+
+#: templates/schedule-page.php:103
+msgid ""
+"Copy every backup somewhere other than this server. A backup that lives only "
+"on the machine it protects is not a backup."
+msgstr ""
+
+#: templates/schedule-page.php:108
+msgid "Copy each backup off this server"
+msgstr ""
+
+#: templates/schedule-page.php:112
+msgid "Where to"
+msgstr ""
+
+#: templates/schedule-page.php:145 templates/schedule-page.php:150
+msgid "Stored. Leave blank to keep it."
+msgstr ""
+
+#: templates/schedule-page.php:163
+msgid "Save schedule"
+msgstr ""
+
+#: templates/schedule-page.php:168
+msgid "Status"
+msgstr ""
+
+#: templates/schedule-page.php:172
+msgid "Automatic backups"
+msgstr ""
+
+#: templates/schedule-page.php:175
+msgid "On"
+msgstr ""
+
+#: templates/schedule-page.php:176 templates/schedule-page.php:214
+msgid "Off"
+msgstr ""
+
+#: templates/schedule-page.php:180
+msgid "Next run"
+msgstr ""
+
+#: templates/schedule-page.php:182
+msgid "Not scheduled"
+msgstr ""
+
+#: templates/schedule-page.php:186
+msgid "Last backup"
+msgstr ""
+
+#: templates/schedule-page.php:190
+msgid "Never"
+msgstr ""
+
+#. translators: 1: date, 2: human file size
+#: templates/schedule-page.php:194
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#. translators: %s: date
+#: templates/schedule-page.php:201
+#, php-format
+msgid "Failed on %s"
+msgstr ""
+
+#: templates/schedule-page.php:216
+msgid "Copied"
+msgstr ""
+
+#: templates/schedule-page.php:218
+msgid "Copy failed"
+msgstr ""
+
+#: templates/schedule-page.php:220
+msgid "On (no run yet)"
+msgstr ""
+
+#: templates/schedule-page.php:238
+msgid "Back up now"
+msgstr ""
+
+#: templates/schedule-page.php:245
+msgid "Kept backups"
+msgstr ""
+
+#: templates/schedule-page.php:250
+msgid "No scheduled backups yet. The first one appears here after a run."
+msgstr ""
+
+#: templates/schedule-page.php:255
+msgid "Backup"
+msgstr ""
+
+#: templates/schedule-page.php:256
+msgid "Created"
+msgstr ""
+
+#: templates/schedule-page.php:257
+msgid "Size"
+msgstr ""
+
+#~ msgid "Plogins Migrator - Site Migration and Backup"
+#~ msgstr "Plogins Migrator - Site-Migration und Backup"
+
+#, php-format
+#~ msgid "od %d zł/rok"
+#~ msgstr "ab %d PLN/Jahr"
