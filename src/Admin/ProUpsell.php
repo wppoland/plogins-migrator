@@ -154,9 +154,14 @@ final class ProUpsell
     }
 
     /** Sidebar promo panel (sits in the admin two-column layout). */
+    /**
+     * The sidebar promo follows the banner's dismissal. Without that, dismissing
+     * the banner left a full-height advert on the screen for good, which is not
+     * what Guideline 11 means by used with moderation.
+     */
     public function aside(): void
     {
-        if (! $this->enabled()) {
+        if (! $this->enabled() || $this->bannerDismissed()) {
             return;
         }
         $name     = (string) ($this->data()['name'] ?? 'Migrator Pro');
