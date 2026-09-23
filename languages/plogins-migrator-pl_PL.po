@@ -17,7 +17,7 @@ msgstr ""
 #. Plugin Name of the plugin
 #: plogins-migrator.php
 msgid "Migrator - Site Migration and Backup"
-msgstr ""
+msgstr "Migrator - migracja i kopia zapasowa witryny"
 
 #. Plugin URI of the plugin
 #: plogins-migrator.php
@@ -248,20 +248,20 @@ msgstr "Co dodaje %s"
 
 #: src/Backup/Schedule.php:133
 msgid "Once a day (Migrator)"
-msgstr ""
+msgstr "Raz dziennie (Migrator)"
 
 #: src/Backup/Schedule.php:137
 msgid "Once a week (Migrator)"
-msgstr ""
+msgstr "Raz w tygodniu (Migrator)"
 
 #: src/Backup/Scheduler.php:55 src/Backup/Scheduler.php:56
 #: templates/schedule-page.php:36
 msgid "Scheduled Backups"
-msgstr ""
+msgstr "Zaplanowane kopie zapasowe"
 
 #: src/Backup/Scheduler.php:111 src/Backup/Scheduler.php:206
 msgid "You are not allowed to do this."
-msgstr ""
+msgstr "Nie masz uprawnień do wykonania tej czynności."
 
 #: src/Backup/Scheduler.php:250 templates/admin-page.php:53
 msgid "Media library (uploads)"
@@ -429,63 +429,63 @@ msgstr ""
 
 #: src/Storage/DestinationRegistry.php:36
 msgid "Folder on this server"
-msgstr ""
+msgstr "Folder na tym serwerze"
 
 #: src/Storage/DestinationRegistry.php:41
 msgid "Absolute path"
-msgstr ""
+msgstr "Ścieżka bezwzględna"
 
 #: src/Storage/DestinationRegistry.php:48
 msgid "FTP or FTPS"
-msgstr ""
+msgstr "FTP lub FTPS"
 
 #: src/Storage/DestinationRegistry.php:50
 msgid "Requires the PHP FTP extension, which this server does not have."
-msgstr ""
+msgstr "Wymaga rozszerzenia PHP FTP, którego ten serwer nie ma."
 
 #: src/Storage/DestinationRegistry.php:52
 msgid "Host"
-msgstr ""
+msgstr "Host"
 
 #: src/Storage/DestinationRegistry.php:53
 msgid "Port"
-msgstr ""
+msgstr "Port"
 
 #: src/Storage/DestinationRegistry.php:54
 msgid "Username"
-msgstr ""
+msgstr "Nazwa użytkownika"
 
 #: src/Storage/DestinationRegistry.php:55
 msgid "Password"
-msgstr ""
+msgstr "Hasło"
 
 #: src/Storage/DestinationRegistry.php:56
 msgid "Remote directory"
-msgstr ""
+msgstr "Katalog zdalny"
 
 #: src/Storage/DestinationRegistry.php:57
 msgid "Passive mode"
-msgstr ""
+msgstr "Tryb pasywny"
 
 #: src/Storage/DestinationRegistry.php:58
 msgid "Use FTPS (explicit TLS)"
-msgstr ""
+msgstr "Użyj FTPS (jawny TLS)"
 
 #: src/Storage/FtpDestination.php:46
 msgid "FTPS server"
-msgstr ""
+msgstr "Serwer FTPS"
 
 #: src/Storage/FtpDestination.php:46
 msgid "FTP server"
-msgstr ""
+msgstr "Serwer FTP"
 
 #: src/Storage/FtpDestination.php:151
 msgid "FTP login failed: check the username and password."
-msgstr ""
+msgstr "Logowanie FTP nie powiodło się: sprawdź nazwę użytkownika i hasło."
 
 #: src/Storage/LocalFolderDestination.php:32
 msgid "Local or mounted folder"
-msgstr ""
+msgstr "Folder lokalny lub zamontowany"
 
 #: templates/admin-page.php:19
 msgid ""
@@ -683,160 +683,160 @@ msgstr "Z wiersza poleceń:"
 
 #: templates/schedule-page.php:23
 msgid "Schedule saved."
-msgstr ""
+msgstr "Harmonogram zapisany."
 
 #: templates/schedule-page.php:24
 msgid "Backup created."
-msgstr ""
+msgstr "Kopia zapasowa utworzona."
 
 #: templates/schedule-page.php:25
 msgid "Backup failed. See the status below."
-msgstr ""
+msgstr "Kopia zapasowa nie powiodła się. Zobacz stan poniżej."
 
 #: templates/schedule-page.php:39
 msgid ""
 "Back up this site automatically on a schedule and keep the most recent "
 "copies. Backups run unattended through WordPress cron, using the same engine "
 "as a manual backup."
-msgstr ""
+msgstr "Twórz kopie zapasowe tej witryny automatycznie według harmonogramu i zachowuj najnowsze z nich. Kopie zapasowe działają bez nadzoru przez cron WordPressa i korzystają z tego samego mechanizmu co kopia ręczna."
 
 #: templates/schedule-page.php:53
 msgid "Schedule"
-msgstr ""
+msgstr "Harmonogram"
 
 #: templates/schedule-page.php:57
 msgid "Run automatic backups"
-msgstr ""
+msgstr "Uruchamiaj automatyczne kopie zapasowe"
 
 #: templates/schedule-page.php:61
 msgid "How often"
-msgstr ""
+msgstr "Jak często"
 
 #: templates/schedule-page.php:63
 msgid "Every day"
-msgstr ""
+msgstr "Codziennie"
 
 #: templates/schedule-page.php:64
 msgid "Every week"
-msgstr ""
+msgstr "Co tydzień"
 
 #: templates/schedule-page.php:69
 msgid "Backups to keep"
-msgstr ""
+msgstr "Liczba przechowywanych kopii zapasowych"
 
 #: templates/schedule-page.php:71
 msgid "Older scheduled backups beyond this count are deleted automatically."
-msgstr ""
+msgstr "Starsze zaplanowane kopie zapasowe ponad tę liczbę są usuwane automatycznie."
 
 #: templates/schedule-page.php:89
 msgid "Compress backups with gzip (smaller files)"
-msgstr ""
+msgstr "Kompresuj kopie zapasowe gzipem (mniejsze pliki)"
 
 #: templates/schedule-page.php:101 templates/schedule-page.php:209
 msgid "Off-site copy"
-msgstr ""
+msgstr "Kopia poza serwerem"
 
 #: templates/schedule-page.php:103
 msgid ""
 "Copy every backup somewhere other than this server. A backup that lives only "
 "on the machine it protects is not a backup."
-msgstr ""
+msgstr "Kopiuj każdą kopię zapasową w miejsce inne niż ten serwer. Kopia, która leży wyłącznie na chronionej maszynie, nie jest kopią zapasową."
 
 #: templates/schedule-page.php:108
 msgid "Copy each backup off this server"
-msgstr ""
+msgstr "Kopiuj każdą kopię zapasową poza ten serwer"
 
 #: templates/schedule-page.php:112
 msgid "Where to"
-msgstr ""
+msgstr "Dokąd"
 
 #: templates/schedule-page.php:145 templates/schedule-page.php:150
 msgid "Stored. Leave blank to keep it."
-msgstr ""
+msgstr "Zapisane. Pozostaw puste, aby zachować."
 
 #: templates/schedule-page.php:163
 msgid "Save schedule"
-msgstr ""
+msgstr "Zapisz harmonogram"
 
 #: templates/schedule-page.php:168
 msgid "Status"
-msgstr ""
+msgstr "Stan"
 
 #: templates/schedule-page.php:172
 msgid "Automatic backups"
-msgstr ""
+msgstr "Automatyczne kopie zapasowe"
 
 #: templates/schedule-page.php:175
 msgid "On"
-msgstr ""
+msgstr "Włączone"
 
 #: templates/schedule-page.php:176 templates/schedule-page.php:214
 msgid "Off"
-msgstr ""
+msgstr "Wyłączone"
 
 #: templates/schedule-page.php:180
 msgid "Next run"
-msgstr ""
+msgstr "Następne uruchomienie"
 
 #: templates/schedule-page.php:182
 msgid "Not scheduled"
-msgstr ""
+msgstr "Nie zaplanowano"
 
 #: templates/schedule-page.php:186
 msgid "Last backup"
-msgstr ""
+msgstr "Ostatnia kopia zapasowa"
 
 #: templates/schedule-page.php:190
 msgid "Never"
-msgstr ""
+msgstr "Nigdy"
 
 #. translators: 1: date, 2: human file size
 #: templates/schedule-page.php:194
 #, php-format
 msgid "%1$s (%2$s)"
-msgstr ""
+msgstr "%1$s (%2$s)"
 
 #. translators: %s: date
 #: templates/schedule-page.php:201
 #, php-format
 msgid "Failed on %s"
-msgstr ""
+msgstr "Niepowodzenie: %s"
 
 #: templates/schedule-page.php:216
 msgid "Copied"
-msgstr ""
+msgstr "Skopiowano"
 
 #: templates/schedule-page.php:218
 msgid "Copy failed"
-msgstr ""
+msgstr "Kopiowanie nie powiodło się"
 
 #: templates/schedule-page.php:220
 msgid "On (no run yet)"
-msgstr ""
+msgstr "Włączone (jeszcze bez uruchomienia)"
 
 #: templates/schedule-page.php:238
 msgid "Back up now"
-msgstr ""
+msgstr "Utwórz kopię teraz"
 
 #: templates/schedule-page.php:245
 msgid "Kept backups"
-msgstr ""
+msgstr "Przechowywane kopie zapasowe"
 
 #: templates/schedule-page.php:250
 msgid "No scheduled backups yet. The first one appears here after a run."
-msgstr ""
+msgstr "Brak zaplanowanych kopii zapasowych. Pierwsza pojawi się tutaj po uruchomieniu."
 
 #: templates/schedule-page.php:255
 msgid "Backup"
-msgstr ""
+msgstr "Kopia zapasowa"
 
 #: templates/schedule-page.php:256
 msgid "Created"
-msgstr ""
+msgstr "Utworzono"
 
 #: templates/schedule-page.php:257
 msgid "Size"
-msgstr ""
+msgstr "Rozmiar"
 
 #~ msgid "Plogins Migrator - Site Migration and Backup"
 #~ msgstr "Plogins Migrator - migracja witryny i tworzenie kopii zapasowych"
