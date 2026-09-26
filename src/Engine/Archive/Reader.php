@@ -51,6 +51,32 @@ final class Reader
     }
 
     /**
+     * Whether the file ends with the end marker the writer puts there last.
+     *
+     * Reads four bytes from the tail, so it answers "was this archive finished"
+     * before a restore has touched anything, instead of half way through one.
+     * It is a pre-flight, not a proof: a cut that happens to land on four zero
+     * bytes passes it, and it says nothing about the middle of the file. The
+     * per-entry checks in {@see nextEntry()} and the checksums stay the backstop.
+     *
+     * Takes a path rather than working on the open handle because the callers
+     * that need it ask before they open anything, and because a stream wrapper
+     * (compressed archives, as the Inspector reads them) cannot seek to the end.
+     */
+    public static function endsWithMarker(string $path): bool
+    {
+        $handle = fopen($path, 'rb');
+        if (false === $handle) {
+            return false;
+        }
+        $sought = fseek($handle, -4, SEEK_END);
+        $tail   = -1 === $sought ? '' : (string) fread($handle, 4);
+        fclose($handle);
+
+        return pack('N', 0) === $tail;
+    }
+
+    /**
      * Advance to the next entry. Skips any unconsumed content of the previous
      * entry first. Returns null at end of archive.
      */
@@ -61,9 +87,17 @@ final class Reader
             $this->remaining = 0;
         }
 
+        // A finished archive always ends with the four-byte end marker, so
+        // running out of file instead is not the end of the archive: it is an
+        // archive that was cut short while it was being written. Treating that
+        // as a clean end is how a half-written backup restores as if it were
+        // whole, with everything after the cut silently absent.
         $lenBytes = (string) fread($this->handle, 4);
         if (strlen($lenBytes) < 4) {
-            return null;
+            throw new \RuntimeException(
+                'Migrator: this archive ends part way through, so it is not a complete backup. '
+                . 'The run that wrote it was cut short (execution time, memory, or a full disk).'
+            );
         }
 
         /** @var array{1: int} $unpacked */
@@ -74,6 +108,12 @@ final class Reader
         }
 
         $headerJson = (string) fread($this->handle, $headerLen);
+        if (strlen($headerJson) < $headerLen) {
+            throw new \RuntimeException(
+                'Migrator: this archive ends part way through an entry, so it is not a complete backup. '
+                . 'The run that wrote it was cut short (execution time, memory, or a full disk).'
+            );
+        }
         /** @var array<string, mixed> $header */
         $header = json_decode($headerJson, true) ?: [];
         $entry  = Entry::fromHeader($header);

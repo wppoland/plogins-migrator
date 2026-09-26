@@ -24,9 +24,9 @@ defined('ABSPATH') || exit;
  * this runs in time-boxed slices so it survives the request timeout on large
  * sites:
  *
- *   start()  → write signature, manifest and the database dump; enumerate the
+ *   start()  > write signature, manifest and the database dump; enumerate the
  *              files to a list; leave the archive open-ended (no end marker).
- *   step()   → append a time-boxed batch of files; when the list is exhausted,
+ *   step()   > append a time-boxed batch of files; when the list is exhausted,
  *              write the end marker and finish.
  *
  * Each appended file is a complete, checksummed entry, so an interrupted export
@@ -99,7 +99,17 @@ final class ExportPipeline
         }
         $total = 0;
         foreach ($this->scanner($options)->scan($this->contentDir()) as $file) {
-            fwrite($list, $file['rel'] . "\n");
+            $line = $file['rel'] . "\n";
+            // The list IS the backup's contents. A short write here drops files
+            // from it while $total still counts them, so the job reports a file
+            // count the archive does not contain and nobody finds out until a
+            // restore is missing something.
+            if (fwrite($list, $line) !== strlen($line)) {
+                fclose($list);
+                $writer->close();
+
+                throw new \RuntimeException('Migrator: could not write the file list, the disk is most likely full.');
+            }
             $total++;
         }
         fclose($list);

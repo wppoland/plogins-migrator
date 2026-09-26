@@ -30,3 +30,15 @@
 
 # Translation import tooling (GlotPress PO/MO staging) - never ship in the zip
 glotpress-import/
+
+# wordpress.org builds language packs from translate.wordpress.org, so a
+# catalogue in the package is a duplicate at best, and a bundled .mo shadows the
+# pack, meaning a translation corrected upstream never reaches these users until
+# the next release. Reel was pended for shipping these. Exclude by FILE TYPE,
+# never locale by locale: a per-locale list rots the moment a new locale appears,
+# which is exactly how polski-bel.mo walked through a rule naming polski-be_BY.
+languages/*.po
+languages/*.mo
+languages/*.json
+languages/*.l10n.php
+languages/*.po~

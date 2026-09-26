@@ -1,25 +1,23 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Migrator 0.3.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/migrator\n"
-"POT-Creation-Date: 2026-07-13T11:03:26+00:00\n"
-"PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
-"Last-Translator: motylanogha <szatkowski.mariusz@gmail.com>\n"
-"Language-Team: Polish <pl@li.org>\n"
-"Language: pl_PL\n"
+"Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
+"Stable (latest release)\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
+"POT-Creation-Date: 2026-09-09T17:34:30+00:00\n"
+"PO-Revision-Date: 2026-07-21 05:32:32+0000\n"
+"Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
-"|| n%100>=20) ? 1 : 2);\n"
-"X-Domain: plogins-migrator\n"
-"X-Generator: WP-CLI 2.12.0\n"
+"Plural-Forms: nplurals=3; plural=(n == 1) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 "
+"&& (n % 100 < 12 || n % 100 > 14)) ? 1 : 2);\n"
+"X-Generator: GlotPress/4.0.3\n"
 
 #. Plugin Name of the plugin
 #: plogins-migrator.php
-msgid "Plogins Migrator - Site Migration and Backup"
-msgstr "Plogins Migrator - migracja witryny i tworzenie kopii zapasowych"
+msgid "Migrator - Site Migration and Backup"
+msgstr "Migrator - migracja i kopia zapasowa witryny"
 
 #. Plugin URI of the plugin
 #: plogins-migrator.php
@@ -46,7 +44,7 @@ msgid "https://wppoland.com"
 msgstr "https://wppoland.com"
 
 #. translators: 1: Required PHP version, 2: Current PHP version
-#: plogins-migrator.php:41
+#: plogins-migrator.php:40
 #, php-format
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr "Migrator wymaga PHP %1$s lub nowszego. Używasz PHP %2$s."
@@ -210,49 +208,112 @@ msgstr "Zmieniono"
 msgid "Skipped (no primary key):"
 msgstr "Pominięte (brak klucza podstawowego):"
 
-#. translators: %d: yearly price in PLN
-#: src/Admin/ProUpsell.php:74
-#, php-format
-msgid "od %d zł/rok"
-msgstr "od %d zł/rok"
-
 #. translators: 1: currency symbol, 2: yearly price
-#: src/Admin/ProUpsell.php:79
+#: src/Admin/ProUpsell.php:75
 #, php-format
 msgid "from %1$s%2$d/yr"
 msgstr "od %1$s%2$d/rok"
 
-#: src/Admin/ProUpsell.php:111
+#: src/Admin/ProUpsell.php:107
 msgid "Permission denied."
 msgstr "Brak uprawnień."
 
 #. translators: %s: PRO edition name
-#: src/Admin/ProUpsell.php:141
+#: src/Admin/ProUpsell.php:137
 #, php-format
 msgid "Do more with %s"
 msgstr "Zrób więcej z %s"
 
-#: src/Admin/ProUpsell.php:146 src/Admin/ProUpsell.php:175
+#: src/Admin/ProUpsell.php:142 src/Admin/ProUpsell.php:171
 msgid "Upgrade to PRO"
 msgstr "Przejdź na PRO"
 
-#: src/Admin/ProUpsell.php:148
+#: src/Admin/ProUpsell.php:144
 msgid "Dismiss this notice"
 msgstr "Ukryj to powiadomienie"
 
-#: src/Admin/ProUpsell.php:165
+#: src/Admin/ProUpsell.php:161
 msgid "Unlock every PRO feature"
 msgstr "Odblokuj wszystkie funkcje PRO"
 
-#: src/Admin/ProUpsell.php:178
+#: src/Admin/ProUpsell.php:174
 msgid "one licence, every PRO feature"
 msgstr "jedna licencja, wszystkie funkcje PRO"
 
 #. translators: %s: PRO edition name
-#: src/Admin/ProUpsell.php:197
+#: src/Admin/ProUpsell.php:193
 #, php-format
 msgid "What %s adds"
 msgstr "Co dodaje %s"
+
+#: src/Backup/Schedule.php:133
+msgid "Once a day (Migrator)"
+msgstr "Raz dziennie (Migrator)"
+
+#: src/Backup/Schedule.php:137
+msgid "Once a week (Migrator)"
+msgstr "Raz w tygodniu (Migrator)"
+
+#: src/Backup/Scheduler.php:55 src/Backup/Scheduler.php:56
+#: templates/schedule-page.php:36
+msgid "Scheduled Backups"
+msgstr "Zaplanowane kopie zapasowe"
+
+#: src/Backup/Scheduler.php:111 src/Backup/Scheduler.php:206
+msgid "You are not allowed to do this."
+msgstr "Nie masz uprawnień do wykonania tej czynności."
+
+#: src/Backup/Scheduler.php:250 templates/admin-page.php:53
+msgid "Media library (uploads)"
+msgstr "Biblioteka multimediów (przesłane pliki)"
+
+#: src/Backup/Scheduler.php:251 templates/admin-page.php:54
+msgid "All themes"
+msgstr "Wszystkie motywy"
+
+#: src/Backup/Scheduler.php:252 templates/admin-page.php:55
+msgid "Inactive themes (keep active only)"
+msgstr "Nieaktywne motywy (tylko pozostaw aktywne)"
+
+#: src/Backup/Scheduler.php:253 templates/admin-page.php:56
+msgid "All plugins"
+msgstr "Wszystkie wtyczki"
+
+#: src/Backup/Scheduler.php:254 templates/admin-page.php:57
+msgid "Inactive plugins (keep active only)"
+msgstr "Nieaktywne wtyczki (tylko pozostaw aktywne)"
+
+#: src/Backup/Scheduler.php:255 templates/admin-page.php:58
+msgid "Must-use plugins"
+msgstr "Wtyczki must-use"
+
+#: src/Backup/Scheduler.php:256 templates/admin-page.php:59
+msgid "Cache files"
+msgstr "Pliki pamięci podręcznej"
+
+#: src/Backup/Scheduler.php:257 templates/admin-page.php:45
+msgid "Spam comments"
+msgstr "Komentarze spamowe"
+
+#: src/Backup/Scheduler.php:258 templates/admin-page.php:46
+msgid "Post revisions"
+msgstr "Wersje wpisów"
+
+#: src/Backup/Scheduler.php:259 templates/admin-page.php:47
+msgid "Transients"
+msgstr "Transienty"
+
+#: src/Backup/Scheduler.php:260 templates/admin-page.php:48
+msgid "WooCommerce sessions"
+msgstr "Sesje WooCommerce"
+
+#: src/Backup/Scheduler.php:261 templates/admin-page.php:49
+msgid "Action Scheduler tables"
+msgstr "Tabele harmonogramu akcji"
+
+#: src/Backup/Scheduler.php:262 templates/admin-page.php:50
+msgid "Database (files-only backup)"
+msgstr "Baza danych (kopia zapasowa samych plików)"
 
 #: src/Engine/Archive/Inspector.php:52
 msgid "Source site"
@@ -366,6 +427,66 @@ msgstr ""
 "Kopia zapasowa została utworzona w PHP %1$s; ten serwer działa %2$s. Kod "
 "oparty na nowszym PHP może nie zostać tutaj uruchomiony."
 
+#: src/Storage/DestinationRegistry.php:36
+msgid "Folder on this server"
+msgstr "Folder na tym serwerze"
+
+#: src/Storage/DestinationRegistry.php:41
+msgid "Absolute path"
+msgstr "Ścieżka bezwzględna"
+
+#: src/Storage/DestinationRegistry.php:48
+msgid "FTP or FTPS"
+msgstr "FTP lub FTPS"
+
+#: src/Storage/DestinationRegistry.php:50
+msgid "Requires the PHP FTP extension, which this server does not have."
+msgstr "Wymaga rozszerzenia PHP FTP, którego ten serwer nie ma."
+
+#: src/Storage/DestinationRegistry.php:52
+msgid "Host"
+msgstr "Host"
+
+#: src/Storage/DestinationRegistry.php:53
+msgid "Port"
+msgstr "Port"
+
+#: src/Storage/DestinationRegistry.php:54
+msgid "Username"
+msgstr "Nazwa użytkownika"
+
+#: src/Storage/DestinationRegistry.php:55
+msgid "Password"
+msgstr "Hasło"
+
+#: src/Storage/DestinationRegistry.php:56
+msgid "Remote directory"
+msgstr "Katalog zdalny"
+
+#: src/Storage/DestinationRegistry.php:57
+msgid "Passive mode"
+msgstr "Tryb pasywny"
+
+#: src/Storage/DestinationRegistry.php:58
+msgid "Use FTPS (explicit TLS)"
+msgstr "Użyj FTPS (jawny TLS)"
+
+#: src/Storage/FtpDestination.php:46
+msgid "FTPS server"
+msgstr "Serwer FTPS"
+
+#: src/Storage/FtpDestination.php:46
+msgid "FTP server"
+msgstr "Serwer FTP"
+
+#: src/Storage/FtpDestination.php:151
+msgid "FTP login failed: check the username and password."
+msgstr "Logowanie FTP nie powiodło się: sprawdź nazwę użytkownika i hasło."
+
+#: src/Storage/LocalFolderDestination.php:32
+msgid "Local or mounted folder"
+msgstr "Folder lokalny lub zamontowany"
+
 #: templates/admin-page.php:19
 msgid ""
 "Back up your site or move it to a new host, one file, no technical setup."
@@ -405,7 +526,7 @@ msgstr "Tylko baza danych"
 msgid "Media only"
 msgstr "Tylko media"
 
-#: templates/admin-page.php:41
+#: templates/admin-page.php:41 templates/schedule-page.php:75
 msgid "What to leave out (optional)"
 msgstr "Co pominąć (opcjonalnie)"
 
@@ -413,61 +534,9 @@ msgstr "Co pominąć (opcjonalnie)"
 msgid "Database"
 msgstr "Baza danych"
 
-#: templates/admin-page.php:45
-msgid "Spam comments"
-msgstr "Komentarze spamowe"
-
-#: templates/admin-page.php:46
-msgid "Post revisions"
-msgstr "Wersje wpisów"
-
-#: templates/admin-page.php:47
-msgid "Transients"
-msgstr "Transienty"
-
-#: templates/admin-page.php:48
-msgid "WooCommerce sessions"
-msgstr "Sesje WooCommerce"
-
-#: templates/admin-page.php:49
-msgid "Action Scheduler tables"
-msgstr "Tabele harmonogramu akcji"
-
-#: templates/admin-page.php:50
-msgid "Database (files-only backup)"
-msgstr "Baza danych (kopia zapasowa samych plików)"
-
 #: templates/admin-page.php:52
 msgid "Files"
 msgstr "Pliki"
-
-#: templates/admin-page.php:53
-msgid "Media library (uploads)"
-msgstr "Biblioteka multimediów (przesłane pliki)"
-
-#: templates/admin-page.php:54
-msgid "All themes"
-msgstr "Wszystkie motywy"
-
-#: templates/admin-page.php:55
-msgid "Inactive themes (keep active only)"
-msgstr "Nieaktywne motywy (tylko pozostaw aktywne)"
-
-#: templates/admin-page.php:56
-msgid "All plugins"
-msgstr "Wszystkie wtyczki"
-
-#: templates/admin-page.php:57
-msgid "Inactive plugins (keep active only)"
-msgstr "Nieaktywne wtyczki (tylko pozostaw aktywne)"
-
-#: templates/admin-page.php:58
-msgid "Must-use plugins"
-msgstr "Wtyczki must-use"
-
-#: templates/admin-page.php:59
-msgid "Cache files"
-msgstr "Pliki pamięci podręcznej"
 
 #: templates/admin-page.php:83
 msgid "Exclude specific database tables (optional)"
@@ -490,7 +559,7 @@ msgstr ""
 "potrzebujesz w kopii zapasowej, na przykład dużą pamięć podręczną, dzienniki "
 "lub dane przechowywane przez inną wtyczkę."
 
-#: templates/admin-page.php:106
+#: templates/admin-page.php:106 templates/schedule-page.php:86
 msgid "Compression"
 msgstr "Kompresja"
 
@@ -611,3 +680,167 @@ msgstr "Uruchom"
 #: templates/admin-page.php:228
 msgid "From the command line:"
 msgstr "Z wiersza poleceń:"
+
+#: templates/schedule-page.php:23
+msgid "Schedule saved."
+msgstr "Harmonogram zapisany."
+
+#: templates/schedule-page.php:24
+msgid "Backup created."
+msgstr "Kopia zapasowa utworzona."
+
+#: templates/schedule-page.php:25
+msgid "Backup failed. See the status below."
+msgstr "Kopia zapasowa nie powiodła się. Zobacz stan poniżej."
+
+#: templates/schedule-page.php:39
+msgid ""
+"Back up this site automatically on a schedule and keep the most recent "
+"copies. Backups run unattended through WordPress cron, using the same engine "
+"as a manual backup."
+msgstr "Twórz kopie zapasowe tej witryny automatycznie według harmonogramu i zachowuj najnowsze z nich. Kopie zapasowe działają bez nadzoru przez cron WordPressa i korzystają z tego samego mechanizmu co kopia ręczna."
+
+#: templates/schedule-page.php:53
+msgid "Schedule"
+msgstr "Harmonogram"
+
+#: templates/schedule-page.php:57
+msgid "Run automatic backups"
+msgstr "Uruchamiaj automatyczne kopie zapasowe"
+
+#: templates/schedule-page.php:61
+msgid "How often"
+msgstr "Jak często"
+
+#: templates/schedule-page.php:63
+msgid "Every day"
+msgstr "Codziennie"
+
+#: templates/schedule-page.php:64
+msgid "Every week"
+msgstr "Co tydzień"
+
+#: templates/schedule-page.php:69
+msgid "Backups to keep"
+msgstr "Liczba przechowywanych kopii zapasowych"
+
+#: templates/schedule-page.php:71
+msgid "Older scheduled backups beyond this count are deleted automatically."
+msgstr "Starsze zaplanowane kopie zapasowe ponad tę liczbę są usuwane automatycznie."
+
+#: templates/schedule-page.php:89
+msgid "Compress backups with gzip (smaller files)"
+msgstr "Kompresuj kopie zapasowe gzipem (mniejsze pliki)"
+
+#: templates/schedule-page.php:101 templates/schedule-page.php:209
+msgid "Off-site copy"
+msgstr "Kopia poza serwerem"
+
+#: templates/schedule-page.php:103
+msgid ""
+"Copy every backup somewhere other than this server. A backup that lives only "
+"on the machine it protects is not a backup."
+msgstr "Kopiuj każdą kopię zapasową w miejsce inne niż ten serwer. Kopia, która leży wyłącznie na chronionej maszynie, nie jest kopią zapasową."
+
+#: templates/schedule-page.php:108
+msgid "Copy each backup off this server"
+msgstr "Kopiuj każdą kopię zapasową poza ten serwer"
+
+#: templates/schedule-page.php:112
+msgid "Where to"
+msgstr "Dokąd"
+
+#: templates/schedule-page.php:145 templates/schedule-page.php:150
+msgid "Stored. Leave blank to keep it."
+msgstr "Zapisane. Pozostaw puste, aby zachować."
+
+#: templates/schedule-page.php:163
+msgid "Save schedule"
+msgstr "Zapisz harmonogram"
+
+#: templates/schedule-page.php:168
+msgid "Status"
+msgstr "Stan"
+
+#: templates/schedule-page.php:172
+msgid "Automatic backups"
+msgstr "Automatyczne kopie zapasowe"
+
+#: templates/schedule-page.php:175
+msgid "On"
+msgstr "Włączone"
+
+#: templates/schedule-page.php:176 templates/schedule-page.php:214
+msgid "Off"
+msgstr "Wyłączone"
+
+#: templates/schedule-page.php:180
+msgid "Next run"
+msgstr "Następne uruchomienie"
+
+#: templates/schedule-page.php:182
+msgid "Not scheduled"
+msgstr "Nie zaplanowano"
+
+#: templates/schedule-page.php:186
+msgid "Last backup"
+msgstr "Ostatnia kopia zapasowa"
+
+#: templates/schedule-page.php:190
+msgid "Never"
+msgstr "Nigdy"
+
+#. translators: 1: date, 2: human file size
+#: templates/schedule-page.php:194
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr "%1$s (%2$s)"
+
+#. translators: %s: date
+#: templates/schedule-page.php:201
+#, php-format
+msgid "Failed on %s"
+msgstr "Niepowodzenie: %s"
+
+#: templates/schedule-page.php:216
+msgid "Copied"
+msgstr "Skopiowano"
+
+#: templates/schedule-page.php:218
+msgid "Copy failed"
+msgstr "Kopiowanie nie powiodło się"
+
+#: templates/schedule-page.php:220
+msgid "On (no run yet)"
+msgstr "Włączone (jeszcze bez uruchomienia)"
+
+#: templates/schedule-page.php:238
+msgid "Back up now"
+msgstr "Utwórz kopię teraz"
+
+#: templates/schedule-page.php:245
+msgid "Kept backups"
+msgstr "Przechowywane kopie zapasowe"
+
+#: templates/schedule-page.php:250
+msgid "No scheduled backups yet. The first one appears here after a run."
+msgstr "Brak zaplanowanych kopii zapasowych. Pierwsza pojawi się tutaj po uruchomieniu."
+
+#: templates/schedule-page.php:255
+msgid "Backup"
+msgstr "Kopia zapasowa"
+
+#: templates/schedule-page.php:256
+msgid "Created"
+msgstr "Utworzono"
+
+#: templates/schedule-page.php:257
+msgid "Size"
+msgstr "Rozmiar"
+
+#~ msgid "Plogins Migrator - Site Migration and Backup"
+#~ msgstr "Plogins Migrator - migracja witryny i tworzenie kopii zapasowych"
+
+#, php-format
+#~ msgid "od %d zł/rok"
+#~ msgstr "od %d zł/rok"

@@ -9,6 +9,8 @@
 declare(strict_types=1);
 
 use Migrator\Admin\Ajax;
+use Migrator\Backup\BackupRunner;
+use Migrator\Backup\Scheduler;
 use Migrator\Admin\Page;
 use Migrator\Container;
 use Migrator\Engine\Db\Dumper;
@@ -31,5 +33,13 @@ return static function (Container $c): void {
     $c->singleton(Ajax::class, static fn (Container $c): Ajax => new Ajax(
         $c->get(ExportPipeline::class),
         $c->get(Workspace::class),
+    ));
+
+    $c->singleton(BackupRunner::class, static fn (Container $c): BackupRunner => new BackupRunner(
+        $c->get(Workspace::class),
+    ));
+
+    $c->singleton(Scheduler::class, static fn (Container $c): Scheduler => new Scheduler(
+        $c->get(BackupRunner::class),
     ));
 };

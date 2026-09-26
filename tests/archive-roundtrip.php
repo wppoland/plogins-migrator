@@ -142,6 +142,57 @@ try {
 }
 check('corrupted entry is caught by checksum verification', $detected);
 
+// ---- a truncated archive is not mistaken for a shorter one ----
+// A run killed mid-write leaves the file with no end marker. Read to the end and
+// the reader must say so, rather than reporting the entries it did manage to
+// reach as the whole backup.
+foreach ([64, 4096, filesize($archive) - 4] as $cut) {
+    $cutPath = $tmp . '/cut-' . $cut . '.migrator';
+    copy($archive, $cutPath);
+    $fh = fopen($cutPath, 'r+b');
+    ftruncate($fh, (int) $cut);
+    fclose($fh);
+
+    $caught = false;
+    try {
+        $rt = new Reader($cutPath);
+        while (($e = $rt->nextEntry()) !== null) {
+            $rt->skip();
+        }
+        $rt->close();
+    } catch (\RuntimeException $ex) {
+        $caught = str_contains($ex->getMessage(), 'ends part way through');
+    }
+    check("an archive truncated at {$cut} bytes is reported, not read as complete", $caught);
+    check("an archive truncated at {$cut} bytes fails the end-marker check", ! Reader::endsWithMarker($cutPath));
+}
+
+// ---- the end-marker check is a pre-flight, not a proof ----
+// The small file carries four null bytes on purpose. A cut that lands right
+// after them leaves a tail that looks exactly like the end marker, so the cheap
+// check passes and the read has to be the one that catches it. Asserting the
+// blind spot keeps the claim made for that check honest.
+$blindPath = $tmp . '/cut-on-nulls.migrator';
+copy($archive, $blindPath);
+$fh = fopen($blindPath, 'r+b');
+ftruncate($fh, $offsets['wp-content/uploads/small.txt']['off'] + 10); // "h\u00e9llo" is 6 bytes, then the four nulls.
+fclose($fh);
+check('a cut landing on four null bytes passes the end-marker check', Reader::endsWithMarker($blindPath));
+
+$caughtBlind = false;
+try {
+    $rb = new Reader($blindPath);
+    while (($e = $rb->nextEntry()) !== null) {
+        $rb->readContents();
+    }
+    $rb->close();
+} catch (\RuntimeException $ex) {
+    $caughtBlind = true;
+}
+check('and the read still refuses to call that archive complete', $caughtBlind);
+
+check('a finished archive passes the end-marker check', Reader::endsWithMarker($archive));
+
 // ---- a clean archive passes full verification ----
 $clean = true;
 try {

@@ -48,7 +48,7 @@ W przypadku dużych witryn, gdzie żądanie przeglądarki przekroczyłoby limit 
 
 == Installation ==
 
-1. Prześlij wtyczkę do `/wp-content/plugins/migrator` lub zainstaluj ją z Wtyczki → Dodaj nową.
+1. Prześlij wtyczkę do `/wp-content/plugins/migrator` lub zainstaluj ją z Wtyczki > Dodaj nową.
 2. Włącz ją. Nie ma żadnych wymaganych zależności.
 3. Otwórz <strong>Migrator</strong> w menu administracyjnym, aby utworzyć kopię zapasową, albo użyj `wp migrator export` z wiersza poleceń.
 

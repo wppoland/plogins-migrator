@@ -558,6 +558,13 @@ final class Ajax implements HasHooks
                 ],
                 admin_url('admin-ajax.php')
             );
+            // A post-processing handler may have failed to encrypt an archive the
+            // merchant asked to be encrypted. The file is still offered, because
+            // losing a backup is worse, but the screen must not present it as if
+            // the request had been honoured.
+            if ('' !== (string) ($job['encryption_error'] ?? '')) {
+                $shaped['encryptionError'] = (string) $job['encryption_error'];
+            }
         }
 
         return $shaped;

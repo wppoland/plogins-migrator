@@ -58,6 +58,13 @@
 		result.hidden = false;
 		resultMsg.classList.remove( 'is-error' );
 		resultMsg.textContent = ( i18n.done || 'Backup ready.' ) + ' ' + ( job.fileName || '' ) + ' (' + ( job.size || '' ) + ')';
+		// The archive is the whole database. If encryption was asked for and did
+		// not happen, saying nothing lets the merchant treat a readable file as a
+		// safe one, which is the harm. Mark the result, do not hide the download.
+		if ( job.encryptionError ) {
+			resultMsg.classList.add( 'is-error' );
+			resultMsg.textContent += ' ' + job.encryptionError;
+		}
 		download.hidden = false;
 		download.setAttribute( 'href', job.download );
 		download.setAttribute( 'download', job.fileName || 'backup.migrator' );

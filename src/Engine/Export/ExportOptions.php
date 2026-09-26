@@ -123,7 +123,8 @@ final class ExportOptions
     }
 
     /**
-     * Tables to skip entirely (structure + data), given the site prefix.
+     * Tables to skip entirely (structure + data), given the site prefix. The
+     * admin list is built from SHOW TABLES, so a name here can also be a view.
      *
      * @return string[]
      */
@@ -261,8 +262,10 @@ final class ExportOptions
             $active[] = $root . '/' . strtok((string) $plugin, '/');
         }
         // Never prune Migrator itself.
-        $active[] = $root . '/migrator';
-        $active[] = $root . '/migrator-pro';
+        $active[] = $root . '/' . dirname(plugin_basename(\Migrator\PLUGIN_FILE));
+        if (defined('Migrator\\Pro\\PLUGIN_FILE')) {
+            $active[] = $root . '/' . dirname(plugin_basename(constant('Migrator\\Pro\\PLUGIN_FILE')));
+        }
 
         $dirs = glob($root . '/*', GLOB_ONLYDIR) ?: [];
         $skip = [];
