@@ -17,7 +17,11 @@ defined('ABSPATH') || exit;
  */
 final class Workspace
 {
-    private const DIR_NAME = 'migrator-backups';
+    /**
+     * The backups folder under wp-content. Public because the importer derives
+     * its never-overwrite list from it rather than repeating the string.
+     */
+    public const DIR_NAME = 'migrator-backups';
 
     private ?string $base = null;
 
@@ -59,7 +63,15 @@ final class Workspace
             wp_mkdir_p($dir);
         }
 
-        $this->writeGuard($dir . '/.htaccess', "Order Deny,Allow\nDeny from all\n");
+        // Both Apache dialects: 2.4 uses Require, 2.2 uses Order/Deny, and a 2.4
+        // server without mod_access_compat treats the old form as an unknown
+        // directive. Guarded by IfModule so whichever one is loaded applies and
+        // the other is skipped instead of erroring.
+        $this->writeGuard(
+            $dir . '/.htaccess',
+            "<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n"
+            . "<IfModule !mod_authz_core.c>\n\tOrder Deny,Allow\n\tDeny from all\n</IfModule>\n"
+        );
         $this->writeGuard(
             $dir . '/web.config',
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration><system.webServer>"

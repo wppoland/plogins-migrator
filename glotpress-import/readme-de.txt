@@ -48,7 +48,7 @@ Bei großen Websites, bei denen eine Browser-Anfrage in ein Timeout laufen würd
 
 == Installation ==
 
-1. Lade das Plugin nach `/wp-content/plugins/migrator` hoch oder installiere es über Plugins → Installieren.
+1. Lade das Plugin nach `/wp-content/plugins/migrator` hoch oder installiere es über Plugins > Installieren.
 2. Aktiviere es. Es gibt keine erforderlichen Abhängigkeiten.
 3. Öffne <strong>Migrator</strong> im Admin-Menü, um ein Backup zu erstellen, oder verwende `wp migrator export` über die Befehlszeile.
 

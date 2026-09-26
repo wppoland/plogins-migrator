@@ -74,10 +74,10 @@ msgstr ""
 #. Found in description paragraph.
 msgid ""
 "Everything in the free edition stays free and open. Plogins Migrator PRO "
-"starts at 49 EUR per year (PLN shown at checkout)."
+"starts at 49 EUR per year, billed in EUR."
 msgstr ""
 "Alles in der kostenlosen Edition bleibt kostenlos und offen. Plogins "
-"Migrator PRO beginnt bei 49 EUR pro Jahr (PLN wird an der Kasse angezeigt)."
+"Migrator PRO beginnt bei 49 EUR pro Jahr, Abrechnung in EUR."
 
 #. Found in description paragraph.
 msgid ""
@@ -274,10 +274,10 @@ msgstr "Aktiviere es. Es gibt keine erforderlichen Abhängigkeiten."
 #. Found in installation list item.
 msgid ""
 "Upload the plugin to <code>/wp-content/plugins/migrator</code>, or install "
-"it from Plugins → Add New."
+"it from Plugins > Add New."
 msgstr ""
 "Lade das Plugin nach <code>/wp-content/plugins/migrator</code> hoch oder "
-"installiere es über Plugins → Installieren."
+"installiere es über Plugins > Installieren."
 
 #. Found in description paragraph.
 msgid ""

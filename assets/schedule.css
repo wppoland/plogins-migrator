@@ -1,0 +1,273 @@
+/* Scheduled Backups screen. Light, modern, matches the WordPress admin palette. */
+
+.migrator-schedule__lead {
+	max-width: 60ch;
+	font-size: 14px;
+	color: #50575e;
+}
+
+.migrator-schedule h1 .dashicons {
+	margin-right: 6px;
+	color: #2271b1;
+	vertical-align: text-bottom;
+}
+
+.migrator-grid {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 20px;
+	margin-top: 16px;
+	align-items: start;
+}
+
+@media (max-width: 782px) {
+	.migrator-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.migrator-card {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	padding: 20px 22px;
+	margin-top: 20px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.migrator-grid .migrator-card {
+	margin-top: 0;
+}
+
+.migrator-card__heading {
+	margin: 0 0 14px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #f0f0f1;
+	font-size: 15px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.migrator-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 7px;
+	border-radius: 11px;
+	background: #2271b1;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.migrator-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	margin-bottom: 16px;
+}
+
+.migrator-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0 0 16px;
+	max-width: 320px;
+}
+
+.migrator-field label {
+	font-weight: 600;
+}
+
+.migrator-field input[type="number"],
+.migrator-field select {
+	max-width: 220px;
+}
+
+.migrator-hint {
+	font-size: 12px;
+	color: #646970;
+}
+
+.migrator-hint--block {
+	display: block;
+	max-width: 60ch;
+	margin: 0 0 12px;
+}
+
+.migrator-card__heading--spaced {
+	margin-top: 26px;
+}
+
+.migrator-field--wide {
+	max-width: 100%;
+}
+
+.migrator-field--wide input[type="text"] {
+	max-width: 420px;
+}
+
+.migrator-exclude {
+	margin: 4px 0 18px;
+	border: 1px solid #f0f0f1;
+	border-radius: 6px;
+	padding: 10px 14px;
+	background: #fbfbfc;
+}
+
+.migrator-exclude summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.migrator-exclude__grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px 18px;
+	margin-top: 12px;
+}
+
+@media (max-width: 600px) {
+	.migrator-exclude__grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.migrator-exclude__opt {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+}
+
+.migrator-status {
+	margin: 0 0 16px;
+	list-style: none;
+	padding: 0;
+}
+
+.migrator-status li {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 0;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.migrator-status li:last-child {
+	border-bottom: 0;
+}
+
+.migrator-status__label {
+	color: #646970;
+}
+
+.migrator-status__value {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.migrator-status__value .is-on {
+	color: #007017;
+}
+
+.migrator-failed {
+	color: #b32d2e;
+}
+
+.migrator-empty {
+	color: #646970;
+	font-style: italic;
+}
+
+.migrator-table {
+	margin-top: 4px;
+}
+
+.migrator-table code {
+	background: transparent;
+	font-size: 12px;
+}
+
+/* Site Transfer */
+
+.migrator-transfer-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	margin: 14px 0 4px;
+}
+
+.migrator-transfer-actions form {
+	margin: 0;
+}
+
+.migrator-keybox {
+	margin: 12px 0;
+	padding: 10px 14px;
+}
+
+.migrator-keybox__key {
+	display: block;
+	margin: 6px 0;
+	padding: 10px 12px;
+	background: #1d2327;
+	color: #fff;
+	border-radius: 6px;
+	font-size: 13px;
+	word-break: break-all;
+	user-select: all;
+}
+
+.migrator-pull-status {
+	margin: 10px 0;
+	font-weight: 600;
+	min-height: 1.2em;
+}
+
+.migrator-pull-status.is-working {
+	color: #2271b1;
+}
+
+.migrator-pull-status.is-ok {
+	color: #007017;
+}
+
+.migrator-pull-status.is-error {
+	color: #b32d2e;
+}
+
+/* Backups manager */
+
+.migrator-badge {
+	display: inline-block;
+	margin-left: 8px;
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: #ddeafe;
+	color: #0b3a8a;
+	font-size: 11px;
+	font-weight: 600;
+	vertical-align: middle;
+}
+
+.migrator-backups__actions {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.migrator-backups__status {
+	margin: 12px 2px 0;
+	font-weight: 600;
+	min-height: 1.2em;
+}
+
+.migrator-backups__status.is-working { color: #2271b1; }
+.migrator-backups__status.is-ok { color: #007017; }
+.migrator-backups__status.is-error { color: #b32d2e; }

@@ -19,6 +19,12 @@ delete_option('migrator_settings');
 delete_option('migrator_db_version');
 delete_option('migrator_export_job');
 
+// The PRO banner's dismissal is stored per user, so it belongs to the
+// plugin rather than to the site content. User meta is global, not
+// per-site, which is why this uses delete_metadata's \$delete_all rather
+// than a loop over the users of one blog.
+delete_metadata('user', 0, 'migrator_pro_banner_dismissed', '', true);
+
 // Remove the backups directory, recursively. Defined inline so uninstall has no
 // dependency on the (already-unloaded) plugin autoloader.
 $migrator_dir = rtrim((string) WP_CONTENT_DIR, '/') . '/migrator-backups';

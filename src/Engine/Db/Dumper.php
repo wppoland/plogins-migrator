@@ -145,7 +145,7 @@ final class Dumper
      * @param resource               $handle
      * @param array<string, string>  $where  Optional table => WHERE clause to
      *                                        filter out disposable rows.
-     * @param string[]               $skip   Tables to omit entirely.
+     * @param string[]               $skip   Tables and views to omit entirely.
      */
     public function dumpAll(array $tables, $handle, array $where = [], array $skip = []): void
     {
@@ -165,7 +165,13 @@ final class Dumper
         }
 
         // Views are created after every base table, since they reference them.
+        // The exclusion list is built from SHOW TABLES, which lists views next to
+        // base tables, so a merchant could tick a view and still find its
+        // definition in the archive. The skip list applies here too.
         foreach ($this->views() as $view) {
+            if (in_array($view, $skip, true)) {
+                continue;
+            }
             $this->dumpView($view, $handle);
         }
 
@@ -283,10 +289,115 @@ final class Dumper
     private function dumpRows(string $safe, $handle, ?string $where = null, ?string $outSafe = null): void
     {
         $outSafe ??= $safe;
-        $offset  = 0;
         $insert  = '';
         $started = false;
-        $filter  = (null !== $where && '' !== $where) ? " WHERE {$where}" : '';
+
+        foreach ($this->readRows($safe, $where) as $row) {
+            $values = '(' . $this->rowValues($row) . ')';
+
+            if (! $started) {
+                $insert  = $this->insertPrefix($outSafe, array_keys($row)) . $values;
+                $started = true;
+            } else {
+                $insert .= ',' . $values;
+            }
+
+            if (strlen($insert) >= $this->maxInsertBytes) {
+                $this->write($handle, $insert . ";\n");
+                $insert  = '';
+                $started = false;
+            }
+        }
+
+        if ($started && '' !== $insert) {
+            $this->write($handle, $insert . ";\n");
+        }
+    }
+
+    /**
+     * Read a table in bounded batches.
+     *
+     * Paging by OFFSET over a live site skips rows: delete a row the walk has
+     * already passed and every later row shifts one place towards the start, so
+     * the row that lands on the next offset boundary is never read and never
+     * reaches the backup. Nothing reports it. Expiring transients, WooCommerce
+     * sessions and abandoned carts delete rows constantly, so this is ordinary
+     * traffic and not a rare race.
+     *
+     * So batches are cut by primary key instead: each one asks for the rows
+     * AFTER the last key already read, which no concurrent delete can move. An
+     * insert during the walk either lands after the cursor (and is included) or
+     * before it (and is not), but nothing existing is ever skipped.
+     *
+     * @return \Generator<array<string, scalar|null>>
+     */
+    private function readRows(string $safe, ?string $where): \Generator
+    {
+        $keys = $this->primaryKeyColumns($safe);
+
+        if ([] === $keys) {
+            yield from $this->readRowsByOffset($safe, $where);
+
+            return;
+        }
+
+        $columns = implode(',', array_map([$this, 'backtick'], $keys));
+        $cursor  = null;
+
+        do {
+            $clauses = [];
+            $args    = [];
+
+            if (null !== $where && '' !== $where) {
+                $clauses[] = "({$where})";
+            }
+            if (null !== $cursor) {
+                // Row-constructor comparison, so a composite key is paged as one
+                // ordered tuple rather than column by column.
+                $clauses[] = "({$columns}) > (" . implode(',', array_fill(0, count($keys), '%s')) . ')';
+                $args      = $cursor;
+            }
+
+            $sql = "SELECT * FROM {$safe}"
+                . ([] === $clauses ? '' : ' WHERE ' . implode(' AND ', $clauses))
+                . " ORDER BY {$columns} LIMIT %d";
+
+            $args[] = $this->batchSize;
+
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+            $rows = $this->db->get_results($this->db->prepare($sql, $args), ARRAY_A);
+
+            if (! is_array($rows) || [] === $rows) {
+                return;
+            }
+
+            foreach ($rows as $row) {
+                /** @var array<string, scalar|null> $row */
+                yield $row;
+            }
+
+            $last   = (array) end($rows);
+            $cursor = [];
+            foreach ($keys as $key) {
+                $cursor[] = (string) ($last[$key] ?? '');
+            }
+        } while (count($rows) === $this->batchSize);
+    }
+
+    /**
+     * The fallback for a table with no primary key, where there is no column the
+     * batches can be cut on. It pages by offset, which is only safe while no row
+     * is deleted underneath it, so the row count is taken before and after: a
+     * table that shrank during the walk may have skipped rows, and the dump
+     * stops rather than writing an archive that quietly lacks them.
+     *
+     * @return \Generator<array<string, scalar|null>>
+     */
+    private function readRowsByOffset(string $safe, ?string $where): \Generator
+    {
+        $filter = (null !== $where && '' !== $where) ? " WHERE {$where}" : '';
+        $before = $this->countRows($safe, $filter);
+        $offset = 0;
 
         do {
             // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
@@ -301,28 +412,49 @@ final class Dumper
 
             foreach ($rows as $row) {
                 /** @var array<string, scalar|null> $row */
-                $values = '(' . $this->rowValues($row) . ')';
-
-                if (! $started) {
-                    $insert  = $this->insertPrefix($outSafe, array_keys($row)) . $values;
-                    $started = true;
-                } else {
-                    $insert .= ',' . $values;
-                }
-
-                if (strlen($insert) >= $this->maxInsertBytes) {
-                    $this->write($handle, $insert . ";\n");
-                    $insert  = '';
-                    $started = false;
-                }
+                yield $row;
             }
 
             $offset += $this->batchSize;
         } while (count($rows) === $this->batchSize);
 
-        if ($started && '' !== $insert) {
-            $this->write($handle, $insert . ";\n");
+        if ($this->countRows($safe, $filter) < $before) {
+            throw new \RuntimeException(esc_html(sprintf(
+                'Migrator: rows were deleted from %s while it was being dumped, and it has no primary key to page on, so the dump may be missing rows. The backup was stopped.',
+                $safe
+            )));
         }
+    }
+
+    private function countRows(string $safe, string $filter): int
+    {
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+        return (int) $this->db->get_var("SELECT COUNT(*) FROM {$safe}{$filter}");
+    }
+
+    /**
+     * The table's primary key columns, in key order. Empty when it has none.
+     *
+     * @return string[]
+     */
+    private function primaryKeyColumns(string $safe): array
+    {
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+        $rows = $this->db->get_results("SHOW KEYS FROM {$safe} WHERE Key_name = 'PRIMARY'", ARRAY_A);
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $columns = [];
+        foreach ($rows as $row) {
+            $name = (string) ($row['Column_name'] ?? '');
+            if ('' !== $name) {
+                $columns[(int) ($row['Seq_in_index'] ?? count($columns) + 1)] = $name;
+            }
+        }
+        ksort($columns);
+
+        return array_values($columns);
     }
 
     /**
