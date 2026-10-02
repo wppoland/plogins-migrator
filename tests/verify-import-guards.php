@@ -43,8 +43,10 @@ try {
     (new Importer($ws, $wpdb))->import($mPath, false);
 } catch (\Throwable $e) {
     $rejected = str_contains($e->getMessage(), 'prefix mismatch');
+    $plain    = str_contains($e->getMessage(), '"zz_"') && ! str_contains($e->getMessage(), '&quot;');
 }
 $check('prefix mismatch is rejected (no silent broken site)', $rejected);
+$check('and the message is plain text, not HTML entities the screen would show literally', $plain ?? false);
 @unlink($mPath);
 
 // 2. Zip-slip: an entry path escaping wp-content must NOT be written.

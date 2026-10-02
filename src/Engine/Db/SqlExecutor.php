@@ -179,10 +179,14 @@ final class SqlExecutor
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
         $result = $this->db->query($statement);
         if (false === $result) {
-            throw new \RuntimeException(esc_html(sprintf(
-                'Migrator: SQL import failed near: %s',
-                substr(ltrim($statement), 0, 120)
-            )));
+            // Plain text, not HTML-escaped: the quotes in the statement are the
+            // useful part, and the screen shows the message with textContent.
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
+            throw new \RuntimeException(sprintf(
+                'Migrator: SQL import failed near: %s (%s)',
+                substr(ltrim($statement), 0, 120),
+                (string) $this->db->last_error
+            ));
         }
 
         return true;
