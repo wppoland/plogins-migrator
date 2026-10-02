@@ -21,6 +21,10 @@ defined('ABSPATH') || exit;
 // reads and writes whole files into memory, which would exhaust it, so this file
 // uses direct stream functions by necessity.
 // phpcs:disable WordPress.WP.AlternativeFunctions
+// Exception messages here are plain text: the admin screen shows them with
+// textContent, WP-CLI prints them, the scheduler stores them and the template
+// escapes on output. HTML-escaping them made entities appear literally.
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 
 /**
  * Restores an archive onto the current site.
@@ -122,7 +126,7 @@ final class Importer
         // while refusing still costs the site nothing.
         if (! Reader::endsWithMarker($archivePath)) {
             $reader->close();
-            throw new \RuntimeException(__('Migrator: this archive was never finished, so it is not a complete backup. The run that wrote it was cut short (execution time, memory, or a full disk). Nothing has been imported, this site is untouched. Restore from a backup that finished.', 'plogins-migrator')); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
+            throw new \RuntimeException(__('Migrator: this archive was never finished, so it is not a complete backup. The run that wrote it was cut short (execution time, memory, or a full disk). Nothing has been imported, this site is untouched. Restore from a backup that finished.', 'plogins-migrator'));
         }
 
         // Read the whole archive once, checking every header and checksum,
@@ -138,11 +142,11 @@ final class Importer
 
         $first = $reader->nextEntry();
         if (null === $first || ! $first->isManifest()) {
-            throw new \RuntimeException(__('Migrator: archive has no manifest (is this a Migrator archive?).', 'plogins-migrator')); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
+            throw new \RuntimeException(__('Migrator: archive has no manifest (is this a Migrator archive?).', 'plogins-migrator'));
         }
         $manifest = Manifest::fromJson($reader->readContents());
         if (! $manifest->isSupported()) {
-            throw new \RuntimeException(__('Migrator: this archive was made by a newer version of Migrator. Update the plugin on this site and try again.', 'plogins-migrator')); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
+            throw new \RuntimeException(__('Migrator: this archive was made by a newer version of Migrator. Update the plugin on this site and try again.', 'plogins-migrator'));
         }
 
         // The dump uses the source's literal table names. If this site's prefix
@@ -152,7 +156,6 @@ final class Importer
         if ('' !== $sourcePrefix && $sourcePrefix !== $this->db->prefix) {
             // No esc_html() in these messages: the screen shows them with
             // textContent, so entities appeared literally ("&quot;wp_&quot;").
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
             throw new \RuntimeException(sprintf(
                 /* translators: 1: the archive's table prefix, 2: this site's table prefix */
                 __('Migrator: table prefix mismatch. This archive uses "%1$s" but this site uses "%2$s". Set this site\'s $table_prefix to "%1$s" in wp-config.php and try again.', 'plogins-migrator'),
@@ -180,7 +183,7 @@ final class Importer
                 // domains and paths) is genuinely not in this package, so
                 // refusing is honest, but a free plugin's own code should
                 // not read as an upsell in a thrown exception.
-                throw new \RuntimeException(__('Migrator: this restore crosses a multisite boundary. Restoring a network backup rewrites the network tables to the destination domain, which this plugin does not do, so the import was stopped rather than left half applied.', 'plogins-migrator')); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
+                throw new \RuntimeException(__('Migrator: this restore crosses a multisite boundary. Restoring a network backup rewrites the network tables to the destination domain, which this plugin does not do, so the import was stopped rather than left half applied.', 'plogins-migrator'));
             }
         }
 
@@ -272,7 +275,6 @@ final class Importer
                         if (! $restored) {
                             $log('The rollback did not complete. The previous database is in ' . $rollback);
 
-                            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
                             throw new \RuntimeException(sprintf(
                                 /* translators: 1: path to the SQL dump of the previous database, 2: the original error */
                                 __('Migrator: the import failed AND the rollback failed, so the database is in a partly imported state. The dump of the previous database is kept at %1$s and must be restored by hand. %2$s', 'plogins-migrator'),
@@ -281,7 +283,6 @@ final class Importer
                             ));
                         }
 
-                        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
                         throw new \RuntimeException(sprintf(
                             /* translators: %s: the original error */
                             __('Migrator: import failed and the database was rolled back to its previous state. %s', 'plogins-migrator'),
@@ -317,7 +318,6 @@ final class Importer
             // pair the old database with the new files that were written before
             // the stop, so state what the site is standing on and hand over the
             // dump that makes either choice possible.
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
             throw new \RuntimeException(sprintf(
                 /* translators: 1: number of files restored, 2: path to the SQL dump of the previous database, 3: the original error */
                 __('Migrator: the restore stopped after the database had already been replaced, so this site is now part restored: the database is the one from the archive, %1$d files came across in full, the file it stopped on may be part written, and the rest of the archive was not read. The database as it was before is dumped at %2$s: import that file to put the database back, or restore again from a backup that finished. Do one of the two before letting visitors in. %3$s', 'plogins-migrator'),
@@ -356,7 +356,6 @@ final class Importer
                 });
             }
         } catch (\Throwable $e) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
             throw new \RuntimeException(
                 sprintf(
                     /* translators: %s: what was wrong with the archive */
@@ -379,7 +378,7 @@ final class Importer
         $path   = $this->workspace->path('rollback-' . gmdate('Ymd-His') . '-' . wp_generate_password(6, false) . '.sql');
         $handle = fopen($path, 'wb');
         if (false === $handle) {
-            throw new \RuntimeException(__('Migrator: cannot create the pre-import safety backup, so nothing has been imported. Check that the backups folder is writable.', 'plogins-migrator')); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
+            throw new \RuntimeException(__('Migrator: cannot create the pre-import safety backup, so nothing has been imported. Check that the backups folder is writable.', 'plogins-migrator'));
         }
         $dumper = new Dumper($this->db);
         $dumper->dumpAll($dumper->tables(), $handle);
@@ -452,7 +451,6 @@ final class Importer
                 fclose($handle);
                 wp_delete_file($tmp);
 
-                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
                 throw new \RuntimeException(sprintf(
                     /* translators: %s: path of the temporary SQL file */
                     __('Migrator: could not write the whole SQL dump to %s. The disk is most likely full. Nothing has been imported.', 'plogins-migrator'),
