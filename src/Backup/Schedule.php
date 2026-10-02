@@ -110,6 +110,20 @@ final class Schedule
         ], false);
     }
 
+    /**
+     * The start of every scheduled archive's file name from this site:
+     * "<host>-scheduled-". Retention, here and at an off-site destination,
+     * only ever counts and deletes files that start with it, so a folder or FTP
+     * directory shared with other sites, or holding manual backups, is safe.
+     */
+    public static function archivePrefix(): string
+    {
+        $host = (string) wp_parse_url((string) get_option('home'), PHP_URL_HOST);
+        $host = preg_replace('/[^a-z0-9.-]/i', '', $host) ?: 'site';
+
+        return $host . '-' . self::MARKER . '-';
+    }
+
     public function recurrence(): string
     {
         return self::RECURRENCE[$this->frequency] ?? self::RECURRENCE[self::FREQ_DAILY];

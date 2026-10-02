@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Migrator\Backup;
 
+use Migrator\Support\Access;
+use Migrator\Contract\HasHooks;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Storage\DestinationRegistry;
+use Migrator\Storage\LocalFolderDestination;
 use Migrator\Storage\OffsiteSettings;
 
 defined('ABSPATH') || exit;
@@ -15,7 +18,7 @@ defined('ABSPATH') || exit;
  * cron event that runs the backup, and the glue that keeps the cron registration
  * in step with the saved settings. Capability- and nonce-guarded throughout.
  */
-final class Scheduler
+final class Scheduler implements HasHooks
 {
     private const SAVE_ACTION = 'migrator_save_schedule';
 
@@ -54,7 +57,7 @@ final class Scheduler
             'migrator',
             __('Scheduled Backups', 'plogins-migrator'),
             __('Scheduled Backups', 'plogins-migrator'),
-            'manage_options',
+            Access::capability(),
             self::PAGE_SLUG,
             [$this, 'render'],
         );
@@ -87,7 +90,7 @@ final class Scheduler
 
     public function render(): void
     {
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             return;
         }
 
@@ -107,7 +110,7 @@ final class Scheduler
      */
     public function handleSave(): void
     {
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             wp_die(esc_html__('You are not allowed to do this.', 'plogins-migrator'));
         }
         check_admin_referer(self::SAVE_ACTION);
@@ -134,11 +137,12 @@ final class Scheduler
         $schedule->save();
         $this->reschedule($schedule);
 
-        OffsiteSettings::fromArray([
+        $offsite = OffsiteSettings::fromArray([
             'enabled' => ! empty($post['offsite_enabled']),
             'type'    => isset($post['offsite_type']) ? sanitize_key((string) $post['offsite_type']) : '',
             'config'  => $this->readDestinationConfig(is_array($post['dest'] ?? null) ? $post['dest'] : []),
-        ])->save();
+        ]);
+        $offsite->save();
 
         /**
          * Fires after the schedule and its destination have been saved, so an
@@ -148,6 +152,13 @@ final class Scheduler
          * @param Schedule             $schedule The schedule just saved.
          */
         do_action('migrator/schedule_saved', $post, $schedule);
+
+        // A folder that cannot be used is saved as typed, so it can be fixed,
+        // but the screen says why no copy will be made.
+        $folder = new LocalFolderDestination((string) ($offsite->config['local']['folder'] ?? ''));
+        if ($offsite->enabled && 'local' === $offsite->type && null !== $folder->problem()) {
+            $this->redirectBack('badfolder');
+        }
 
         $this->redirectBack('saved');
     }
@@ -202,7 +213,7 @@ final class Scheduler
      */
     public function handleRunNow(): void
     {
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             wp_die(esc_html__('You are not allowed to do this.', 'plogins-migrator'));
         }
         check_admin_referer(self::RUN_ACTION);

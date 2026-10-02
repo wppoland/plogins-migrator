@@ -65,6 +65,10 @@
 			resultMsg.classList.add( 'is-error' );
 			resultMsg.textContent += ' ' + job.encryptionError;
 		}
+		// Files that were unreadable or changed mid-copy are named, not hidden.
+		if ( job.warnings && job.warnings.length ) {
+			resultMsg.textContent += ' ' + job.warnings.join( ' ' );
+		}
 		download.hidden = false;
 		download.setAttribute( 'href', job.download );
 		download.setAttribute( 'download', job.fileName || 'backup.migrator' );
@@ -246,7 +250,8 @@
 		post( 'migrator_restore_backup', { file: file, import_files: '1' } ).then( function ( res ) {
 			btn.disabled = false;
 			btn.textContent = label;
-			window.alert( res && res.success ? ( i18n.restoreDone || 'Restore complete.' ) : ( ( res && res.data && res.data.message ) || i18n.restoreFailed || 'Restore failed.' ) );
+			var done = ( i18n.restoreDone || 'Restore complete.' ) + ( res && res.success && res.data && res.data.warnings && res.data.warnings.length ? ' ' + res.data.warnings.join( ' ' ) : '' );
+			window.alert( res && res.success ? done : ( ( res && res.data && res.data.message ) || i18n.restoreFailed || 'Restore failed.' ) );
 		} ).catch( function () {
 			btn.disabled = false;
 			btn.textContent = label;
@@ -435,6 +440,9 @@
 				var d = res.data || {};
 				resultMsg.textContent = ( i18n.restoreDone || 'Restore complete.' ) +
 					' ' + ( d.statements || 0 ) + ' statements, ' + ( d.replaced || 0 ) + ' rows rewritten, ' + ( d.files || 0 ) + ' files.';
+				if ( d.warnings && d.warnings.length ) {
+					resultMsg.textContent += ' ' + d.warnings.join( ' ' );
+				}
 				startBtn.disabled = false;
 			} )
 			.catch( function () {
@@ -591,6 +599,7 @@
 				var verb = d.dryRun ? ( i18n.srWould || 'Would change' ) : ( i18n.srMade || 'Changed' );
 				var msg = verb + ' ' + d.changes + ' row(s) across ' + d.tables + ' table(s).';
 				if ( d.skipped && d.skipped.length ) { msg += ' ' + ( i18n.srSkipped || 'Skipped (no primary key):' ) + ' ' + d.skipped.join( ', ' ) + '.'; }
+				if ( d.warning ) { msg += ' ' + d.warning; }
 				result.textContent = msg;
 			} )
 			.catch( function () { runBtn.disabled = false; result.textContent = i18n.srFailed || 'Failed.'; } );

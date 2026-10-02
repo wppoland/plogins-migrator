@@ -43,8 +43,10 @@ try {
     (new Importer($ws, $wpdb))->import($mPath, false);
 } catch (\Throwable $e) {
     $rejected = str_contains($e->getMessage(), 'prefix mismatch');
+    $plain    = str_contains($e->getMessage(), '"zz_"') && ! str_contains($e->getMessage(), '&quot;');
 }
 $check('prefix mismatch is rejected (no silent broken site)', $rejected);
+$check('and the message is plain text, not HTML entities the screen would show literally', $plain ?? false);
 @unlink($mPath);
 
 // 2. Zip-slip: an entry path escaping wp-content must NOT be written.
@@ -80,6 +82,41 @@ $check('an archive cut short is refused, not restored half way', $refused);
 $check('and nothing was touched, so no safety dump was taken', (glob($ws->path('rollback-*.sql')) ?: []) === $stale);
 $check('and the cut archive extracted no files', ! file_exists(WP_CONTENT_DIR . '/uploads/guard-cut.txt'));
 @unlink($tPath);
+
+// 3b. A damaged FILE entry after the database must also be refused before the
+// database is replaced. It used to be found after the import, leaving the site
+// part restored.
+$cPath  = $ws->path('guard-crc.migrator');
+$table  = $wpdb->prefix . 'migrator_crcguard';
+$w = new Writer($cPath);
+$w->addString(Manifest::NAME, (string) wp_json_encode(array_merge($baseManifest, ['tables' => [$table]])), Entry::TYPE_MANIFEST);
+$w->addString(\Migrator\Engine\Export\Exporter::DB_ENTRY, "CREATE TABLE `{$table}` (`id` int NOT NULL, PRIMARY KEY (`id`));\n");
+$w->addString('wp-content/uploads/guard-crc.txt', 'AAAAAAAAAAAAAAAA');
+$w->finish();
+$raw = (string) file_get_contents($cPath);
+file_put_contents($cPath, str_replace('AAAAAAAAAAAAAAAA', 'AAAAAAAABAAAAAAA', $raw)); // Flip one byte.
+$refused = '';
+try {
+    (new Importer($ws, $wpdb))->import($cPath, true);
+} catch (\Throwable $e) {
+    $refused = $e->getMessage();
+}
+$check('a damaged file entry is refused (' . substr($refused, 0, 60) . ')', str_contains($refused, 'damaged'));
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$check('and the database entry before it was never run', null === $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)));
+@unlink($cPath);
+
+// 3c. A file that is not an archive is called that, not "never finished".
+$nPath = $ws->path('guard-notarchive.migrator');
+file_put_contents($nPath, 'PK this is a zip file, honest');
+$msg = '';
+try {
+    (new Importer($ws, $wpdb))->import($nPath, true);
+} catch (\Throwable $e) {
+    $msg = $e->getMessage();
+}
+$check('a non-Migrator file gets the bad-signature message', str_contains($msg, 'not a Migrator archive'));
+@unlink($nPath);
 
 // 4. Safety backup is created and cleaned up on a successful DB import.
 $before = glob($ws->path('rollback-*.sql')) ?: [];

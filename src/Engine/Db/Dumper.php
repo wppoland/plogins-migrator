@@ -126,14 +126,19 @@ final class Dumper
     }
 
     /**
-     * The database's character set, sanitised to an identifier for SET NAMES.
-     * Falls back to utf8mb4 (the WordPress default) when unavailable.
+     * The character set the dump's bytes are in, for its SET NAMES line.
+     *
+     * That is the connection's charset, not the database's: every row is read
+     * through wpdb, so its bytes arrive in whatever wpdb set on the connection
+     * (utf8mb4 on any current site). This used to report
+     * @@character_set_database, which is latin1 or utf8mb3 on plenty of older
+     * hosts while the tables themselves are utf8mb4. The dump then declared
+     * latin1 over UTF-8 bytes and every non-ASCII character came back
+     * double-encoded on restore, the safety rollback included.
      */
     public function charset(): string
     {
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
-        $charset = (string) $this->db->get_var('SELECT @@character_set_database');
-        $charset = preg_replace('/[^a-z0-9_]/i', '', $charset) ?: '';
+        $charset = preg_replace('/[^a-z0-9_]/i', '', (string) $this->db->charset) ?: '';
 
         return '' !== $charset ? $charset : 'utf8mb4';
     }
@@ -480,7 +485,13 @@ final class Dumper
             if (null === $value) {
                 $out[] = 'NULL';
             } else {
-                $out[] = "'" . $this->db->_real_escape((string) $value) . "'";
+                // _real_escape() swaps every % for this request's placeholder
+                // hash (it exists to protect prepare()), and nothing downstream
+                // swaps it back: the dump left this request carrying the hash, so
+                // every % in the site ("/%postname%/", "50% off", a serialized
+                // %1$s whose byte length then no longer matched) came back as a
+                // 66-character token on restore.
+                $out[] = "'" . $this->db->remove_placeholder_escape($this->db->_real_escape((string) $value)) . "'";
             }
         }
 
@@ -492,7 +503,10 @@ final class Dumper
      */
     private function write($handle, string $sql): void
     {
-        if (false === fwrite($handle, $sql)) {
+        // A full disk makes fwrite() write what fits and return the short
+        // count; only checking for false let the dump end mid-statement.
+        $written = fwrite($handle, $sql);
+        if (false === $written || $written < strlen($sql)) {
             throw new \RuntimeException('Migrator: failed writing SQL dump (disk full?).');
         }
     }

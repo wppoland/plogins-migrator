@@ -72,9 +72,15 @@ class wpdb // phpcs:ignore
         );
     }
 
+    /** Real wpdb swaps every % for a per-request hash here; so does this fake. */
     public function _real_escape(string $value): string // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore
     {
-        return addslashes($value);
+        return str_replace('%', '{abc123placeholder}', addslashes($value));
+    }
+
+    public function remove_placeholder_escape(string $query): string // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore
+    {
+        return str_replace('{abc123placeholder}', '%', $query);
     }
 
     public function esc_like(string $text): string // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore
@@ -231,6 +237,12 @@ $sql = dump($db);
 foreach ([1, 2, 3, 4, 5, 6] as $id) {
     ok("row {$id} is in the dump", str_contains($sql, "'row-{$id}'"));
 }
+
+echo "\nA percent sign is dumped as itself, not as the placeholder hash\n";
+$db  = new wpdb([1 => ['id' => '1', 'name' => '/%postname%/ 50% off s:2:"%1$s"']], ['id']);
+$sql = dump($db);
+ok('the % survives the dump', str_contains($sql, "'/%postname%/ 50% off s:2:\\\"%1\$s\\\"'"));
+ok('no placeholder hash leaks into the dump', ! str_contains($sql, 'placeholder'));
 
 echo "\nA row deleted behind the walk does not take another row with it\n";
 $db = new wpdb(table([1, 2, 3, 4, 5, 6]), ['id']);

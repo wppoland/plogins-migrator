@@ -182,7 +182,15 @@ final class ExportOptions
      */
     public function fileExcludePaths(): array
     {
-        $paths = [];
+        // The debug log, always: it is often hundreds of megabytes, it is
+        // being written while the backup runs, and it can hold request data
+        // nobody meant to ship to another host.
+        $paths = [untrailingslashit((string) WP_CONTENT_DIR) . '/debug.log'];
+        // Read through constant(): WP_DEBUG_LOG is true/false or a file path.
+        $log = defined('WP_DEBUG_LOG') ? constant('WP_DEBUG_LOG') : null;
+        if (is_string($log) && '' !== $log) {
+            $paths[] = $log;
+        }
 
         if ($this->is('no_media')) {
             $uploads = wp_get_upload_dir();

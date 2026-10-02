@@ -10,6 +10,10 @@ defined('ABSPATH') || exit;
 // reads and writes whole files into memory, which would exhaust it, so this file
 // uses direct stream functions by necessity.
 // phpcs:disable WordPress.WP.AlternativeFunctions
+// Exception messages here are plain text: the admin screen shows them with
+// textContent and WP-CLI prints them. HTML-escaping them made entities appear
+// literally.
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 
 /**
  * Executes a SQL dump statement by statement.
@@ -58,6 +62,7 @@ final class SqlExecutor
             $count = $this->runStream($handle);
         } finally {
             fclose($handle);
+            $this->restoreConnectionCharset();
         }
 
         return $count;
@@ -68,10 +73,28 @@ final class SqlExecutor
      */
     public function run(string $sql): int
     {
-        $this->reset();
-        $count = $this->consume($sql);
+        try {
+            $this->reset();
+            $count = $this->consume($sql);
 
-        return $count + $this->flush();
+            return $count + $this->flush();
+        } finally {
+            $this->restoreConnectionCharset();
+        }
+    }
+
+    /**
+     * A dump carries its own SET NAMES, and it stays on the connection after
+     * the dump is done. Whatever runs next on this request (the URL rewrite,
+     * the options WordPress saves on shutdown) would then write through the
+     * dump's charset instead of the one wpdb chose, so put wpdb's back.
+     */
+    private function restoreConnectionCharset(): void
+    {
+        $dbh = $this->db->__get('dbh');
+        if ($dbh instanceof \mysqli) {
+            $this->db->set_charset($dbh, $this->db->charset, $this->db->collate);
+        }
     }
 
     /**
@@ -160,10 +183,13 @@ final class SqlExecutor
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
         $result = $this->db->query($statement);
         if (false === $result) {
-            throw new \RuntimeException(esc_html(sprintf(
-                'Migrator: SQL import failed near: %s',
-                substr(ltrim($statement), 0, 120)
-            )));
+            // Plain text, not HTML-escaped: the quotes in the statement are the
+            // useful part, and the screen shows the message with textContent.
+            throw new \RuntimeException(sprintf(
+                'Migrator: SQL import failed near: %s (%s)',
+                substr(ltrim($statement), 0, 120),
+                (string) $this->db->last_error
+            ));
         }
 
         return true;
