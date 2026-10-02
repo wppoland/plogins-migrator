@@ -78,7 +78,7 @@ final class Importer
     /**
      * @param callable(string):void|null $log
      *
-     * @return array{tables: int, statements: int, replaced: int, files: int}
+     * @return array{tables: int, statements: int, replaced: int, files: int, warnings: list<string>}
      */
     public function import(string $archivePath, bool $importFiles = true, ?callable $log = null): array
     {
@@ -105,7 +105,7 @@ final class Importer
 
     /**
      * @param callable(string):void $log
-     * @return array{tables: int, statements: int, replaced: int, files: int}
+     * @return array{tables: int, statements: int, replaced: int, files: int, warnings: list<string>}
      */
     private function runImport(string $archivePath, bool $importFiles, callable $log): array
     {
@@ -198,6 +198,7 @@ final class Importer
         ];
 
         $statements = 0;
+        $warnings   = [];
         $replaced   = 0;
         $tablesRepl = 0;
         $files      = 0;
@@ -228,6 +229,23 @@ final class Importer
                             $replaced   = $result['changes'];
                             $tablesRepl = $result['tables'];
                             $log(sprintf('Rewrote URLs/paths in %d rows across %d tables.', $replaced, $tablesRepl));
+                            if ($result['failed'] > 0) {
+                                $warnings[] = sprintf(
+                                    /* translators: 1: number of rows, 2: database error */
+                                    __('%1$d rows could not be rewritten and may still point at the old address (%2$s).', 'plogins-migrator'),
+                                    $result['failed'],
+                                    $result['error']
+                                );
+                            }
+                        }
+
+                        // The pairs are applied one after another, so with
+                        // WordPress in a subdirectory (siteurl = home + /wp) the
+                        // home pair rewrites the front of siteurl first and the
+                        // site lands on the wrong address. These two values are
+                        // known exactly, so set them to what this site had.
+                        foreach (['home', 'siteurl'] as $option) {
+                            $this->db->update($this->db->options, ['option_value' => $target[$option]], ['option_name' => $option]);
                         }
 
                         /**
@@ -246,6 +264,9 @@ final class Importer
                     } catch (\Throwable $e) {
                         $log('Import failed, restoring the previous database…');
                         $restored = $this->restoreDatabase($rollback);
+                        // The object cache still holds what the half import
+                        // wrote; left alone it serves that over the rollback.
+                        wp_cache_flush();
                         $reader->close();
                         if (! $restored) {
                             $log('The rollback did not complete. The previous database is in ' . $rollback);
@@ -282,6 +303,9 @@ final class Importer
                 throw $e;
             }
 
+            // The database is the archive's now; the cache still holds the old one.
+            wp_cache_flush();
+
             // The database is already the archive's and the files got only as
             // far as the read did. Rolling the database back on its own would
             // pair the old database with the new files that were written before
@@ -311,6 +335,7 @@ final class Importer
             'statements' => $statements,
             'replaced'   => $replaced,
             'files'      => $files,
+            'warnings'   => $warnings,
         ];
     }
 

@@ -545,6 +545,10 @@ final class Ajax implements HasHooks
 
         $engine = new SearchReplace($wpdb, new SerializedReplacer($from, $to));
         $result = $engine->run(array_map('strval', (array) $tables), $dryRun);
+        if (! $dryRun) {
+            // Rows were rewritten under the cache's feet.
+            wp_cache_flush();
+        }
 
         wp_send_json_success([
             'dryRun'  => $dryRun,
@@ -552,6 +556,12 @@ final class Ajax implements HasHooks
             'rows'    => $result['rows'],
             'changes' => $result['changes'],
             'skipped' => $result['skipped'],
+            'warning' => $result['failed'] > 0 ? sprintf(
+                /* translators: 1: number of rows, 2: database error */
+                __('%1$d rows could not be written (%2$s).', 'plogins-migrator'),
+                $result['failed'],
+                $result['error']
+            ) : '',
         ]);
     }
 
