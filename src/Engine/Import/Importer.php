@@ -22,8 +22,8 @@ defined('ABSPATH') || exit;
 // uses direct stream functions by necessity.
 // phpcs:disable WordPress.WP.AlternativeFunctions
 // Exception messages here are plain text: the admin screen shows them with
-// textContent, WP-CLI prints them, the scheduler stores them and the template
-// escapes on output. HTML-escaping them made entities appear literally.
+// textContent and WP-CLI prints them. HTML-escaping them made entities appear
+// literally.
 // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 
 /**
