@@ -117,7 +117,7 @@ final class BackupRunner
     {
         global $wpdb;
 
-        $this->discardAbandoned();
+        $this->workspace->sweep();
         $working = '';
 
         try {
@@ -377,24 +377,6 @@ final class BackupRunner
         }
 
         return $final;
-    }
-
-    /**
-     * Delete the leavings of runs that were killed before they finished. They
-     * can never be completed (no run resumes another's file) and a half-written
-     * archive of a large site is large, so left alone they fill the disk.
-     *
-     * The pattern carries a trailing wildcard because post-processing appends to
-     * the working name (`.gz`, `.enc`), so a run that died after compressing
-     * left a file the bare `.part` pattern never saw.
-     */
-    private function discardAbandoned(): void
-    {
-        foreach (glob($this->workspace->path('building-*.part*')) ?: [] as $path) {
-            if ((int) filemtime($path) < time() - DAY_IN_SECONDS) {
-                wp_delete_file($path);
-            }
-        }
     }
 
     /**
