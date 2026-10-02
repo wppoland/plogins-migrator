@@ -109,12 +109,18 @@ final class Importer
      */
     private function runImport(string $archivePath, bool $importFiles, callable $log): array
     {
+        // Open first: the constructor checks the signature, so a file that is
+        // not a Migrator archive at all is called that, rather than "never
+        // finished" by the end-marker test below.
+        $reader = new Reader($archivePath);
+
         // An archive cut short while it was being written is otherwise found out
         // part way through the restore, which is too late: the database entry
         // comes before the files, so by then it has been replaced. The end marker
         // is four bytes at the tail of a finished archive, so ask for it now,
         // while refusing still costs the site nothing.
         if (! Reader::endsWithMarker($archivePath)) {
+            $reader->close();
             throw new \RuntimeException(
                 'Migrator: this archive was never finished, so it is not a complete backup. The run that wrote it '
                 . 'was cut short (execution time, memory, or a full disk). Nothing has been imported, this site is '
@@ -122,7 +128,16 @@ final class Importer
             );
         }
 
-        $reader = new Reader($archivePath);
+        // Read the whole archive once, checking every header and checksum,
+        // before anything is written. A damaged file entry used to be found
+        // after the database had been replaced, leaving the site part restored.
+        try {
+            $this->verifyArchive($archivePath);
+        } catch (\Throwable $e) {
+            $reader->close();
+            throw $e;
+        }
+        $log('Archive checked: every entry is intact.');
 
         $first = $reader->nextEntry();
         if (null === $first || ! $first->isManifest()) {
@@ -297,6 +312,29 @@ final class Importer
             'replaced'   => $replaced,
             'files'      => $files,
         ];
+    }
+
+    /**
+     * Read-only pass over every entry: headers parse, sizes add up, checksums
+     * match, the end marker is reached. Throws on the first problem.
+     */
+    private function verifyArchive(string $archivePath): void
+    {
+        $reader = new Reader($archivePath);
+        try {
+            while (null !== $reader->nextEntry()) {
+                $reader->streamTo(static function (string $chunk): void {
+                });
+            }
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                'Migrator: this archive is damaged, so nothing has been imported and this site is untouched. ' . $e->getMessage(),
+                0,
+                $e
+            );
+        } finally {
+            $reader->close();
+        }
     }
 
     /**
