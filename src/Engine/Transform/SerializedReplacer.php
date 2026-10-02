@@ -21,9 +21,10 @@ defined('ABSPATH') || exit;
  *    (`__PHP_Incomplete_Class`) are left completely untouched, because
  *    re-serializing one would corrupt it. We skip the replacement rather than
  *    risk the data.
- *  - JSON that decodes to an array/object is recursed (WooCommerce stores
- *    serialized strings inside JSON meta), but only re-encoded when something
- *    inside actually changed, untouched JSON is returned byte-for-byte.
+ *  - JSON is replaced as text, in each escaping an encoder could have used,
+ *    so its formatting and number types survive. It is only decoded and
+ *    re-encoded when it wraps a serialized PHP string that needs the change
+ *    (WooCommerce stores those inside JSON meta).
  *
  * Usage:
  *   $r   = new SerializedReplacer($fromUrl, $toUrl);          // or arrays
@@ -115,26 +116,32 @@ final class SerializedReplacer
     }
 
     /**
-     * Replace inside a plain string. If the string is JSON that decodes to an
-     * array/object, recurse it (to fix any serialized strings nested inside) and
-     * re-encode only when a replacement actually happened.
+     * Replace inside a plain string. JSON is edited as text wherever possible:
+     * decoding and re-encoding it turned {} into [], 1.0 into 1 and a 64-bit id
+     * into a float that lost its last digits, and changed every escape in the
+     * document, all for one URL. Only JSON that carries a serialized PHP string
+     * needing the replacement is decoded, because that string's byte length has
+     * to be recomputed.
      */
     private function replaceInString(string $data): string
     {
         $trimmed = ltrim($data);
         if ('' !== $trimmed && ('{' === $trimmed[0] || '[' === $trimmed[0])) {
-            $decoded = json_decode($data, true);
-            if (is_array($decoded) && JSON_ERROR_NONE === json_last_error()) {
-                $before    = $this->count;
-                $processed = $this->process($decoded, false);
-                if ($this->count > $before) {
-                    $encoded = wp_json_encode($processed, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                    if (is_string($encoded)) {
-                        return $encoded;
-                    }
+            $decoded = json_decode($data, false, 512, JSON_BIGINT_AS_STRING);
+            if ((is_array($decoded) || is_object($decoded)) && JSON_ERROR_NONE === json_last_error()) {
+                if (! $this->holdsSerializedMatch($decoded)) {
+                    return $this->replaceJsonText($data);
                 }
-                // Nothing changed inside (count unchanged): the plain replace
-                // below would also find nothing, so the string is returned intact.
+
+                // ponytail: this path re-encodes, which keeps {} and 1.0 but
+                // writes a bigint as a quoted string. It only runs for JSON
+                // wrapping serialized PHP; a token-level rewriter would lift
+                // that ceiling if it ever matters.
+                $processed = $this->process($decoded, false);
+                $encoded   = wp_json_encode($processed, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+                if (is_string($encoded)) {
+                    return $encoded;
+                }
             }
         }
 
@@ -143,6 +150,62 @@ final class SerializedReplacer
         $this->count += $replaced;
 
         return $out;
+    }
+
+    /**
+     * Replace in JSON text, matching each search string in every escaping a
+     * JSON encoder produces for it ("https:\/\/old" as well as "https://old"),
+     * and writing the replacement in the same escaping.
+     */
+    private function replaceJsonText(string $json): string
+    {
+        $from = [];
+        $to   = [];
+        foreach ($this->from as $i => $search) {
+            foreach ([JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE, JSON_UNESCAPED_UNICODE, JSON_UNESCAPED_SLASHES, 0] as $flags) {
+                $f = substr((string) json_encode($search, $flags), 1, -1);
+                if ('' === $f || in_array($f, $from, true)) {
+                    continue;
+                }
+                $from[] = $f;
+                $to[]   = substr((string) json_encode($this->to[$i] ?? '', $flags), 1, -1);
+            }
+        }
+
+        $replaced     = 0;
+        $out          = str_replace($from, $to, $json, $replaced);
+        $this->count += $replaced;
+
+        return $out;
+    }
+
+    /**
+     * Whether a decoded JSON value holds a serialized PHP string that contains
+     * one of the search strings, the one case plain text replacement breaks.
+     */
+    private function holdsSerializedMatch(mixed $data): bool
+    {
+        if (is_string($data)) {
+            if (! $this->isSerialized($data)) {
+                return false;
+            }
+            foreach ($this->from as $search) {
+                if ('' !== $search && str_contains($data, $search)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        if (is_array($data) || is_object($data)) {
+            foreach ((array) $data as $value) {
+                if ($this->holdsSerializedMatch($value)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function hasIncompleteClass(mixed $data): bool

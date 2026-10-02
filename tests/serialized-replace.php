@@ -123,6 +123,14 @@ $json = '{"a":"keep me","b":[1,2,3]}';
 [$out, $n] = run($json);
 ok('non-matching JSON returned byte-identical', $out === $json && $n === 0);
 
+// 10b. JSON whose types a decode/encode round trip would change.
+$json = '{"url":"https:\\/\\/old.example\\/z","empty":{},"list":[],"price":1.0,"id":9007199254740993123,"name":"\\u0141\\u00f3d\\u017a"}';
+[$out, $n] = run($json);
+ok('JSON keeps {}, 1.0, bigints and escapes while the URL is replaced',
+    $out === '{"url":"https:\\/\\/new-site.example.com\\/z","empty":{},"list":[],"price":1.0,"id":9007199254740993123,"name":"\\u0141\\u00f3d\\u017a"}' && 1 === $n);
+[$out] = run('{"u":"https://old.example/a","o":{}}');
+ok('JSON with unescaped slashes is replaced in place', $out === '{"u":"https://new-site.example.com/a","o":{}}');
+
 // 11. Looks-like-JSON but isn't (shortcode) → plain replace, no corruption.
 [$out] = run('[gallery link="https://old.example"]');
 ok('bracket string that is not JSON handled as plain string',
