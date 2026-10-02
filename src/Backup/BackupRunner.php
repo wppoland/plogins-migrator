@@ -251,7 +251,7 @@ final class BackupRunner
      */
     public function archives(): array
     {
-        return $this->describe(glob($this->workspace->path('*-' . Schedule::MARKER . '-*.migrator*')) ?: []);
+        return $this->describe($this->scheduledFiles());
     }
 
     /**
@@ -278,11 +278,25 @@ final class BackupRunner
         $extra = apply_filters('migrator/backup_listed_archives', []);
 
         $paths = array_merge(
-            glob($this->workspace->path('*-' . Schedule::MARKER . '-*.migrator*')) ?: [],
+            $this->scheduledFiles(),
             is_array($extra) ? array_filter($extra, 'is_string') : [],
         );
 
         return $this->describe(array_values(array_unique($paths)));
+    }
+
+    /**
+     * This site's finished scheduled archives in the workspace. Another site's
+     * (a network shares wp-content) and files still being written are not
+     * retention's to count or delete.
+     *
+     * @return list<string>
+     */
+    private function scheduledFiles(): array
+    {
+        $found = glob($this->workspace->path(Schedule::archivePrefix() . '*.migrator*')) ?: [];
+
+        return array_values(array_filter($found, static fn (string $p): bool => ! str_ends_with($p, '.part')));
     }
 
     /**
@@ -375,13 +389,9 @@ final class BackupRunner
      */
     private function destination(): string
     {
-        $host = (string) wp_parse_url((string) get_option('home'), PHP_URL_HOST);
-        $host = preg_replace('/[^a-z0-9.-]/i', '', $host) ?: 'site';
-
         return $this->workspace->path(sprintf(
-            '%s-%s-%s-%s.migrator',
-            $host,
-            Schedule::MARKER,
+            '%s%s-%s.migrator',
+            Schedule::archivePrefix(),
             gmdate('Ymd-His'),
             wp_generate_password(8, false),
         ));

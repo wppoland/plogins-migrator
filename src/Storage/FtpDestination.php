@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Migrator\Storage;
 
+use Migrator\Backup\Schedule;
+
 defined('ABSPATH') || exit;
 
 /**
@@ -81,9 +83,24 @@ final class FtpDestination implements BackupDestination
 
     public function prune(int $retention): int
     {
-        $archives = $this->archives();
+        // Only this site's scheduled archives: the directory may be shared with
+        // other sites or hold uploads made by hand.
+        $prefix   = Schedule::archivePrefix();
+        $archives = array_values(array_filter(
+            $this->archives(),
+            static fn (array $a): bool => str_starts_with($a['file'], $prefix),
+        ));
         if ([] === $archives) {
             return 0;
+        }
+
+        // Without MDTM every time is 0, the "newest first" order is arbitrary,
+        // and pruning would delete whichever files the server listed last,
+        // possibly the newest. Keep everything rather than guess.
+        foreach ($archives as $archive) {
+            if ($archive['time'] <= 0) {
+                return count($archives);
+            }
         }
 
         $conn = $this->connect();

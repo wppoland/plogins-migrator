@@ -23,6 +23,7 @@ $migrator_notices = [
     'saved'  => ['updated', __('Schedule saved.', 'plogins-migrator')],
     'ran'    => ['updated', __('Backup created.', 'plogins-migrator')],
     'failed' => ['error', __('Backup failed. See the status below.', 'plogins-migrator')],
+    'badfolder' => ['error', __('Schedule saved, but no copies will go to the folder: it must be an absolute path outside the website and outside Migrator\'s own backups folder, and the web server must be able to write to it.', 'plogins-migrator')],
 ];
 
 $migrator_date = static fn (int $ts): string => wp_date(
