@@ -1,6 +1,6 @@
 === Migrator - Site Migration and Backup ===
 Contributors: motylanogha
-Tags: backup, migration, clone, restore, wp-cli
+Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
@@ -8,13 +8,13 @@ Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Back up, clone and migrate your whole site to one file, then restore it here or on a new host. URLs and paths are fixed for you. Runs on your server.
+WordPress backup and migration in one file. Free scheduled backups, FTP off-site copies, safe URL rewrite and DB rollback. No account, no size cap.
 
 == Description ==
 
 Migrator packs your database and everything in `wp-content` into a single file you can download, keep as a backup, and restore, on the same site or on a brand-new install somewhere else. When you restore onto a different address, Migrator rewrites the old URLs and file paths to the new ones for you, so the site just works.
 
-Everything happens on your own server. There is no account to create, no file size sold back to you, and nothing is ever sent to a third-party service. Because it is fully open, you can read exactly what it does: the source lives at [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator), which is also where to file a bug or request a feature.
+Everything happens on your own server. There is no account to create and no file size sold back to you, and nothing leaves your server unless you add an off-site destination you own. The source lives at [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator), which is also where to file a bug or request a feature.
 
 **How it works**
 
@@ -24,9 +24,13 @@ Everything happens on your own server. There is no account to create, no file si
 
 The address rewrite is **safe for serialized data**: Migrator walks the actual data structures rather than doing a blind text replace, so the byte-length counts PHP stores inside serialized options and meta stay correct and nothing breaks.
 
+**Scheduled backups and off-site copies**
+
+Back up daily or weekly and keep as many copies as you choose. Each scheduled backup can also be copied off the server, to an FTP or FTPS server or to a local or mounted folder outside the web root. Older scheduled copies are deleted automatically, on the server and at the destination, once they fall outside your retention setting.
+
 **A few things worth knowing**
 
-Backups are written to a protected folder (`wp-content/migrator-backups`) that denies direct web access, and the in-browser download is served only to logged-in administrators through an authenticated handler, the files are never exposed at a guessable URL. Each item inside an archive carries a checksum, so a truncated or corrupted backup is caught before it is ever restored over a live site.
+Backups are written to `wp-content/migrator-backups`. On Apache and IIS that folder denies direct web access. nginx ignores those rules, so every backup file name also carries a random token and is never at a guessable URL. The in-browser download is served only to logged-in administrators through an authenticated handler. Each item inside an archive carries a checksum, and a finished archive ends with an end marker, so a truncated or corrupted backup is caught before it is restored over a live site.
 
 Restoring **overwrites** the destination database and files, that is the point of a restore, so it asks for confirmation and is limited to administrators. Migrator never overwrites its own plugin folder during a restore, so it cannot pull the rug out from under itself mid-import.
 
@@ -40,13 +44,22 @@ For large sites where a browser request would time out, every job also runs from
 * One-click backup of your database and all of `wp-content` into a single archive
 * Restore to the same site, or migrate to a new host with automatic, serialization-safe URL and path rewriting
 * Choose what to leave out: media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables
-* In-browser export with a progress bar and a direct download, resumable so large sites finish across multiple steps, plus drag-and-drop restore
-* WP-CLI `export` and `import` commands for sites too large for the browser
-* A safety snapshot of your database before every restore, rolled back automatically if anything fails
-* Per-item checksums so a corrupt archive is detected, not restored
+* In-browser export in short resumable steps with a progress bar and a direct download, plus drag-and-drop restore that uploads in 4 MB pieces
+* Scheduled backups, daily or weekly, with a retention rule
+* Off-site copies to an FTP or FTPS server, or to a local or mounted folder
+* WP-CLI `export`, `import` and `replace` commands for sites too large for the browser
+* A snapshot of your database before every restore. If the database import or the URL rewrite fails, the previous database is put back automatically. If a later step fails, such as extracting files, the site is left partly restored and the message gives the path of the previous database dump to restore by hand
+* Per-item checksums and an archive check before the database is touched, so a corrupt or unfinished archive is refused, not restored
 * Serialization-safe search and replace across the database, with a dry-run preview and a `wp migrator replace` command, to change a domain, URL or path safely
 * Inspect any stored backup before you restore it: source URL, WordPress and PHP versions, table count, plus pre-restore checks for table prefix, disk space and writability
-* Self-hosted: no account, no third-party service, nothing leaves your server
+* No account and no service of ours: nothing leaves your server unless you add an off-site destination you own
+
+**Documentation and links**
+
+* **Documentation**: [plogins.com/plogins-migrator/docs/](https://plogins.com/plogins-migrator/docs/)
+* **Plugin page**: [plogins.com/plogins-migrator/](https://plogins.com/plogins-migrator/)
+* **Source code**: [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator)
+* **Bug reports and feature requests**: [github.com/wppoland/plogins-migrator/issues](https://github.com/wppoland/plogins-migrator/issues)
 
 Reporting a security issue: email hello@wppoland.com, and under our [coordinated disclosure policy](https://wppoland.com/en/security-policy/) we confirm within two business days, assess within five, and patch a critical issue within seven days of confirming it.
 
@@ -69,9 +82,9 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
     Imports chosen tables          paid     ?     no     paid     paid    paid
     Paid plan, from               EUR49   $69    $99      $49      $70     $49
 
-**Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and restored automatically if the restore fails. No other free tier here documents that rollback. Automation is not the paid tier here: a shop that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
+**Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and put back automatically if the database import fails. No other free tier here documents that rollback. Automation is not the paid tier here: a site that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
 
-**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV, Dropbox, Google Drive), incremental backups, encrypted archives, recovery points, server-to-server transfer, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
+**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, server-to-server transfer, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
 
 = All-in-One WP Migration =
 
@@ -99,16 +112,16 @@ Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion i
 
 The free edition backs up on a schedule and copies each backup off the server. **Plogins Migrator PRO** is for putting those copies further away, keeping more of them, and getting back faster:
 
-* **Cloud destinations** - S3, R2, Backblaze B2, Wasabi, SFTP, WebDAV, Dropbox and Google Drive, on top of the FTP and folder destinations the free edition ships
-* **Incremental backups** - store only the files that changed between fulls, with retention that keeps whole chains so a base is never orphaned
-* **Recovery points** - one-click rollback to a known-good backup
-* **Encrypted backups** - password-protected archives, decrypted on restore
-* **Server-to-server transfer** - move a site between servers with no manual download
-* **Table sync** - import chosen database tables from a backup into a live site and leave the rest alone
-* **Email notifications and activity log** - a silent failure never slips by
-* **Multisite, network to network** - back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
-* **Reset a site to a clean install** - take a staging site back to fresh WordPress without reinstalling: a safety backup first, then the tables dropped, a clean install, and the address, title and administrator password put back. Single sites only, not networks
-* **White label** - replace the menu name with your own, point the upgrade link elsewhere and hide the purchase prompt, so a client sees the tool under your brand
+* **Cloud destinations**: S3, R2, Backblaze B2, Wasabi, SFTP and WebDAV, on top of the FTP and folder destinations the free edition ships
+* **Incremental backups**: store only the files that changed between fulls, with retention that keeps whole chains so a base is never orphaned
+* **Recovery points**: one-click rollback to a known-good backup
+* **Encrypted backups**: password-protected archives, decrypted on restore
+* **Server-to-server transfer**: move a site between servers with no manual download
+* **Table sync**: import chosen database tables from a backup into a live site and leave the rest alone
+* **Email notifications and activity log**: a silent failure never slips by
+* **Multisite, network to network**: back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
+* **Reset a site to a clean install**: take a staging site back to fresh WordPress without reinstalling: a safety backup first, then the tables dropped, a clean install, and the address, title and administrator password put back. Single sites only, not networks
+* **White label**: replace the menu name with your own, point the upgrade link elsewhere and hide the purchase prompt, so a client sees the tool under your brand
 
 Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year, billed in EUR.
 
@@ -122,14 +135,6 @@ Compare editions and pricing: [plogins.com/plogins-migrator-pro/pricing/](https:
 
 == Frequently Asked Questions ==
 
-= Documentation and links =
-
-* **Documentation** - [plogins.com/plogins-migrator/docs/](https://plogins.com/plogins-migrator/docs/)
-* **Plugin page** - [plogins.com/plogins-migrator/](https://plogins.com/plogins-migrator/)
-* **Source code** - [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator)
-* **Bug reports and feature requests** - [github.com/wppoland/plogins-migrator/issues](https://github.com/wppoland/plogins-migrator/issues)
-
-
 = Does restoring delete what is already on the destination? =
 
 Yes. A restore replaces the destination's database and files with the contents of the archive, that is what restoring a backup means. It is limited to administrators and asks for confirmation first. Always keep a separate backup of anything on the destination you want to keep.
@@ -138,18 +143,45 @@ Yes. A restore replaces the destination's database and files with the contents o
 
 No. When you restore onto a different address, Migrator rewrites the old site URL and file paths to the new ones, including inside serialized data, so internal links and settings keep working.
 
-= My site is large and the browser export stops. What do I do? =
+= How large a site can I move? =
 
-Use WP-CLI, which has no request time limit: `wp migrator export` to build the archive and `wp migrator import <file>` to restore it.
+Migrator sets no size limit. A browser export runs in short steps, so PHP time limits do not stop it, and uploads go in 4 MB pieces, so your host's upload limit does not apply. A browser restore runs as one long request, and some hosts or proxies (Cloudflare, nginx) cut those off. For a big site, restore with `wp migrator import <file>`, which has no time limit.
+
+= My host times out or shows a 502 during a restore. What now? =
+
+The restore may still be running on the server. Wait a few minutes, then check the site. To avoid it, restore over WP-CLI. If a restore stops after the database was replaced, the error message gives the path of the database dump taken before the restore, so you can put the old database back.
+
+= What happens if a restore fails? =
+
+The archive is checked before the database is touched, so an unfinished or corrupt archive is refused with the site left as it was. If the database import or the URL rewrite fails, the previous database is restored automatically. If a later step fails (for example, the disk fills while files are extracted), the site is left part restored, and the message says what state it is in and where the previous database dump is, so you can restore it by hand.
+
+= Do I need WordPress installed on the new host? =
+
+Yes. Install WordPress and Migrator on the destination, then restore the archive there. The database prefix in the new site's wp-config.php must match the source site's; the restore checks this first and tells you the value to set.
+
+= Does it back up WordPress core and wp-config.php? =
+
+No. An archive holds the database and everything in `wp-content`. WordPress core comes from the fresh install, and wp-config.php stays the destination's own, so its database credentials are never overwritten.
+
+= Can I import a .wpress file from All-in-One WP Migration, or a Duplicator package? =
+
+Not yet. Restore it with the plugin that made it, then create a Migrator backup to use from then on.
+
+= Can I open a .migrator file without the plugin? =
+
+It is Migrator's own streaming format, not a ZIP. Restore it with Migrator, or check its contents first with Details in the backups list.
 
 = Does it send my data anywhere? =
 
-No. Migrator runs entirely on your own server. It creates no account and contacts no external service. Your backups stay in `wp-content/migrator-backups` until you download or delete them.
+Only where you tell it to. Migrator creates no account and calls no service of ours. Backups stay in `wp-content/migrator-backups` unless you add an off-site destination (an FTP or FTPS server, or a folder outside the web root), and then a copy goes there. Scheduled backups older than your retention setting are deleted automatically.
 
 = Where are my backups stored? =
 
-In `wp-content/migrator-backups`, a folder protected from direct web access. Removing the plugin deletes that folder and its contents.
+In `wp-content/migrator-backups`. On Apache and IIS the folder denies direct web access; on nginx, which ignores those rules, each file name carries a random token so it cannot be guessed. Removing the plugin deletes that folder and its contents. Copies on an off-site destination stay there.
 
+= Does it work with WooCommerce? =
+
+Yes. Orders (including HPOS tables), products and settings move with the database. You can leave out WooCommerce sessions and Action Scheduler tables to make the archive smaller.
 
 = Does this plugin work on WordPress Multisite? =
 
@@ -157,16 +189,15 @@ It runs on Multisite: network activate it or activate it on individual sites, an
 
 = How does Migrator compare to Duplicator and All-in-One WP Migration? =
 
-All three back up, clone and migrate WordPress, and all three run on your own server. The differences worth knowing, comparing the free editions:
+Comparing free editions:
 
-* **Size limits**: Migrator's free edition has no artificial size limit. All-in-One WP Migration limits imports in its free version and sells a paid Unlimited extension to remove that cap. Duplicator's free edition has no advertised size cap either.
-* **Serialization-safe URL rewriting**: all three do it.
-* **Exclusions and stored-backup management**: free in Migrator and in Duplicator; part of the paid tier for All-in-One WP Migration.
-* **Scheduling, incremental backups, cloud storage and multisite**: paid in all three (Migrator PRO, Duplicator Pro, paid All-in-One WP Migration extensions).
-* **WP-CLI**: Migrator ships `wp migrator export`, `import` and `replace` in the free version.
-* **Licensing**: Migrator is GPLv2 and fully open source, including PRO.
+* **Size**: Migrator sets no cap. All-in-One WP Migration is bounded by your host's PHP upload limits, and lifting them is a paid extension. Duplicator publishes 4 GB (500 MB on DupArchive).
+* **Scheduling and off-site copies**: free in Migrator (daily or weekly, FTP/FTPS or a folder). Paid in both others.
+* **WP-CLI**: `wp migrator export`, `import` and `replace` are in the free plugin.
+* **Rollback**: Migrator snapshots the database before every import and puts it back if the database import fails.
+* **Encryption**: All-in-One WP Migration encrypts exports in its free plugin. Migrator keeps encryption in PRO.
 
-Competitor details as of July 2026; check the vendors' own sites for their current features and pricing.
+See the grid above for all five competitors. Vendor details as of July 2026.
 
 == Screenshots ==
 
@@ -178,6 +209,26 @@ Competitor details as of July 2026; check the vendors' own sites for their curre
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.4.0 =
+* Fixed: backups no longer alter `%` characters in the database. In 1.3.8, permalink structures, text such as "50%" and serialized values containing `%` were damaged on restore.
+* Fixed: scheduled backups, retention, and the FTP and folder copies now run in the free edition. They were not wired up from 1.3.0 to 1.3.8.
+* Fixed: database dumps are charset-safe on latin1 and utf8mb3 databases.
+* Fixed: collations from MySQL 8 and MariaDB 11 sources are normalised.
+* Fixed: a file that changes during a backup no longer corrupts the archive, and the archive is verified before a restore touches the database.
+* Fixed: off-site retention deletes only this site's backups.
+* Fixed: home and siteurl are correct after a restore of WordPress installed in a subdirectory.
+* Fixed: JSON values are preserved during the URL rewrite.
+* Fixed: the object cache is flushed after every kind of restore.
+* Fixed: unreadable files are skipped.
+* Fixed: interrupted scheduled backups are now visible.
+* Fixed: downloading a large archive no longer runs out of memory.
+* Fixed: import error messages are readable and translatable.
+* Fixed: `wp migrator import` reports errors cleanly.
+* Fixed: the encryption password is passed to Migrator PRO intact.
+* Changed: on Multisite, Migrator is limited to super admins.
+* Changed: uninstalling removes all of Migrator's settings and its scheduled event.
+* Readme: corrected the rollback, nginx and off-site wording and the competitor comparison, and added FAQ entries.
 
 = 1.3.8 =
 * The sidebar upgrade promo now follows the same dismissal as the banner. Dismissing the banner used to leave a full-height advert on the settings screen for good, which is not what the WordPress.org guideline on upgrade prompts means by used with moderation.
@@ -276,7 +327,7 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 = 1.2.0 =
 * New: standalone serialization-safe search and replace (admin tool + dry run + `wp migrator replace`) to change a domain, URL or path without corrupting serialized data.
-* New: inspect a stored backup before restoring - shows the source URL, WordPress and PHP versions and table count, and runs pre-restore checks (table prefix, disk space, writable files).
+* New: inspect a stored backup before restoring: it shows the source URL, WordPress and PHP versions and table count, and runs pre-restore checks (table prefix, disk space, writable files).
 
 = 1.1.1 =
 * Added a Free vs PRO overview to the readme.
@@ -322,5 +373,5 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 == Upgrade Notice ==
 
-= 1.3.4 =
-Fixes a restore that could finish silently truncated on a full disk, and a rollback failure that reported itself as a successful rollback. Update before your next restore.
+= 1.4.0 =
+Recommended for everyone. Backups made with 1.3.x may contain damaged percent signs and non-ASCII text. After updating, make a fresh backup.

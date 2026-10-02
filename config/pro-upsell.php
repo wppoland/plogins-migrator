@@ -16,21 +16,21 @@ return [
     'price_from' => 49,
     'currency'   => 'EUR',
     'lead'       => [
-        'en' => 'Everything you need to make backups run themselves and migrations safe. Every feature ships in the current release.',
-        'pl' => 'Wszystko, czego potrzeba, żeby kopie działały same, a przenosiny były bezpieczne. Każda funkcja jest w bieżącym wydaniu.',
+        'en' => 'Scheduled backups and FTP or folder copies are already in this free plugin. PRO puts the copies further away, keeps them smaller and gets you back faster. Every feature ships in the current release.',
+        'pl' => 'Harmonogram kopii i kopie na FTP lub do folderu są już w tej darmowej wtyczce. PRO wysyła kopie dalej, zmniejsza je i szybciej przywraca witrynę. Każda funkcja jest w bieżącym wydaniu.',
     ],
     'features'   => [
         [
-            'en' => ['title' => 'Scheduled and incremental backups', 'desc' => 'Daily or weekly backups with retention. Incremental mode stores only the files that changed, and every archive still carries the full database.'],
-            'pl' => ['title' => 'Harmonogram i kopie przyrostowe', 'desc' => 'Codzienne lub tygodniowe kopie z retencją. Tryb przyrostowy zapisuje tylko zmienione pliki, a baza danych trafia do archiwum w całości za każdym razem.'],
+            'en' => ['title' => 'Incremental backups', 'desc' => 'Scheduled backups store only the files that changed, and every archive still carries the full database.'],
+            'pl' => ['title' => 'Kopie przyrostowe', 'desc' => 'Kopie z harmonogramu zapisują tylko zmienione pliki, a baza danych trafia do archiwum w całości za każdym razem.'],
         ],
         [
             'en' => ['title' => 'Recovery points', 'desc' => 'A list of known-good backups with one-click rollback. A point is captured automatically after every successful backup or on demand, and remembers the site URL and database prefix.'],
             'pl' => ['title' => 'Punkty przywracania', 'desc' => 'Lista sprawdzonych kopii z rollbackiem jednym kliknięciem. Punkt tworzy się automatycznie po każdej udanej kopii lub na żądanie i zapamiętuje adres oraz prefiks bazy.'],
         ],
         [
-            'en' => ['title' => 'Cloud and off-site copies', 'desc' => 'S3-compatible storage with presets (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), FTP/FTPS, SFTP, WebDAV (Nextcloud, ownCloud), Dropbox, Google Drive, and a local or mounted folder.'],
-            'pl' => ['title' => 'Kopie w chmurze i poza witryną', 'desc' => 'Storage zgodny z S3 z presetami (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), FTP/FTPS, SFTP, WebDAV (Nextcloud, ownCloud), Dropbox, Google Drive oraz folder lokalny lub zamontowany.'],
+            'en' => ['title' => 'Cloud destinations', 'desc' => 'S3-compatible storage with presets (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), SFTP and WebDAV (Nextcloud, ownCloud), on top of the FTP/FTPS and folder copies in the free plugin.'],
+            'pl' => ['title' => 'Kopie w chmurze', 'desc' => 'Storage zgodny z S3 z presetami (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), SFTP i WebDAV (Nextcloud, ownCloud), obok kopii na FTP/FTPS i do folderu z darmowej wtyczki.'],
         ],
         [
             'en' => ['title' => 'Server-to-server transfer', 'desc' => 'Pull a site from one server to another with no manual download.'],
