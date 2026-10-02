@@ -201,7 +201,7 @@ final class Importer
                     $rollback = $this->backupDatabase($log);
 
                     try {
-                        $statements = $this->importDatabase($reader, $log);
+                        $statements = $this->importDatabase($reader, $log, $this->dumpCharset($manifest));
 
                         [$from, $to] = $this->replacements($source, $target);
                         if ([] !== $from) {
@@ -343,7 +343,25 @@ final class Importer
         return true;
     }
 
-    private function importDatabase(Reader $reader, callable $log): int
+    /**
+     * The charset the archive's SQL bytes are really in.
+     *
+     * From 1.4.0 the manifest says so. Before that the dump's SET NAMES came
+     * from @@character_set_database, while the rows were read through wpdb's
+     * utf8mb4 connection: on a database whose default is latin1 or utf8mb3 the
+     * line names the wrong charset for bytes that are UTF-8, so it is
+     * overridden to utf8mb4. That is wrong only for a source that ran wpdb
+     * itself on latin1 (DB_CHARSET set to latin1 by hand), which is far rarer
+     * than a latin1 database default under utf8mb4 tables.
+     */
+    private function dumpCharset(Manifest $manifest): string
+    {
+        $declared = preg_replace('/[^a-z0-9_]/i', '', (string) $manifest->get('dbCharset', '')) ?: '';
+
+        return '' !== $declared ? $declared : 'utf8mb4';
+    }
+
+    private function importDatabase(Reader $reader, callable $log, string $charset = 'utf8mb4'): int
     {
         $tmp    = $this->workspace->path('import-' . wp_generate_password(8, false) . '.sql');
         $handle = fopen($tmp, 'wb');
@@ -370,7 +388,8 @@ final class Importer
 
         // Stream the temp file statement-by-statement, never load the whole
         // dump into memory.
-        $count = (new SqlExecutor($this->db))->runFile($tmp);
+        $setNames = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql) ? 'SET NAMES ' . $charset : $sql;
+        $count    = (new SqlExecutor($this->db, $setNames))->runFile($tmp);
         wp_delete_file($tmp);
 
         $log(sprintf('Imported database (%d statements).', $count));

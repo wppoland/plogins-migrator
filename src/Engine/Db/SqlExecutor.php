@@ -58,6 +58,7 @@ final class SqlExecutor
             $count = $this->runStream($handle);
         } finally {
             fclose($handle);
+            $this->restoreConnectionCharset();
         }
 
         return $count;
@@ -68,10 +69,28 @@ final class SqlExecutor
      */
     public function run(string $sql): int
     {
-        $this->reset();
-        $count = $this->consume($sql);
+        try {
+            $this->reset();
+            $count = $this->consume($sql);
 
-        return $count + $this->flush();
+            return $count + $this->flush();
+        } finally {
+            $this->restoreConnectionCharset();
+        }
+    }
+
+    /**
+     * A dump carries its own SET NAMES, and it stays on the connection after
+     * the dump is done. Whatever runs next on this request (the URL rewrite,
+     * the options WordPress saves on shutdown) would then write through the
+     * dump's charset instead of the one wpdb chose, so put wpdb's back.
+     */
+    private function restoreConnectionCharset(): void
+    {
+        $dbh = $this->db->__get('dbh');
+        if ($dbh instanceof \mysqli) {
+            $this->db->set_charset($dbh, $this->db->charset, $this->db->collate);
+        }
     }
 
     /**

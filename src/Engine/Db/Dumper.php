@@ -126,14 +126,19 @@ final class Dumper
     }
 
     /**
-     * The database's character set, sanitised to an identifier for SET NAMES.
-     * Falls back to utf8mb4 (the WordPress default) when unavailable.
+     * The character set the dump's bytes are in, for its SET NAMES line.
+     *
+     * That is the connection's charset, not the database's: every row is read
+     * through wpdb, so its bytes arrive in whatever wpdb set on the connection
+     * (utf8mb4 on any current site). This used to report
+     * @@character_set_database, which is latin1 or utf8mb3 on plenty of older
+     * hosts while the tables themselves are utf8mb4. The dump then declared
+     * latin1 over UTF-8 bytes and every non-ASCII character came back
+     * double-encoded on restore, the safety rollback included.
      */
     public function charset(): string
     {
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
-        $charset = (string) $this->db->get_var('SELECT @@character_set_database');
-        $charset = preg_replace('/[^a-z0-9_]/i', '', $charset) ?: '';
+        $charset = preg_replace('/[^a-z0-9_]/i', '', (string) $this->db->charset) ?: '';
 
         return '' !== $charset ? $charset : 'utf8mb4';
     }
