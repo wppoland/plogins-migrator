@@ -503,7 +503,10 @@ final class Dumper
      */
     private function write($handle, string $sql): void
     {
-        if (false === fwrite($handle, $sql)) {
+        // A full disk makes fwrite() write what fits and return the short
+        // count; only checking for false let the dump end mid-statement.
+        $written = fwrite($handle, $sql);
+        if (false === $written || $written < strlen($sql)) {
             throw new \RuntimeException('Migrator: failed writing SQL dump (disk full?).');
         }
     }
