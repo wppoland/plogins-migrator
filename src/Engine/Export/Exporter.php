@@ -106,6 +106,10 @@ final class Exporter
         $fileCount = 0;
         $fileBytes = 0;
         $warnings  = [];
+        $outside   = $options->is('no_media') ? null : self::uploadsOutsideContent();
+        if (null !== $outside) {
+            $warnings[] = sprintf('The media library is outside wp-content (%s) and is not in this backup.', $outside);
+        }
         foreach ($scanner->scan($contentDir) as $file) {
             if (! is_readable($file['abs'])) {
                 $warnings[] = sprintf('wp-content/%s is not readable and was left out.', $file['rel']);
@@ -135,6 +139,25 @@ final class Exporter
             'bytes'    => (int) filesize($destination),
             'warnings' => $warnings,
         ];
+    }
+
+    /**
+     * The uploads folder when it lies outside wp-content, else null.
+     *
+     * Archive entries are stored relative to wp-content and the importer only
+     * writes under wp-content, so media moved elsewhere with the UPLOADS
+     * constant cannot be carried without a new entry namespace and a mapping
+     * on restore. Until then it is reported rather than silently missing.
+     */
+    public static function uploadsOutsideContent(): ?string
+    {
+        $uploads = untrailingslashit((string) (wp_get_upload_dir()['basedir'] ?? ''));
+        $content = untrailingslashit((string) WP_CONTENT_DIR);
+
+        $realUploads = realpath($uploads) ?: $uploads;
+        $realContent = realpath($content) ?: $content;
+
+        return '' !== $uploads && ! str_starts_with($realUploads . '/', $realContent . '/') ? $uploads : null;
     }
 
     /**

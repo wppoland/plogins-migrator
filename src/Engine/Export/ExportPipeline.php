@@ -138,7 +138,7 @@ final class ExportPipeline
             'id'         => wp_generate_password(12, false),
             'dest'       => $destination,
             'final'      => $final,
-            'warnings'   => $writer->warnings(),
+            'warnings'   => array_merge($this->uploadsWarning($options), $writer->warnings()),
             'list'       => $listPath,
             'index'      => 0,
             'total'      => $total,
@@ -288,6 +288,16 @@ final class ExportPipeline
             wp_delete_file($dest);
         }
         delete_option(self::JOB_OPTION);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function uploadsWarning(ExportOptions $options): array
+    {
+        $outside = $options->is('no_media') ? null : Exporter::uploadsOutsideContent();
+
+        return null === $outside ? [] : [sprintf('The media library is outside wp-content (%s) and is not in this backup.', $outside)];
     }
 
     private function scanner(ExportOptions $options): FileScanner
