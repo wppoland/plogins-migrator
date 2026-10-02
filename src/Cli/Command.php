@@ -16,8 +16,10 @@ use Migrator\Support\Workspace;
 defined('ABSPATH') || exit;
 
 /**
- * WP-CLI commands for Migrator. The CLI path has no web-request timeout, so it
- * is the reliable way to back up or move large sites.
+ * Back up, restore and search-replace a site from the command line.
+ *
+ * The CLI path has no web-request timeout, so it is the reliable way to back up
+ * or move large sites.
  */
 final class Command
 {
@@ -64,6 +66,11 @@ final class Command
         $exporter = new Exporter($workspace, new Dumper($wpdb));
 
         $destination = $assoc_args['output'] ?? $exporter->defaultDestination();
+        // Relative to where the command was run, made absolute so the exporter
+        // can recognise the file if it lands inside wp-content.
+        if (! str_starts_with($destination, '/') && ! preg_match('#^[A-Za-z]:[\\\\/]#', $destination)) {
+            $destination = getcwd() . '/' . $destination;
+        }
 
         $exclude = array_filter(array_map('trim', explode(',', (string) ($assoc_args['exclude'] ?? ''))));
         $flags   = [];
@@ -99,8 +106,9 @@ final class Command
     }
 
     /**
-     * Import an archive onto this site (database + files), rewriting the source
-     * site's URLs and paths to this site's.
+     * Import an archive onto this site (database and files).
+     *
+     * The source site's URLs and paths are rewritten to this site's.
      *
      * ## OPTIONS
      *
@@ -139,13 +147,23 @@ final class Command
         $importer = new Importer($workspace, $wpdb);
 
         \WP_CLI::log('Importing archive…');
-        $result = $importer->import(
-            $archive,
-            ! isset($assoc_args['skip-files']),
-            static function (string $message): void {
-                \WP_CLI::log('  ' . $message);
-            }
-        );
+        try {
+            $result = $importer->import(
+                $archive,
+                ! isset($assoc_args['skip-files']),
+                static function (string $message): void {
+                    \WP_CLI::log('  ' . $message);
+                }
+            );
+        } catch (\Throwable $e) {
+            // A refused or failed restore is an expected outcome with a message
+            // written for the person running it, not a PHP fatal.
+            \WP_CLI::error($e->getMessage());
+        }
+
+        foreach ($result['warnings'] as $warning) {
+            \WP_CLI::warning($warning);
+        }
 
         \WP_CLI::success(sprintf(
             'Imported %d SQL statements, rewrote %d rows, extracted %d files.',
@@ -156,8 +174,9 @@ final class Command
     }
 
     /**
-     * Search and replace a literal string across this install's tables, safely
-     * for serialized data (byte-length counts stay correct).
+     * Search and replace a literal string across this install's tables.
+     *
+     * Safe for serialized data: byte-length counts stay correct.
      *
      * ## OPTIONS
      *
