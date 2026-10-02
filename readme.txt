@@ -214,14 +214,14 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Fixed: backups no longer alter `%` characters in the database. In 1.3.8, permalink structures, text such as "50%" and serialized values containing `%` were damaged on restore.
 * Fixed: scheduled backups, retention, and the FTP and folder copies now run in the free edition. They were not wired up from 1.3.0 to 1.3.8.
 * Fixed: database dumps are charset-safe on latin1 and utf8mb3 databases.
-* Fixed: collations from MySQL 8 and MariaDB 11 sources are normalised, so their dumps import on older servers.
+* Fixed: collations from MySQL 8 and MariaDB 11 sources are normalised.
 * Fixed: a file that changes during a backup no longer corrupts the archive, and the archive is verified before a restore touches the database.
 * Fixed: off-site retention deletes only this site's backups.
 * Fixed: home and siteurl are correct after a restore of WordPress installed in a subdirectory.
 * Fixed: JSON values are preserved during the URL rewrite.
 * Fixed: the object cache is flushed after every kind of restore.
-* Fixed: unreadable files are skipped instead of stopping the backup.
-* Fixed: an interrupted scheduled backup is now shown as interrupted.
+* Fixed: unreadable files are skipped.
+* Fixed: interrupted scheduled backups are now visible.
 * Fixed: downloading a large archive no longer runs out of memory.
 * Fixed: import error messages are readable and translatable.
 * Fixed: `wp migrator import` reports errors cleanly.
@@ -374,4 +374,4 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 == Upgrade Notice ==
 
 = 1.4.0 =
-Recommended for everyone. Backups made with 1.3.x may contain damaged `%` characters and non-ASCII text. After updating, make a fresh backup.
+Recommended for everyone. Backups made with 1.3.x may contain damaged percent signs and non-ASCII text. After updating, make a fresh backup.
