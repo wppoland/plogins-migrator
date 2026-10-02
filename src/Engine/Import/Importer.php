@@ -7,6 +7,7 @@ namespace Migrator\Engine\Import;
 use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Archive\Manifest;
 use Migrator\Engine\Archive\Reader;
+use Migrator\Engine\Db\Collation;
 use Migrator\Engine\Db\Dumper;
 use Migrator\Engine\Db\SearchReplace;
 use Migrator\Engine\Db\SqlExecutor;
@@ -388,8 +389,11 @@ final class Importer
 
         // Stream the temp file statement-by-statement, never load the whole
         // dump into memory.
-        $setNames = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql) ? 'SET NAMES ' . $charset : $sql;
-        $count    = (new SqlExecutor($this->db, $setNames))->runFile($tmp);
+        $collation = Collation::forServer($this->db);
+        $transform = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql)
+            ? 'SET NAMES ' . $charset
+            : $collation->normalise($sql);
+        $count     = (new SqlExecutor($this->db, $transform))->runFile($tmp);
         wp_delete_file($tmp);
 
         $log(sprintf('Imported database (%d statements).', $count));
