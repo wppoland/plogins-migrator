@@ -448,6 +448,17 @@ final class Ajax implements HasHooks
             wp_die(esc_html__('File not found.', 'plogins-migrator'), '', ['response' => 404]);
         }
 
+        // Any output buffer still open (a theme, a cache or security plugin
+        // that called ob_start()) would collect the whole archive in memory
+        // before sending a byte, and a backup bigger than memory_limit then
+        // died part way. Close them all so each chunk goes straight out.
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
         nocache_headers();
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . $name . '"');
@@ -456,7 +467,11 @@ final class Ajax implements HasHooks
         $handle = fopen($realPath, 'rb');
         if (false !== $handle) {
             while (! feof($handle)) {
-                echo fread($handle, 1_048_576); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                $chunk = fread($handle, 1_048_576);
+                if (false === $chunk || '' === $chunk) {
+                    break;
+                }
+                echo $chunk; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                 flush();
             }
             fclose($handle);
