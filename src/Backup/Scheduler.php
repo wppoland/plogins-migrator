@@ -8,6 +8,7 @@ use Migrator\Support\Access;
 use Migrator\Contract\HasHooks;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Storage\DestinationRegistry;
+use Migrator\Storage\LocalFolderDestination;
 use Migrator\Storage\OffsiteSettings;
 
 defined('ABSPATH') || exit;
@@ -136,11 +137,12 @@ final class Scheduler implements HasHooks
         $schedule->save();
         $this->reschedule($schedule);
 
-        OffsiteSettings::fromArray([
+        $offsite = OffsiteSettings::fromArray([
             'enabled' => ! empty($post['offsite_enabled']),
             'type'    => isset($post['offsite_type']) ? sanitize_key((string) $post['offsite_type']) : '',
             'config'  => $this->readDestinationConfig(is_array($post['dest'] ?? null) ? $post['dest'] : []),
-        ])->save();
+        ]);
+        $offsite->save();
 
         /**
          * Fires after the schedule and its destination have been saved, so an
@@ -150,6 +152,13 @@ final class Scheduler implements HasHooks
          * @param Schedule             $schedule The schedule just saved.
          */
         do_action('migrator/schedule_saved', $post, $schedule);
+
+        // A folder that cannot be used is saved as typed, so it can be fixed,
+        // but the screen says why no copy will be made.
+        $folder = new LocalFolderDestination((string) ($offsite->config['local']['folder'] ?? ''));
+        if ($offsite->enabled && 'local' === $offsite->type && null !== $folder->problem()) {
+            $this->redirectBack('badfolder');
+        }
 
         $this->redirectBack('saved');
     }
