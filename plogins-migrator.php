@@ -68,7 +68,20 @@ if (defined('WP_CLI') && WP_CLI) {
     \WP_CLI::add_command('migrator', Cli\Command::class);
 }
 
+// A deactivated plugin cannot answer its own cron event, so the event would
+// sit in cron firing into nothing. The schedule itself is kept and re-armed on
+// activation; uninstall removes it for good.
+register_deactivation_hook(PLUGIN_FILE, static function (): void {
+    wp_clear_scheduled_hook('migrator_run_scheduled_backup');
+    wp_clear_scheduled_hook('migrator_pro_run_scheduled_backup');
+});
+
 register_activation_hook(PLUGIN_FILE, static function (): void {
     require_once PLUGIN_DIR . '/autoload.php';
     Plugin::instance()->container()->get(Support\Workspace::class)->ensure();
+
+    // Put back the event deactivation cleared. The recurrences are registered
+    // on init, which has not run for this request yet.
+    add_filter('cron_schedules', [Backup\Schedule::class, 'registerRecurrences']);
+    Plugin::instance()->container()->get(Backup\Scheduler::class)->reschedule(Backup\Schedule::load());
 });
