@@ -86,10 +86,17 @@ final class Ajax implements HasHooks
                 'size'        => (int) filesize($path),
                 'date'        => gmdate('Y-m-d H:i', (int) filemtime($path)),
                 'compressed'  => str_ends_with($name, Compressor::EXT),
-                'downloadUrl' => wp_nonce_url(
-                    admin_url('admin-ajax.php?action=migrator_download&file=' . rawurlencode($name)),
-                    'migrator_download',
-                    'nonce',
+                // Not wp_nonce_url(): it HTML-escapes the & for printing into
+                // markup, and this URL goes into JSON that the script assigns to
+                // href, so the browser sent "amp;nonce" and every Download
+                // button in the list answered 403.
+                'downloadUrl' => add_query_arg(
+                    [
+                        'action' => 'migrator_download',
+                        'file'   => rawurlencode($name),
+                        'nonce'  => wp_create_nonce('migrator_download'),
+                    ],
+                    admin_url('admin-ajax.php'),
                 ),
             ];
         }
