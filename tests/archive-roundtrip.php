@@ -206,6 +206,93 @@ try {
 }
 check('clean archive passes full checksum verification', $clean);
 
+// ---- a file that changes size while it is copied ----
+// A stream that reports one size to fstat() and then yields a different number
+// of bytes, which is what a log or cache file does when it is written to
+// between the stat and the end of the copy.
+final class ResizingStream
+{
+    /** @var resource|null */
+    public $context;
+    private string $data = '';
+    private int $statSize = 0;
+    private int $pos = 0;
+
+    public function stream_open(string $path, string $mode, int $options, ?string &$opened): bool
+    {
+        // resize://<statSize>/<actualSize>
+        [$stat, $actual] = array_map('intval', explode('/', substr($path, 9)));
+        $this->statSize  = $stat;
+        $this->data      = str_repeat('x', $actual);
+
+        return true;
+    }
+
+    public function stream_read(int $count): string
+    {
+        $chunk      = substr($this->data, $this->pos, $count);
+        $this->pos += strlen($chunk);
+
+        return $chunk;
+    }
+
+    public function stream_eof(): bool
+    {
+        return $this->pos >= strlen($this->data);
+    }
+
+    /** @return array<string, int> */
+    public function stream_stat(): array
+    {
+        return ['size' => $this->statSize, 'mtime' => 1];
+    }
+}
+stream_wrapper_register('resize', ResizingStream::class);
+
+$moving = $tmp . '/moving.migrator';
+$w      = new Writer($moving);
+$w->addFile('wp-content/grew.log', 'resize://100/250');
+$w->addFile('wp-content/shrank.log', 'resize://100/40');
+$w->addString('wp-content/after.txt', 'still here');
+$w->finish();
+check('a file that shrank is reported as a warning', 1 === count($w->warnings()) && str_contains($w->warnings()[0], 'shrank.log'));
+
+$entries = [];
+$intact  = true;
+try {
+    $rm = new Reader($moving);
+    while (($e = $rm->nextEntry()) !== null) {
+        $entries[$e->path] = $rm->readContents();
+    }
+    $rm->close();
+} catch (\RuntimeException $ex) {
+    $intact = false;
+}
+check('an archive with files that changed mid-copy reads back with every checksum valid', $intact);
+check('the grown file was cut at the size its header promised', 100 === strlen($entries['wp-content/grew.log'] ?? ''));
+check('the shrunk file was padded to the size its header promised', 100 === strlen($entries['wp-content/shrank.log'] ?? ''));
+check('the entry after them is still where the reader expects it', 'still here' === ($entries['wp-content/after.txt'] ?? ''));
+
+// ---- appending (the resumable browser export) patches the checksum too ----
+$app = $tmp . '/append.migrator';
+$w   = new Writer($app);
+$w->addString('a.txt', 'first');
+$w->close();
+$w = new Writer($app, true);
+$w->addFile('wp-content/small.txt', $smallSource);
+$w->finish();
+$appended = true;
+try {
+    $ra = new Reader($app);
+    while (($e = $ra->nextEntry()) !== null) {
+        $ra->readContents();
+    }
+    $ra->close();
+} catch (\RuntimeException $ex) {
+    $appended = false;
+}
+check('a file added in append mode carries a valid checksum', $appended);
+
 // cleanup
 array_map('unlink', glob($tmp . '/*') ?: []);
 @rmdir($tmp);
