@@ -480,7 +480,13 @@ final class Dumper
             if (null === $value) {
                 $out[] = 'NULL';
             } else {
-                $out[] = "'" . $this->db->_real_escape((string) $value) . "'";
+                // _real_escape() swaps every % for this request's placeholder
+                // hash (it exists to protect prepare()), and nothing downstream
+                // swaps it back: the dump left this request carrying the hash, so
+                // every % in the site ("/%postname%/", "50% off", a serialized
+                // %1$s whose byte length then no longer matched) came back as a
+                // 66-character token on restore.
+                $out[] = "'" . $this->db->remove_placeholder_escape($this->db->_real_escape((string) $value)) . "'";
             }
         }
 
