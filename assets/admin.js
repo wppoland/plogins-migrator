@@ -65,6 +65,10 @@
 			resultMsg.classList.add( 'is-error' );
 			resultMsg.textContent += ' ' + job.encryptionError;
 		}
+		// Files that were unreadable or changed mid-copy are named, not hidden.
+		if ( job.warnings && job.warnings.length ) {
+			resultMsg.textContent += ' ' + job.warnings.join( ' ' );
+		}
 		download.hidden = false;
 		download.setAttribute( 'href', job.download );
 		download.setAttribute( 'download', job.fileName || 'backup.migrator' );

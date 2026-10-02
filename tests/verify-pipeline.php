@@ -28,12 +28,34 @@ $pipe = new ExportPipeline($ws, new Dumper($wpdb));
 // Exclude media to keep the run quick; files (plugins/themes) still exercise the
 // byte-offset streaming + truncate guard.
 $job = $pipe->start(ExportOptions::fromArray(['no_media' => true]));
+$check('an export in progress is written under a .part name', str_ends_with((string) $job['dest'], ExportPipeline::PART));
+$listed = array_map('basename', array_merge(glob($ws->path('*.migrator')) ?: [], glob($ws->path('*.migrator.gz')) ?: []));
+$check('so the backups list cannot offer it', ! in_array(basename((string) $job['dest']), $listed, true));
+$check('a second export is refused while this one runs', $pipe->isRunning());
+
+// One file the web server cannot read must be skipped with a warning, not fail
+// the whole export.
+$locked = WP_CONTENT_DIR . '/migrator-unreadable.txt';
+file_put_contents($locked, 'secret');
+chmod($locked, 0000);
+$unreadableTestable = ! is_readable($locked); // root reads anything; then this part is skipped.
+
 $steps = 0;
 while (($job['status'] ?? '') === 'running' && $steps < 200) {
     $job = $pipe->step();
     $steps++;
 }
 $check('pipeline completed', ($job['status'] ?? '') === 'done');
+$check('the finished archive has its final name', str_ends_with((string) $job['dest'], '.migrator') && is_file((string) $job['dest']));
+$check('and the .part is gone', ! is_file((string) $job['dest'] . ExportPipeline::PART));
+$check('a finished export no longer blocks a new one', ! $pipe->isRunning());
+if ($unreadableTestable) {
+    $check('an unreadable file is reported, not fatal', str_contains(implode(' ', (array) ($job['warnings'] ?? [])), 'migrator-unreadable.txt'));
+} else {
+    echo "  skip unreadable-file check (running as a user that reads everything)\n";
+}
+chmod($locked, 0644);
+@unlink($locked);
 $check('took at least one step', $steps >= 1);
 
 $archive = (string) ($job['dest'] ?? '');
