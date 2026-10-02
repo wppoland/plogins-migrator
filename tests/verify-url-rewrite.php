@@ -82,4 +82,32 @@ $check(
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
 $wpdb->query("DROP TABLE IF EXISTS {$safe}");
 
+// WordPress in a subdirectory on the source: siteurl = home + /wp. The home pair
+// runs first and rewrites the front of siteurl, so siteurl used to land on the
+// target's home + /wp, a directory that does not exist there.
+// Read the rows, not get_option(): wp-env pins WP_HOME and WP_SITEURL, which
+// would hide what the import wrote.
+$raw = static fn (string $name): string => (string) $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $name)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$targetHome    = $raw('home');
+$targetSiteurl = $raw('siteurl');
+$opts          = '`' . $wpdb->options . '`';
+$dump2 = "UPDATE {$opts} SET option_value = 'https://source-sub.test' WHERE option_name = 'home';\n"
+    . "UPDATE {$opts} SET option_value = 'https://source-sub.test/wp' WHERE option_name = 'siteurl';\n";
+$path = $ws->path('subdirtest.migrator');
+$w    = new Writer($path);
+$w->addString(Manifest::NAME, (string) wp_json_encode(array_merge($manifest, [
+    'homeUrl' => 'https://source-sub.test',
+    'siteUrl' => 'https://source-sub.test/wp',
+    'tables'  => [$wpdb->options],
+])), Entry::TYPE_MANIFEST);
+$w->addString(Exporter::DB_ENTRY, $dump2);
+$w->finish();
+(new Importer($ws, $wpdb))->import($path, false);
+@unlink($path);
+wp_cache_flush();
+$check('home is this site\'s home after a subdirectory import', $targetHome === $raw('home'));
+$check('siteurl is this site\'s siteurl after a subdirectory import (got: ' . $raw('siteurl') . ')', $targetSiteurl === $raw('siteurl'));
+$wpdb->update($wpdb->options, ['option_value' => $targetHome], ['option_name' => 'home']);
+$wpdb->update($wpdb->options, ['option_value' => $targetSiteurl], ['option_name' => 'siteurl']);
+
 echo $fail === 0 ? "URL rewrite: OK\n" : "URL rewrite: {$fail} failure(s)\n";

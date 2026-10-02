@@ -31,13 +31,15 @@ final class SearchReplace
      * @param string[] $tables
      * @param bool     $dryRun When true, count what would change but write nothing.
      *
-     * @return array{tables: int, rows: int, changes: int, skipped: string[]}
+     * @return array{tables: int, rows: int, changes: int, skipped: string[], failed: int, error: string}
      */
     public function run(array $tables, bool $dryRun = false): array
     {
         $rowsSeen = 0;
         $changes  = 0;
         $skipped  = [];
+        $failed   = 0;
+        $error    = '';
 
         foreach ($tables as $table) {
             $table = (string) $table;
@@ -85,7 +87,16 @@ final class SearchReplace
                             foreach ($pks as $pk) {
                                 $where[$pk] = $row[$pk];
                             }
-                            $this->db->update($table, $update, $where);
+                            // A row the server refused (a value too long for
+                            // its column, a lock) used to be counted as changed
+                            // and the old URL stayed in it unreported.
+                            if (false === $this->db->update($table, $update, $where)) {
+                                $failed++;
+                                if ('' === $error) {
+                                    $error = $table . ': ' . (string) $this->db->last_error;
+                                }
+                                continue;
+                            }
                         }
                         $changes++;
                     }
@@ -100,6 +111,8 @@ final class SearchReplace
             'rows'    => $rowsSeen,
             'changes' => $changes,
             'skipped' => $skipped,
+            'failed'  => $failed,
+            'error'   => $error,
         ];
     }
 

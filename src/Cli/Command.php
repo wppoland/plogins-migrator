@@ -201,8 +201,14 @@ final class Command
         $engine = new SearchReplace($wpdb, new SerializedReplacer($from, $to));
         $result = $engine->run($tables, $dryRun);
 
+        if (! $dryRun) {
+            wp_cache_flush();
+        }
         if ([] !== $result['skipped']) {
             \WP_CLI::warning('Skipped tables with no primary key: ' . implode(', ', $result['skipped']));
+        }
+        if ($result['failed'] > 0) {
+            \WP_CLI::warning(sprintf('%d row(s) could not be written: %s', $result['failed'], $result['error']));
         }
         \WP_CLI::success(sprintf(
             '%s %d change(s) across %d table(s); %d row(s) scanned.',
