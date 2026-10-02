@@ -57,6 +57,20 @@ final class BackupRunner
             @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
         }
 
+        // Recorded before the work starts and overwritten when it ends. A run
+        // the host kills (execution time, memory, a restart) never reaches the
+        // end, and used to leave the previous run's "ok" on screen as if
+        // nothing had happened.
+        update_option(self::STATUS_OPTION, [
+            'time'    => time(),
+            'ok'      => false,
+            'started' => true,
+            'path'    => '',
+            'file'    => '',
+            'bytes'   => 0,
+            'message' => __('This backup started but has not finished. If it stays like this, the run was stopped part way (execution time, memory or a server restart).', 'plogins-migrator'),
+        ], false);
+
         $status = null;
 
         if ($allowStrategies) {
