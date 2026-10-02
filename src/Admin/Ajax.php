@@ -304,11 +304,19 @@ final class Ajax implements HasHooks
 
             // Let an add-on register post-processing for the finished archive
             // (e.g. encryption). The returned payload is opaque to core and is
-            // handed back on the migrator/export_complete action. Sanitize the
-            // whole request first: values are recursively cleaned as text fields
-            // before any callback sees them.
-            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
-            $request = map_deep(wp_unslash($_POST), 'sanitize_text_field');
+            // handed back on the migrator/export_complete action. Values are
+            // cleaned as text fields before any callback sees them, except the
+            // password: sanitize_text_field strips tags, %-octets and runs of
+            // whitespace, so the archive was encrypted with a different password
+            // from the one typed, and nobody could ever open it. It is never
+            // output or stored in the database by core, only handed on.
+            // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified above; the password is deliberately unsanitized.
+            $raw     = wp_unslash($_POST);
+            $request = map_deep($raw, 'sanitize_text_field');
+            if (is_array($raw) && isset($raw['password']) && is_string($raw['password'])) {
+                $request['password'] = $raw['password'];
+            }
+            // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
             $postprocess = apply_filters('migrator/postprocess_request', [], $request);
             if (is_array($postprocess) && [] !== $postprocess) {
                 update_option(self::POSTPROCESS_OPTION, $postprocess, false);
