@@ -37,6 +37,9 @@ final class Ajax implements HasHooks
     /** Whether the current export should be gzip-compressed when it finishes. */
     private const COMPRESS_OPTION = 'migrator_export_compress';
 
+    /** Longest search or replace value accepted from the screen. */
+    private const SR_MAX_BYTES = 4096;
+
     public function __construct(
         private ExportPipeline $export,
         private Workspace $workspace,
@@ -528,14 +531,21 @@ final class Ajax implements HasHooks
 
         global $wpdb;
 
-        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
-        // Values are literal search/replace text (a URL, a path). They are never
-        // echoed and $wpdb->update() parameterises them; sanitize_text_field keeps
-        // them safe while leaving URLs and paths intact.
-        $from   = isset($_POST['search']) ? sanitize_text_field(wp_unslash((string) $_POST['search'])) : '';
-        $to     = isset($_POST['replace']) ? sanitize_text_field(wp_unslash((string) $_POST['replace'])) : '';
+        // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified in guard(); see below.
+        // Values are literal search/replace text, matched byte for byte, never
+        // echoed, and parameterised by $wpdb->update(). sanitize_text_field()
+        // used to change them first (stripping tags, %-octets, line breaks and
+        // repeated spaces), so "50%25" or an HTML snippet was searched for in a
+        // form that is not in the database, and a replacement was written in a
+        // form nobody typed. Unslashed only, with a length cap.
+        $from   = isset($_POST['search']) ? wp_unslash((string) $_POST['search']) : '';
+        $to     = isset($_POST['replace']) ? wp_unslash((string) $_POST['replace']) : '';
         $dryRun = ! empty($_POST['dry_run']);
-        // phpcs:enable WordPress.Security.NonceVerification.Missing
+        // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+        if (strlen($from) > self::SR_MAX_BYTES || strlen($to) > self::SR_MAX_BYTES) {
+            wp_send_json_error(['message' => __('Search and replace values are limited to 4096 characters each.', 'plogins-migrator')], 400);
+        }
 
         if ('' === $from) {
             wp_send_json_error(['message' => __('Enter the text to search for.', 'plogins-migrator')], 400);
