@@ -17,7 +17,6 @@
  * @package Migrator
  */
 
-declare(strict_types=1);
 
 use Migrator\Engine\Db\Dumper;
 use Migrator\Engine\Export\ExportOptions;
