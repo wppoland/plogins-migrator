@@ -223,6 +223,8 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Fixed: unreadable files are skipped.
 * Fixed: interrupted scheduled backups are now visible.
 * Fixed: downloading a large archive no longer runs out of memory.
+* Fixed: the Download buttons in the stored backups list no longer return an error.
+* Changed: wp-content/debug.log is left out of backups, and an uploads folder outside wp-content is reported before export.
 * Fixed: import error messages are readable and translatable.
 * Fixed: `wp migrator import` reports errors cleanly.
 * Fixed: the encryption password is passed to Migrator PRO intact.
