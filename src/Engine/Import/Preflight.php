@@ -51,13 +51,32 @@ final class Preflight
             ];
         }
 
-        // 2) Multisite boundary. Core refuses a network restore (needs the Pro
-        //    add-on), so warn if either side is a network.
+        // 2) Multisite boundary. The importer refuses a network restore unless
+        //    something answers migrator/multisite_supported, so warn if either
+        //    side is a network. Stated as a limitation of this plugin, the way
+        //    the importer words it, not as a pointer to a paid edition.
         if ((bool) $manifest->get('multisite') || is_multisite()) {
             $out[] = [
                 'level'   => self::WARN,
                 'label'   => __('Multisite', 'plogins-migrator'),
-                'message' => __('This archive or this site is a network. A network-to-network restore needs Migrator Pro; the free edition will refuse it.', 'plogins-migrator'),
+                'message' => __('This archive or this site is a network. Restoring across a multisite boundary means rewriting the network tables to this domain, which this plugin does not do, so the restore will be refused.', 'plogins-migrator'),
+            ];
+        }
+
+        // 2b) Media outside wp-content. Archive entries are wp-content-relative,
+        //     so an uploads folder moved elsewhere (the UPLOADS constant) was
+        //     never in the backup. Say so before a restore relies on it.
+        $uploads = (string) $manifest->get('uploadsDir');
+        $content = (string) $manifest->get('contentDir');
+        if ('' !== $uploads && '' !== $content && ! str_starts_with($uploads . '/', rtrim($content, '/') . '/')) {
+            $out[] = [
+                'level'   => self::WARN,
+                'label'   => __('Media library', 'plogins-migrator'),
+                'message' => sprintf(
+                    /* translators: %s: uploads folder on the source site */
+                    __('On the source site the media library was outside wp-content (%s), so this backup does not contain it. Copy that folder across separately.', 'plogins-migrator'),
+                    $uploads
+                ),
             ];
         }
 

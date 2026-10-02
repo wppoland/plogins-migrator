@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Migrator\Storage;
 
+use Migrator\Backup\Schedule;
+use Migrator\Support\Workspace;
+
 defined('ABSPATH') || exit;
 
 // Backups are multi-gigabyte archives; copy() streams them on disk without
@@ -34,7 +37,53 @@ final class LocalFolderDestination implements BackupDestination
 
     public function isConfigured(): bool
     {
-        return '' !== $this->folder && $this->ensureFolder() && wp_is_writable($this->folder);
+        return null === $this->problem();
+    }
+
+    /**
+     * Why this folder cannot take backups, or null when it can.
+     *
+     * Retention deletes files here, and anything under the web root can be
+     * downloaded by whoever guesses the name, so the folder has to be an
+     * absolute path outside the site and outside Migrator's own workspace (a
+     * copy there would be pruned as if it were a local backup).
+     */
+    public function problem(): ?string
+    {
+        if ('' === $this->folder) {
+            return __('No folder is set.', 'plogins-migrator');
+        }
+        if (! str_starts_with($this->folder, '/') && ! preg_match('#^[A-Za-z]:[\\\\/]#', $this->folder)) {
+            return __('The folder must be an absolute path.', 'plogins-migrator');
+        }
+
+        $folder = $this->resolved();
+        foreach ([(new Workspace())->path(), (string) ABSPATH, (string) WP_CONTENT_DIR] as $forbidden) {
+            $base = untrailingslashit((string) (realpath($forbidden) ?: $forbidden));
+            if ('' !== $base && ($folder === $base || str_starts_with($folder . '/', $base . '/'))) {
+                return __('The folder must be outside the website and outside Migrator\'s own backups folder.', 'plogins-migrator');
+            }
+        }
+
+        if (! $this->ensureFolder() || ! wp_is_writable($this->folder)) {
+            return __('The folder does not exist and cannot be created, or the web server cannot write to it.', 'plogins-migrator');
+        }
+
+        return null;
+    }
+
+    /** The folder with symlinks and ".." resolved as far as it exists. */
+    private function resolved(): string
+    {
+        $path   = $this->folder;
+        $suffix = '';
+        while ('' !== $path && '/' !== $path && false === realpath($path)) {
+            $suffix = '/' . basename($path) . $suffix;
+            $path   = dirname($path);
+        }
+        $real = realpath($path);
+
+        return untrailingslashit((false === $real ? $path : $real) . $suffix);
     }
 
     public function store(string $archivePath): void
@@ -62,7 +111,13 @@ final class LocalFolderDestination implements BackupDestination
 
     public function prune(int $retention): int
     {
-        $archives = $this->archives();
+        // Only this site's scheduled archives. The folder may hold manual
+        // backups or another site's, and those used to be counted and deleted.
+        $prefix   = Schedule::archivePrefix();
+        $archives = array_values(array_filter(
+            $this->archives(),
+            static fn (array $a): bool => str_starts_with($a['file'], $prefix),
+        ));
         foreach (array_slice($archives, $retention) as $old) {
             wp_delete_file($this->folder . '/' . $old['file']);
         }
@@ -78,6 +133,9 @@ final class LocalFolderDestination implements BackupDestination
 
         $items = [];
         foreach (glob($this->folder . '/*.migrator*') ?: [] as $path) {
+            if (str_ends_with($path, '.part')) {
+                continue;
+            }
             $items[] = [
                 'file'  => basename($path),
                 'bytes' => (int) filesize($path),

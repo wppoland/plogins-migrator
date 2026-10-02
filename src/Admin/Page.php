@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Migrator\Admin;
 
+use Migrator\Support\Access;
 use Migrator\Contract\HasHooks;
 
 defined('ABSPATH') || exit;
@@ -62,7 +63,7 @@ final class Page implements HasHooks
         $hook = add_menu_page(
             $label,
             $label,
-            'manage_options',
+            Access::capability(),
             self::SLUG,
             [$this, 'render'],
             'dashicons-migrate',

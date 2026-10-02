@@ -57,6 +57,37 @@ foreach ($rii as $file) {
             );
             // An explicit, commented decision to ignore it is allowed; the point
             // is that somebody decided, not that the return is always used.
+            // Checking only for false is the same defect in disguise: a short
+            // write returns a number, passes the check, and the file is cut.
+            // Dumper::write() did exactly this.
+            $falseOnly = (bool) preg_match('/false\s*[!=]==?\s*' . $fn . '\s*\(|' . $fn . '\s*\([^;]*\)\s*[!=]==?\s*false/', $trimmed)
+                && ! str_contains($trimmed, 'strlen');
+            if ($falseOnly) {
+                $failures[] = sprintf(
+                    '%s:%d  %s() is only checked for false, so a short write passes: %s',
+                    str_replace($root . '/', '', $file->getPathname()),
+                    $i + 1,
+                    $fn,
+                    trim($line)
+                );
+                continue;
+            }
+            // An assigned result has to be compared with the length it was meant
+            // to write, within the next few lines.
+            if (preg_match('/\$(\w+)\s*=\s*[^;]*\b' . $fn . '\s*\(/', $trimmed, $assign)) {
+                $window = implode("\n", array_slice($lines, $i, 4));
+                if (! preg_match('/\$' . $assign[1] . '\s*(<|!==|!=)\s*strlen\(/', $window)) {
+                    $failures[] = sprintf(
+                        '%s:%d  %s() result $%s is never compared with the length written: %s',
+                        str_replace($root . '/', '', $file->getPathname()),
+                        $i + 1,
+                        $fn,
+                        $assign[1],
+                        trim($line)
+                    );
+                }
+                continue;
+            }
             $prev = $i > 0 ? ltrim($lines[$i - 1]) : '';
             $excused = str_starts_with($prev, '//') && stripos($prev, 'ignore') !== false;
             if (! $used && ! $excused) {

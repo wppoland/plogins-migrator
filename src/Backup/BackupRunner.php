@@ -57,6 +57,20 @@ final class BackupRunner
             @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
         }
 
+        // Recorded before the work starts and overwritten when it ends. A run
+        // the host kills (execution time, memory, a restart) never reaches the
+        // end, and used to leave the previous run's "ok" on screen as if
+        // nothing had happened.
+        update_option(self::STATUS_OPTION, [
+            'time'    => time(),
+            'ok'      => false,
+            'started' => true,
+            'path'    => '',
+            'file'    => '',
+            'bytes'   => 0,
+            'message' => __('This backup started but has not finished. If it stays like this, the run was stopped part way (execution time, memory or a server restart).', 'plogins-migrator'),
+        ], false);
+
         $status = null;
 
         if ($allowStrategies) {
@@ -103,7 +117,7 @@ final class BackupRunner
     {
         global $wpdb;
 
-        $this->discardAbandoned();
+        $this->workspace->sweep();
         $working = '';
 
         try {
@@ -251,7 +265,7 @@ final class BackupRunner
      */
     public function archives(): array
     {
-        return $this->describe(glob($this->workspace->path('*-' . Schedule::MARKER . '-*.migrator*')) ?: []);
+        return $this->describe($this->scheduledFiles());
     }
 
     /**
@@ -278,11 +292,25 @@ final class BackupRunner
         $extra = apply_filters('migrator/backup_listed_archives', []);
 
         $paths = array_merge(
-            glob($this->workspace->path('*-' . Schedule::MARKER . '-*.migrator*')) ?: [],
+            $this->scheduledFiles(),
             is_array($extra) ? array_filter($extra, 'is_string') : [],
         );
 
         return $this->describe(array_values(array_unique($paths)));
+    }
+
+    /**
+     * This site's finished scheduled archives in the workspace. Another site's
+     * (a network shares wp-content) and files still being written are not
+     * retention's to count or delete.
+     *
+     * @return list<string>
+     */
+    private function scheduledFiles(): array
+    {
+        $found = glob($this->workspace->path(Schedule::archivePrefix() . '*.migrator*')) ?: [];
+
+        return array_values(array_filter($found, static fn (string $p): bool => ! str_ends_with($p, '.part')));
     }
 
     /**
@@ -352,36 +380,14 @@ final class BackupRunner
     }
 
     /**
-     * Delete the leavings of runs that were killed before they finished. They
-     * can never be completed (no run resumes another's file) and a half-written
-     * archive of a large site is large, so left alone they fill the disk.
-     *
-     * The pattern carries a trailing wildcard because post-processing appends to
-     * the working name (`.gz`, `.enc`), so a run that died after compressing
-     * left a file the bare `.part` pattern never saw.
-     */
-    private function discardAbandoned(): void
-    {
-        foreach (glob($this->workspace->path('building-*.part*')) ?: [] as $path) {
-            if ((int) filemtime($path) < time() - DAY_IN_SECONDS) {
-                wp_delete_file($path);
-            }
-        }
-    }
-
-    /**
      * A dated, unguessable filename carrying the scheduled marker so retention can
      * find exactly the backups it owns and never a manual one.
      */
     private function destination(): string
     {
-        $host = (string) wp_parse_url((string) get_option('home'), PHP_URL_HOST);
-        $host = preg_replace('/[^a-z0-9.-]/i', '', $host) ?: 'site';
-
         return $this->workspace->path(sprintf(
-            '%s-%s-%s-%s.migrator',
-            $host,
-            Schedule::MARKER,
+            '%s%s-%s.migrator',
+            Schedule::archivePrefix(),
             gmdate('Ymd-His'),
             wp_generate_password(8, false),
         ));

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Migrator\Admin;
 
+use Migrator\Support\Access;
 use Migrator\Contract\HasHooks;
 use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Archive\Inspector;
@@ -24,8 +25,8 @@ defined('ABSPATH') || exit;
 
 /**
  * AJAX endpoints driving the resumable browser export, plus an authenticated
- * download handler. Every endpoint verifies the nonce and the manage_options
- * capability before doing anything, and the download is confined to the
+ * download handler. Every endpoint verifies the nonce and the Access
+ * capability (super admin on a network) before doing anything, and the download is confined to the
  * workspace so no arbitrary file can be read.
  */
 final class Ajax implements HasHooks
@@ -35,6 +36,9 @@ final class Ajax implements HasHooks
 
     /** Whether the current export should be gzip-compressed when it finishes. */
     private const COMPRESS_OPTION = 'migrator_export_compress';
+
+    /** Longest search or replace value accepted from the screen. */
+    private const SR_MAX_BYTES = 4096;
 
     public function __construct(
         private ExportPipeline $export,
@@ -74,7 +78,7 @@ final class Ajax implements HasHooks
         $out = [];
         foreach ($found as $path) {
             $name = basename($path);
-            if (str_starts_with($name, 'upload-') || str_starts_with($name, 'restore-')) {
+            if (str_starts_with($name, 'upload-') || str_starts_with($name, 'restore-') || str_starts_with($name, 'decompress-')) {
                 continue;
             }
             $out[] = [
@@ -82,10 +86,17 @@ final class Ajax implements HasHooks
                 'size'        => (int) filesize($path),
                 'date'        => gmdate('Y-m-d H:i', (int) filemtime($path)),
                 'compressed'  => str_ends_with($name, Compressor::EXT),
-                'downloadUrl' => wp_nonce_url(
-                    admin_url('admin-ajax.php?action=migrator_download&file=' . rawurlencode($name)),
-                    'migrator_download',
-                    'nonce',
+                // Not wp_nonce_url(): it HTML-escapes the & for printing into
+                // markup, and this URL goes into JSON that the script assigns to
+                // href, so the browser sent "amp;nonce" and every Download
+                // button in the list answered 403.
+                'downloadUrl' => add_query_arg(
+                    [
+                        'action' => 'migrator_download',
+                        'file'   => rawurlencode($name),
+                        'nonce'  => wp_create_nonce('migrator_download'),
+                    ],
+                    admin_url('admin-ajax.php'),
                 ),
             ];
         }
@@ -116,25 +127,31 @@ final class Ajax implements HasHooks
 
         $importPath = $path;
         $tmp        = null;
-        if (Compressor::isCompressed($path)) {
-            $tmp = $this->workspace->path('restore-' . wp_generate_password(8, false) . '.migrator');
-            (new Compressor())->decompress($path, $tmp);
-            $importPath = $tmp;
-        }
 
+        // The decompression is inside the try: a corrupt .gz or a full disk
+        // used to escape as a PHP fatal, leaving the screen with no message
+        // and the half-written temp file on disk.
         try {
+            if (Compressor::isCompressed($path)) {
+                $tmp = $this->workspace->path('restore-' . wp_generate_password(8, false) . '.migrator');
+                (new Compressor())->decompress($path, $tmp);
+                $importPath = $tmp;
+            }
+
             $importer = new Importer($this->workspace, $wpdb);
             $result   = $importer->import($importPath, $files);
-            if (null !== $tmp) {
-                wp_delete_file($tmp);
-            }
-            wp_send_json_success($result);
         } catch (\Throwable $e) {
+            $result = $e;
+        } finally {
             if (null !== $tmp) {
                 wp_delete_file($tmp);
             }
-            wp_send_json_error(['message' => $e->getMessage()]);
         }
+
+        if ($result instanceof \Throwable) {
+            wp_send_json_error(['message' => $result->getMessage()]);
+        }
+        wp_send_json_success($result);
     }
 
     /**
@@ -176,7 +193,7 @@ final class Ajax implements HasHooks
      */
     public function scanTree(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
@@ -192,7 +209,7 @@ final class Ajax implements HasHooks
      */
     public function importUpload(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
@@ -209,6 +226,9 @@ final class Ajax implements HasHooks
         }
 
         $dest = $this->uploadPath($id);
+        if (0 === $index) {
+            $this->workspace->sweep();
+        }
 
         $in  = fopen($tmp, 'rb');
         $out = fopen($dest, 0 === $index ? 'wb' : 'ab');
@@ -228,7 +248,7 @@ final class Ajax implements HasHooks
      */
     public function importRun(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
@@ -275,21 +295,49 @@ final class Ajax implements HasHooks
 
     public function exportStart(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
+        // start() dumps the whole database inside this one request, which on
+        // a big site runs past the default execution time.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
+        // clear() on a job another tab is still driving deleted its list and
+        // option under it, and both exports then wrote garbage.
+        if ($this->export->isRunning()) {
+            wp_send_json_error(['message' => __('Another backup is being made right now, in another tab or by another administrator. Wait for it to finish, or about ten minutes if that tab was closed.', 'plogins-migrator')], 409);
+        }
+
+        $this->workspace->sweep();
+
         try {
             $this->export->clear();
+
+            // Nothing from a previous export may reach this one: an encryption
+            // payload left by an export that failed would otherwise be applied.
+            delete_option(self::POSTPROCESS_OPTION);
+            delete_option(self::COMPRESS_OPTION);
+
             $job = $this->export->start($this->readExportOptions());
 
             // Let an add-on register post-processing for the finished archive
             // (e.g. encryption). The returned payload is opaque to core and is
-            // handed back on the migrator/export_complete action. Sanitize the
-            // whole request first: values are recursively cleaned as text fields
-            // before any callback sees them.
-            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
-            $request = map_deep(wp_unslash($_POST), 'sanitize_text_field');
+            // handed back on the migrator/export_complete action. Values are
+            // cleaned as text fields before any callback sees them, except the
+            // password: sanitize_text_field strips tags, %-octets and runs of
+            // whitespace, so the archive was encrypted with a different password
+            // from the one typed, and nobody could ever open it. It is never
+            // output or stored in the database by core, only handed on.
+            // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified above; the password is deliberately unsanitized.
+            $raw     = wp_unslash($_POST);
+            $request = map_deep($raw, 'sanitize_text_field');
+            if (is_array($raw) && isset($raw['password']) && is_string($raw['password'])) {
+                $request['password'] = $raw['password'];
+            }
+            // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
             $postprocess = apply_filters('migrator/postprocess_request', [], $request);
             if (is_array($postprocess) && [] !== $postprocess) {
                 update_option(self::POSTPROCESS_OPTION, $postprocess, false);
@@ -407,7 +455,7 @@ final class Ajax implements HasHooks
      */
     public function download(): void
     {
-        if (! current_user_can('manage_options') || ! check_admin_referer('migrator_download', 'nonce')) {
+        if (! Access::allowed() || ! check_admin_referer('migrator_download', 'nonce')) {
             wp_die(esc_html__('Not allowed.', 'plogins-migrator'), '', ['response' => 403]);
         }
 
@@ -421,6 +469,17 @@ final class Ajax implements HasHooks
             wp_die(esc_html__('File not found.', 'plogins-migrator'), '', ['response' => 404]);
         }
 
+        // Any output buffer still open (a theme, a cache or security plugin
+        // that called ob_start()) would collect the whole archive in memory
+        // before sending a byte, and a backup bigger than memory_limit then
+        // died part way. Close them all so each chunk goes straight out.
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
         nocache_headers();
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . $name . '"');
@@ -429,7 +488,11 @@ final class Ajax implements HasHooks
         $handle = fopen($realPath, 'rb');
         if (false !== $handle) {
             while (! feof($handle)) {
-                echo fread($handle, 1_048_576); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                $chunk = fread($handle, 1_048_576);
+                if (false === $chunk || '' === $chunk) {
+                    break;
+                }
+                echo $chunk; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                 flush();
             }
             fclose($handle);
@@ -475,14 +538,21 @@ final class Ajax implements HasHooks
 
         global $wpdb;
 
-        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
-        // Values are literal search/replace text (a URL, a path). They are never
-        // echoed and $wpdb->update() parameterises them; sanitize_text_field keeps
-        // them safe while leaving URLs and paths intact.
-        $from   = isset($_POST['search']) ? sanitize_text_field(wp_unslash((string) $_POST['search'])) : '';
-        $to     = isset($_POST['replace']) ? sanitize_text_field(wp_unslash((string) $_POST['replace'])) : '';
+        // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified in guard(); see below.
+        // Values are literal search/replace text, matched byte for byte, never
+        // echoed, and parameterised by $wpdb->update(). sanitize_text_field()
+        // used to change them first (stripping tags, %-octets, line breaks and
+        // repeated spaces), so "50%25" or an HTML snippet was searched for in a
+        // form that is not in the database, and a replacement was written in a
+        // form nobody typed. Unslashed only, with a length cap.
+        $from   = isset($_POST['search']) ? wp_unslash((string) $_POST['search']) : '';
+        $to     = isset($_POST['replace']) ? wp_unslash((string) $_POST['replace']) : '';
         $dryRun = ! empty($_POST['dry_run']);
-        // phpcs:enable WordPress.Security.NonceVerification.Missing
+        // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+        if (strlen($from) > self::SR_MAX_BYTES || strlen($to) > self::SR_MAX_BYTES) {
+            wp_send_json_error(['message' => __('Search and replace values are limited to 4096 characters each.', 'plogins-migrator')], 400);
+        }
 
         if ('' === $from) {
             wp_send_json_error(['message' => __('Enter the text to search for.', 'plogins-migrator')], 400);
@@ -503,6 +573,10 @@ final class Ajax implements HasHooks
 
         $engine = new SearchReplace($wpdb, new SerializedReplacer($from, $to));
         $result = $engine->run(array_map('strval', (array) $tables), $dryRun);
+        if (! $dryRun) {
+            // Rows were rewritten under the cache's feet.
+            wp_cache_flush();
+        }
 
         wp_send_json_success([
             'dryRun'  => $dryRun,
@@ -510,6 +584,12 @@ final class Ajax implements HasHooks
             'rows'    => $result['rows'],
             'changes' => $result['changes'],
             'skipped' => $result['skipped'],
+            'warning' => $result['failed'] > 0 ? sprintf(
+                /* translators: 1: number of rows, 2: database error */
+                __('%1$d rows could not be written (%2$s).', 'plogins-migrator'),
+                $result['failed'],
+                $result['error']
+            ) : '',
         ]);
     }
 
@@ -518,7 +598,7 @@ final class Ajax implements HasHooks
         if (! check_ajax_referer('migrator', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security check failed.', 'plogins-migrator')], 403);
         }
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
     }
@@ -538,6 +618,7 @@ final class Ajax implements HasHooks
         $percent = $done ? 100 : (int) floor($index / $total * 100);
 
         $shaped = [
+            'warnings' => array_values(array_map('strval', (array) ($job['warnings'] ?? []))),
             'status'  => (string) ($job['status'] ?? ''),
             'index'   => $index,
             'total'   => (int) ($job['total'] ?? 0),

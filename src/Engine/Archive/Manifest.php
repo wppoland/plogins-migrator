@@ -46,6 +46,9 @@ final class Manifest
             'contentDir'     => untrailingslashit((string) WP_CONTENT_DIR),
             'uploadsDir'     => self::uploadsBaseDir(),
             'tablePrefix'    => self::tablePrefix(),
+            // The charset the dump's bytes are in. Archives before 1.4.0 lack
+            // it, and their SET NAMES line cannot be trusted (see Importer).
+            'dbCharset'      => self::dbCharset(),
             'wpVersion'      => get_bloginfo('version'),
             'phpVersion'     => PHP_VERSION,
             'multisite'      => is_multisite(),
@@ -99,6 +102,13 @@ final class Manifest
         global $wpdb;
 
         return isset($wpdb) ? (string) $wpdb->prefix : '';
+    }
+
+    private static function dbCharset(): string
+    {
+        global $wpdb;
+
+        return isset($wpdb) ? (string) $wpdb->charset : '';
     }
 
     private static function wooActive(): bool

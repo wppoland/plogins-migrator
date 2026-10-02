@@ -27,6 +27,8 @@ class wpdb
     /** @var array<int, array{0: string, 1: array, 2: array}> */
     public array $updates = [];
     private bool $served = false;
+    public bool $refuse = false;
+    public string $last_error = '';
 
     public function prepare(string $query, mixed ...$args): string
     {
@@ -47,9 +49,14 @@ class wpdb
         return [['id' => 1, 'value' => 'visit https://old.example today']];
     }
 
-    public function update(string $table, array $data, array $where): int
+    public function update(string $table, array $data, array $where): int|false
     {
         $this->updates[] = [$table, $data, $where];
+        if ($this->refuse) {
+            $this->last_error = 'Data too long for column';
+
+            return false;
+        }
 
         return 1;
     }
@@ -75,6 +82,12 @@ $liveDb = new wpdb();
 $live   = $make($liveDb)->run(['wp_options'], false);
 $check('live run counts the change', 1 === $live['changes']);
 $check('live run writes exactly once', 1 === count($liveDb->updates));
+
+$badDb         = new wpdb();
+$badDb->refuse = true;
+$bad           = $make($badDb)->run(['wp_options'], false);
+$check('a refused update is reported as failed', 1 === $bad['failed'] && str_contains($bad['error'], 'Data too long'));
+$check('and is not counted as a change', 0 === $bad['changes']);
 
 echo 0 === $failures ? "\nALL PASS\n" : "\n{$failures} FAILED\n";
 exit(0 === $failures ? 0 : 1);

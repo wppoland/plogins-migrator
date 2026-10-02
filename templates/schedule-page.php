@@ -23,6 +23,7 @@ $migrator_notices = [
     'saved'  => ['updated', __('Schedule saved.', 'plogins-migrator')],
     'ran'    => ['updated', __('Backup created.', 'plogins-migrator')],
     'failed' => ['error', __('Backup failed. See the status below.', 'plogins-migrator')],
+    'badfolder' => ['error', __('Schedule saved, but no copies will go to the folder: it must be an absolute path outside the website and outside Migrator\'s own backups folder, and the web server must be able to write to it.', 'plogins-migrator')],
 ];
 
 $migrator_date = static fn (int $ts): string => wp_date(
@@ -188,6 +189,12 @@ $migrator_date = static fn (int $ts): string => wp_date(
 						<?php
 						if (null === $last) {
 							esc_html_e('Never', 'plogins-migrator');
+						} elseif (! empty($last['started'])) {
+							echo '<span class="migrator-failed">' . esc_html(sprintf(
+								/* translators: %s: date */
+								__('Started on %s and has not finished', 'plogins-migrator'),
+								$migrator_date((int) $last['time']),
+							)) . '</span>';
 						} elseif (! empty($last['ok'])) {
 							echo esc_html(sprintf(
 								/* translators: 1: date, 2: human file size */
