@@ -10,6 +10,7 @@ use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\Exporter;
 use Migrator\Engine\Import\Importer;
 use Migrator\Engine\Transform\SerializedReplacer;
+use Migrator\Support\Access;
 use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
@@ -55,6 +56,8 @@ final class Command
     public function export(array $args, array $assoc_args): void
     {
         global $wpdb;
+
+        $this->guardNetwork();
 
         $workspace = new Workspace();
         $workspace->ensure();
@@ -122,6 +125,8 @@ final class Command
     {
         global $wpdb;
 
+        $this->guardNetwork();
+
         $archive = $args[0] ?? '';
         if ('' === $archive || ! is_readable($archive)) {
             \WP_CLI::error('Archive not found or not readable: ' . $archive);
@@ -177,6 +182,8 @@ final class Command
     {
         global $wpdb;
 
+        $this->guardNetwork();
+
         $from = (string) ($args[0] ?? '');
         $to   = (string) ($args[1] ?? '');
         if ('' === $from) {
@@ -204,5 +211,16 @@ final class Command
             $result['tables'],
             $result['rows']
         ));
+    }
+
+    /**
+     * On a network the admin screens take a super admin (see Access), and the
+     * command line reaches the same data, so it asks for one too.
+     */
+    private function guardNetwork(): void
+    {
+        if (is_multisite() && ! Access::allowed()) {
+            \WP_CLI::error('On a multisite network Migrator runs as a super admin. Add --user=<super admin login>.');
+        }
     }
 }
