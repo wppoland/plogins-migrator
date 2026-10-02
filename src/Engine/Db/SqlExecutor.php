@@ -10,6 +10,10 @@ defined('ABSPATH') || exit;
 // reads and writes whole files into memory, which would exhaust it, so this file
 // uses direct stream functions by necessity.
 // phpcs:disable WordPress.WP.AlternativeFunctions
+// Exception messages here are plain text: the admin screen shows them with
+// textContent, WP-CLI prints them, the scheduler stores them and the template
+// escapes on output. HTML-escaping them made entities appear literally.
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 
 /**
  * Executes a SQL dump statement by statement.
@@ -181,7 +185,6 @@ final class SqlExecutor
         if (false === $result) {
             // Plain text, not HTML-escaped: the quotes in the statement are the
             // useful part, and the screen shows the message with textContent.
-            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
             throw new \RuntimeException(sprintf(
                 'Migrator: SQL import failed near: %s (%s)',
                 substr(ltrim($statement), 0, 120),
