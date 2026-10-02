@@ -84,6 +84,33 @@ final class Workspace
     }
 
     /**
+     * Delete what interrupted runs left behind, once it is older than $age.
+     *
+     * Chunked uploads that were never imported, rollback dumps, temporary SQL,
+     * file lists and half-written archives each belong to one request; when
+     * that request dies nothing comes back for them, and on a big site they
+     * are big. Anything this old is not in use: a live export touches its
+     * files every step.
+     */
+    public function sweep(int $age = DAY_IN_SECONDS): int
+    {
+        $patterns = ['upload-*.migrator', 'rollback-*.sql', 'import-*.sql', 'tmp-*.sql', 'job-*.list', '*.part', 'restore-*.migrator', 'decompress-*.migrator', 'building-*.part*'];
+        $cutoff   = time() - $age;
+        $deleted  = 0;
+
+        foreach ($patterns as $pattern) {
+            foreach (glob($this->path($pattern)) ?: [] as $file) {
+                if (is_file($file) && (int) filemtime($file) < $cutoff) {
+                    wp_delete_file($file);
+                    $deleted++;
+                }
+            }
+        }
+
+        return $deleted;
+    }
+
+    /**
      * Resolve the base directory, allowing hosts to relocate it (e.g. onto a
      * larger volume) via filter. Cached per request.
      */

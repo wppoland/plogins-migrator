@@ -117,25 +117,31 @@ final class Ajax implements HasHooks
 
         $importPath = $path;
         $tmp        = null;
-        if (Compressor::isCompressed($path)) {
-            $tmp = $this->workspace->path('restore-' . wp_generate_password(8, false) . '.migrator');
-            (new Compressor())->decompress($path, $tmp);
-            $importPath = $tmp;
-        }
 
+        // The decompression is inside the try: a corrupt .gz or a full disk
+        // used to escape as a PHP fatal, leaving the screen with no message
+        // and the half-written temp file on disk.
         try {
+            if (Compressor::isCompressed($path)) {
+                $tmp = $this->workspace->path('restore-' . wp_generate_password(8, false) . '.migrator');
+                (new Compressor())->decompress($path, $tmp);
+                $importPath = $tmp;
+            }
+
             $importer = new Importer($this->workspace, $wpdb);
             $result   = $importer->import($importPath, $files);
-            if (null !== $tmp) {
-                wp_delete_file($tmp);
-            }
-            wp_send_json_success($result);
         } catch (\Throwable $e) {
+            $result = $e;
+        } finally {
             if (null !== $tmp) {
                 wp_delete_file($tmp);
             }
-            wp_send_json_error(['message' => $e->getMessage()]);
         }
+
+        if ($result instanceof \Throwable) {
+            wp_send_json_error(['message' => $result->getMessage()]);
+        }
+        wp_send_json_success($result);
     }
 
     /**
@@ -210,6 +216,9 @@ final class Ajax implements HasHooks
         }
 
         $dest = $this->uploadPath($id);
+        if (0 === $index) {
+            $this->workspace->sweep();
+        }
 
         $in  = fopen($tmp, 'rb');
         $out = fopen($dest, 0 === $index ? 'wb' : 'ab');
@@ -291,6 +300,8 @@ final class Ajax implements HasHooks
         if ($this->export->isRunning()) {
             wp_send_json_error(['message' => __('Another backup is being made right now, in another tab or by another administrator. Wait for it to finish, or about ten minutes if that tab was closed.', 'plogins-migrator')], 409);
         }
+
+        $this->workspace->sweep();
 
         try {
             $this->export->clear();

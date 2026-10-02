@@ -87,14 +87,15 @@ final class Importer
         // A gzip-compressed archive is expanded to a temp file first; the rest of
         // the import is unchanged and the temp is always cleaned up.
         $temp = null;
-        if (Compressor::isCompressed($archivePath)) {
-            $this->workspace->ensure();
-            $temp = $this->workspace->path('decompress-' . wp_generate_password(8, false) . '.migrator');
-            (new Compressor())->decompress($archivePath, $temp);
-            $archivePath = $temp;
-        }
 
         try {
+            if (Compressor::isCompressed($archivePath)) {
+                $this->workspace->ensure();
+                $temp = $this->workspace->path('decompress-' . wp_generate_password(8, false) . '.migrator');
+                (new Compressor())->decompress($archivePath, $temp);
+                $archivePath = $temp;
+            }
+
             return $this->runImport($archivePath, $importFiles, $log);
         } finally {
             if (null !== $temp) {
@@ -449,6 +450,7 @@ final class Importer
             $written = fwrite($handle, $chunk);
             if (false === $written || $written < strlen($chunk)) {
                 fclose($handle);
+                wp_delete_file($tmp);
 
                 // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Plain text: shown with textContent, logged, or printed by WP-CLI, never as HTML.
                 throw new \RuntimeException(sprintf(
@@ -466,8 +468,13 @@ final class Importer
         $transform = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql)
             ? 'SET NAMES ' . $charset
             : $collation->normalise($sql);
-        $count     = (new SqlExecutor($this->db, $transform))->runFile($tmp);
-        wp_delete_file($tmp);
+        try {
+            $count = (new SqlExecutor($this->db, $transform))->runFile($tmp);
+        } finally {
+            // Removed on failure too: it is a full copy of the archive's
+            // database, and nothing ever came back for it.
+            wp_delete_file($tmp);
+        }
 
         $log(sprintf('Imported database (%d statements).', $count));
 
