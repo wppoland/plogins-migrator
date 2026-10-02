@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Migrator\Backup;
 
+use Migrator\Support\Access;
 use Migrator\Contract\HasHooks;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Storage\DestinationRegistry;
@@ -55,7 +56,7 @@ final class Scheduler implements HasHooks
             'migrator',
             __('Scheduled Backups', 'plogins-migrator'),
             __('Scheduled Backups', 'plogins-migrator'),
-            'manage_options',
+            Access::capability(),
             self::PAGE_SLUG,
             [$this, 'render'],
         );
@@ -88,7 +89,7 @@ final class Scheduler implements HasHooks
 
     public function render(): void
     {
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             return;
         }
 
@@ -108,7 +109,7 @@ final class Scheduler implements HasHooks
      */
     public function handleSave(): void
     {
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             wp_die(esc_html__('You are not allowed to do this.', 'plogins-migrator'));
         }
         check_admin_referer(self::SAVE_ACTION);
@@ -203,7 +204,7 @@ final class Scheduler implements HasHooks
      */
     public function handleRunNow(): void
     {
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             wp_die(esc_html__('You are not allowed to do this.', 'plogins-migrator'));
         }
         check_admin_referer(self::RUN_ACTION);

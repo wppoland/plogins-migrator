@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Migrator\Admin;
 
+use Migrator\Support\Access;
 use Migrator\Contract\HasHooks;
 use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Archive\Inspector;
@@ -24,8 +25,8 @@ defined('ABSPATH') || exit;
 
 /**
  * AJAX endpoints driving the resumable browser export, plus an authenticated
- * download handler. Every endpoint verifies the nonce and the manage_options
- * capability before doing anything, and the download is confined to the
+ * download handler. Every endpoint verifies the nonce and the Access
+ * capability (super admin on a network) before doing anything, and the download is confined to the
  * workspace so no arbitrary file can be read.
  */
 final class Ajax implements HasHooks
@@ -176,7 +177,7 @@ final class Ajax implements HasHooks
      */
     public function scanTree(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
@@ -192,7 +193,7 @@ final class Ajax implements HasHooks
      */
     public function importUpload(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
@@ -228,7 +229,7 @@ final class Ajax implements HasHooks
      */
     public function importRun(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
@@ -275,7 +276,7 @@ final class Ajax implements HasHooks
 
     public function exportStart(): void
     {
-        if (! check_ajax_referer('migrator', 'nonce', false) || ! current_user_can('manage_options')) {
+        if (! check_ajax_referer('migrator', 'nonce', false) || ! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
@@ -425,7 +426,7 @@ final class Ajax implements HasHooks
      */
     public function download(): void
     {
-        if (! current_user_can('manage_options') || ! check_admin_referer('migrator_download', 'nonce')) {
+        if (! Access::allowed() || ! check_admin_referer('migrator_download', 'nonce')) {
             wp_die(esc_html__('Not allowed.', 'plogins-migrator'), '', ['response' => 403]);
         }
 
@@ -536,7 +537,7 @@ final class Ajax implements HasHooks
         if (! check_ajax_referer('migrator', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security check failed.', 'plogins-migrator')], 403);
         }
-        if (! current_user_can('manage_options')) {
+        if (! Access::allowed()) {
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
     }
