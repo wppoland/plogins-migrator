@@ -42,14 +42,17 @@ final class Exporter
      * @param callable(string):void|null $log     Optional progress sink.
      * @param ExportOptions|null          $options What to leave out (defaults to all-in).
      *
-     * @return array{path: string, tables: int, files: int, bytes: int}
+     * @return array{path: string, tables: int, files: int, bytes: int, warnings: list<string>}
      */
     public function export(string $destination, ?callable $log = null, ?ExportOptions $options = null): array
     {
         $log ??= static function (string $m): void {};
         $options ??= new ExportOptions();
 
-        $writer = new Writer($destination);
+        // Built under a .part name and renamed at the end, so the backups list
+        // and retention never see an archive that is still being written.
+        $working = $destination . ExportPipeline::PART;
+        $writer  = new Writer($working);
 
         // 1. Manifest (first entry), recording the dumped table list for the importer.
         $tables = $options->excludeDatabase() ? [] : $this->dumper->tables();
@@ -72,8 +75,11 @@ final class Exporter
                 $writer->close();
                 throw new \RuntimeException('Migrator: cannot open temp file for SQL dump.');
             }
-            $this->dumper->dumpAll($tables, $handle, $options->whereFilters($this->dumper->prefix()), $skip);
-            fclose($handle);
+            try {
+                $this->dumper->dumpAll($tables, $handle, $options->whereFilters($this->dumper->prefix()), $skip);
+            } finally {
+                fclose($handle);
+            }
             $writer->addFile(self::DB_ENTRY, $sqlTmp);
             $dbBytes = (int) filesize($sqlTmp);
             wp_delete_file($sqlTmp);
@@ -89,14 +95,22 @@ final class Exporter
         // 3. Files under wp-content (skipping the backups workspace, dev junk, and
         //    anything the export options exclude).
         $contentDir = untrailingslashit((string) WP_CONTENT_DIR);
+        // The archive itself is excluded too: `wp migrator export --output`
+        // pointed inside wp-content otherwise copied the growing archive into
+        // itself.
         $scanner = new FileScanner(
             ['node_modules', '.git', '.DS_Store'],
-            array_merge([$this->workspace->path()], $options->fileExcludePaths()),
+            array_merge([$this->workspace->path(), $working, $destination], $options->fileExcludePaths()),
         );
 
         $fileCount = 0;
         $fileBytes = 0;
+        $warnings  = [];
         foreach ($scanner->scan($contentDir) as $file) {
+            if (! is_readable($file['abs'])) {
+                $warnings[] = sprintf('wp-content/%s is not readable and was left out.', $file['rel']);
+                continue;
+            }
             $writer->addFile('wp-content/' . $file['rel'], $file['abs']);
             $fileCount++;
             $fileBytes += $file['size'];
@@ -104,12 +118,22 @@ final class Exporter
         $log(sprintf('Files archived: %d (%s).', $fileCount, size_format($fileBytes)));
 
         $writer->finish();
+        $warnings = array_merge($warnings, $writer->warnings());
+        foreach ($warnings as $warning) {
+            $log('Warning: ' . $warning);
+        }
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+        if (! rename($working, $destination)) {
+            throw new \RuntimeException(esc_html('Migrator: the archive was written but could not be renamed to ' . $destination));
+        }
 
         return [
-            'path'   => $destination,
-            'tables' => count($tables),
-            'files'  => $fileCount,
-            'bytes'  => (int) filesize($destination),
+            'path'     => $destination,
+            'tables'   => count($tables),
+            'files'    => $fileCount,
+            'bytes'    => (int) filesize($destination),
+            'warnings' => $warnings,
         ];
     }
 

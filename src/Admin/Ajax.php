@@ -74,7 +74,7 @@ final class Ajax implements HasHooks
         $out = [];
         foreach ($found as $path) {
             $name = basename($path);
-            if (str_starts_with($name, 'upload-') || str_starts_with($name, 'restore-')) {
+            if (str_starts_with($name, 'upload-') || str_starts_with($name, 'restore-') || str_starts_with($name, 'decompress-')) {
                 continue;
             }
             $out[] = [
@@ -279,8 +279,26 @@ final class Ajax implements HasHooks
             wp_send_json_error(['message' => __('Not allowed.', 'plogins-migrator')], 403);
         }
 
+        // start() dumps the whole database inside this one request, which on
+        // a big site runs past the default execution time.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
+        // clear() on a job another tab is still driving deleted its list and
+        // option under it, and both exports then wrote garbage.
+        if ($this->export->isRunning()) {
+            wp_send_json_error(['message' => __('Another backup is being made right now, in another tab or by another administrator. Wait for it to finish, or about ten minutes if that tab was closed.', 'plogins-migrator')], 409);
+        }
+
         try {
             $this->export->clear();
+
+            // Nothing from a previous export may reach this one: an encryption
+            // payload left by an export that failed would otherwise be applied.
+            delete_option(self::POSTPROCESS_OPTION);
+            delete_option(self::COMPRESS_OPTION);
+
             $job = $this->export->start($this->readExportOptions());
 
             // Let an add-on register post-processing for the finished archive
@@ -538,6 +556,7 @@ final class Ajax implements HasHooks
         $percent = $done ? 100 : (int) floor($index / $total * 100);
 
         $shaped = [
+            'warnings' => array_values(array_map('strval', (array) ($job['warnings'] ?? []))),
             'status'  => (string) ($job['status'] ?? ''),
             'index'   => $index,
             'total'   => (int) ($job['total'] ?? 0),

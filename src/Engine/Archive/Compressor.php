@@ -51,25 +51,44 @@ final class Compressor
         if (false === $in) {
             throw new \RuntimeException(esc_html('Migrator: cannot read archive to compress: ' . $src));
         }
-        $out = gzopen($dest, 'wb6');
+        // Written under a temporary name and renamed when complete: the final
+        // name ends in .migrator.gz, which the backups list shows, and a half
+        // compressed file must never be offered as a backup.
+        $part = $dest . '.part';
+        $out  = gzopen($part, 'wb6');
         if (false === $out) {
             fclose($in);
             throw new \RuntimeException(esc_html('Migrator: cannot open compressed archive: ' . $dest));
         }
 
+        $done = false;
         try {
             while (! feof($in)) {
                 $chunk = fread($in, self::CHUNK);
                 if (false === $chunk) {
                     throw new \RuntimeException('Migrator: read error while compressing.');
                 }
-                if ('' !== $chunk && false === gzwrite($out, $chunk)) {
+                $written = '' === $chunk ? 0 : gzwrite($out, $chunk);
+                if (false === $written || $written < strlen($chunk)) {
                     throw new \RuntimeException('Migrator: write error while compressing (disk full?).');
                 }
             }
+            $done = true;
         } finally {
             fclose($in);
-            gzclose($out);
+            $closed = gzclose($out);
+            if (! $done || ! $closed) {
+                wp_delete_file($part);
+            }
+        }
+
+        if (! $closed) {
+            throw new \RuntimeException('Migrator: could not finish writing the compressed archive (disk full?).');
+        }
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+        if (! rename($part, $dest)) {
+            wp_delete_file($part);
+            throw new \RuntimeException(esc_html('Migrator: cannot move the compressed archive into place: ' . $dest));
         }
     }
 
@@ -96,7 +115,9 @@ final class Compressor
                 if (false === $chunk) {
                     throw new \RuntimeException('Migrator: the compressed archive is corrupt.');
                 }
-                if ('' !== $chunk && (false === fwrite($out, $chunk))) {
+                // A short write is a truncated archive, not a success.
+                $written = '' === $chunk ? 0 : fwrite($out, $chunk);
+                if (false === $written || $written < strlen($chunk)) {
                     throw new \RuntimeException('Migrator: write error while decompressing (disk full?).');
                 }
             }
