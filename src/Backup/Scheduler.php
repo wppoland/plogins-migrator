@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Migrator\Backup;
 
+use Migrator\Contract\HasHooks;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Storage\DestinationRegistry;
 use Migrator\Storage\OffsiteSettings;
@@ -15,7 +16,7 @@ defined('ABSPATH') || exit;
  * cron event that runs the backup, and the glue that keeps the cron registration
  * in step with the saved settings. Capability- and nonce-guarded throughout.
  */
-final class Scheduler
+final class Scheduler implements HasHooks
 {
     private const SAVE_ACTION = 'migrator_save_schedule';
 
