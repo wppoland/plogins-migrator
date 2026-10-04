@@ -14,13 +14,19 @@ defined('ABSPATH') || exit;
  * Copies one wp-content tree over another, for pull (pulled tree to this site)
  * and push (this site to the pushed tree).
  *
- * Migrator itself and its backups folder never travel. A file is copied when
+ * Migrator itself and its backups folder never travel, and neither do the
+ * drop-ins that bind a site to its server: a page cache, an object cache or a
+ * database driver from the old host makes the copy fail to boot on the new one
+ * (Reprint issue #114). A file is copied when
  * its size differs, or its time differs and its contents do too: a push and the
  * pull after it touch every time stamp, and comparing times alone recopied the
  * whole site. Files only the destination has are left alone.
  */
 final class Mirror
 {
+    /** Drop-ins that carry server-specific wiring. */
+    public const DROP_INS = ['advanced-cache.php', 'object-cache.php', 'db.php', 'db-error.php', 'sunrise.php', 'fatal-error-handler.php'];
+
     public static function copy(string $from, string $to): int
     {
         if (! is_dir($from)) {
@@ -39,6 +45,9 @@ final class Mirror
         $own = basename(untrailingslashit(\Migrator\PLUGIN_DIR));
         $skip[] = $from . '/plugins/' . $own;
         $skip[] = $to . '/plugins/' . $own;
+        foreach (self::DROP_INS as $dropIn) {
+            $skip[] = $from . '/' . $dropIn;
+        }
 
         $copied = 0;
         $items  = new \RecursiveIteratorIterator(

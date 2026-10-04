@@ -264,6 +264,10 @@ final class Command
      * [--insecure]
      * : Allow a plain http:// source. Anyone on the network path can read the copy.
      *
+     * [--include-host-plugins]
+     * : Also copy the old host's own platform plugins. By default they are left
+     * behind and deactivated, because they rarely work on another host.
+     *
      * [--skip-files]
      * : Pull the database only.
      *
@@ -300,7 +304,7 @@ final class Command
         });
 
         try {
-            $result = $pull->run($url, $this->authFlags($assoc_args), $withFiles, $withDatabase);
+            $result = $pull->run($url, $this->authFlags($assoc_args), $withFiles, $withDatabase, isset($assoc_args['include-host-plugins']));
         } catch (\Throwable $e) {
             \WP_CLI::error($e->getMessage());
         }
