@@ -153,7 +153,7 @@ final class Pull
             if (! $importer->restoreDatabase($rollback)) {
                 throw new \RuntimeException('The database import failed AND the rollback failed. The previous database is kept at ' . $rollback . ' and must be imported by hand.');
             }
-            throw new \RuntimeException('The database import failed (Reprint exit code ' . $code . ') and the previous database was put back. Run the same command again to retry.');
+            throw new \RuntimeException('The database import failed (exit code ' . $code . ') and the previous database was put back. Run the same command again to retry.');
         }
 
         // home and siteurl are known exactly; with WordPress in a subfolder a
@@ -272,11 +272,11 @@ final class Pull
             return;
         }
         if (Client::EXIT_ENROLL === $code) {
-            throw new \RuntimeException('The source site does not know this site yet. Enrol the key printed above on the source under Tools > Reprint Server, or pass --secret=<token>, then run the same command again.');
+            throw new \RuntimeException('The source site does not know this site yet. Enrol the key printed above on the Pull and Push screen of the source, or pass --secret=<token>, then run the same command again.');
         }
         if (Client::EXIT_AGAIN === $code) {
             throw new \RuntimeException('The ' . $stage . ' step was interrupted. Run the same command again: it carries on where it stopped.');
         }
-        throw new \RuntimeException('The ' . $stage . ' step failed (Reprint exit code ' . $code . '). Nothing on this site has been changed by it; the output above says why.');
+        throw new \RuntimeException('The ' . $stage . ' step failed (exit code ' . $code . '). Nothing on this site has been changed by it; the output above says why.');
     }
 }

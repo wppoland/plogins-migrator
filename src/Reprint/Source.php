@@ -24,6 +24,7 @@ defined('ABSPATH') || exit;
 final class Source implements HasHooks
 {
     public const OPTION      = 'migrator_reprint_source';
+    public const QUERY_VAR   = 'migrator-api';
     public const PAGE_SLUG   = 'migrator-pull-push';
     public const SAVE_ACTION = 'migrator_reprint_source_save';
 
@@ -43,6 +44,13 @@ final class Source implements HasHooks
         // A push must never overwrite Migrator itself (the bundled server only
         // protects its own lib/ subfolder) or the backups it keeps.
         add_filter('reprint_server_api_options', [self::class, 'protectOwnPaths'], 1);
+
+        // Migrator's address for the endpoint. The bundled server answers its
+        // own query name; aliasing works the way its legacy name does.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- selects routing only; every request is signed.
+        if (isset($_GET[self::QUERY_VAR]) && ! isset($_GET['reprint-api'])) {
+            $_GET['reprint-api'] = '1';
+        }
 
         require_once \Migrator\PLUGIN_DIR . self::SERVER_ENTRY;
     }

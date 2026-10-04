@@ -39,20 +39,20 @@ final class ReprintProcessLock
             && !is_dir($state_dir)
         ) {
             throw new RuntimeException(
-                'Failed to create the Reprint state directory: '
+                'Failed to create the transfer state directory: '
                 . $state_dir . '.'
             );
         }
         $process_lock_path = wp_join_unix_paths($normalized_state_dir, 'process.lock');
         $this->handle = fopen($process_lock_path, 'c+b');
         if (!is_resource($this->handle)) {
-            throw new RuntimeException('Failed to open the Reprint process lock: ' . $process_lock_path . '.');
+            throw new RuntimeException('Failed to open the transfer process lock: ' . $process_lock_path . '.');
         }
         if (!flock($this->handle, LOCK_EX | LOCK_NB)) {
             fclose($this->handle);
             $this->handle = null;
             throw new RuntimeException(
-                'Another Reprint process is using the state directory: '
+                'Another transfer process is using the state directory: '
                 . $normalized_state_dir . '.'
             );
         }

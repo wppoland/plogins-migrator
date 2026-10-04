@@ -277,7 +277,7 @@ class Pull
 
         if ($has_direct_command_state && $state_status === 'complete') {
             // Users can run lower-level commands directly, e.g.
-            // `reprint files-pull` or `reprint db-pull`, without going through
+            // `wp migrator remote files-pull` or `wp migrator remote db-pull`, without going through
             // this pull pipeline. Those commands save their own completion
             // state in active_resumable_command. That state must not make a
             // high-level command skip its matching stage: the pipeline has not
@@ -1056,9 +1056,9 @@ class Pull
 
             if ($is_not_installed) {
                 $cyan = "\033[36m";
-                $this->progress->print_line("\n{$red}  ✗ The Reprint Server plugin is not installed on this site.{$r}\n\n");
+                $this->progress->print_line("\n{$red}  ✗ Pull and Push on the remote site is not installed on this site.{$r}\n\n");
                 $this->progress->print_line("  To set it up, run:\n\n");
-                $this->progress->print_line("    {$cyan}php reprint.phar install-server{$r}\n\n");
+                $this->progress->print_line("    {$cyan}wp migrator remote install-server{$r}\n\n");
                 $this->progress->print_line("  {$dim}This will show the download URL and step-by-step instructions.{$r}\n");
             } else {
                 $this->progress->print_line("\n{$red}  ✗ Preflight failed{$r}\n");

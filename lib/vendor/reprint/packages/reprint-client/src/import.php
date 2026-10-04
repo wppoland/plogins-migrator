@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 /**
- * Reprint client for export.php.
+ * Migrator for export.php.
  *
  * Downloads SQL and files from a remote export.php script, with support for:
  * - Resumable downloads using cursors
@@ -266,7 +266,7 @@ class ImportClient
         524, // Origin response timed out
     ];
 
-    /** @var string Remote Reprint API URL. */
+    /** @var string Remote site address. */
     public $remote_reprint_api_url;
 
     /** @var array<string,string> Request-context headers shared by pull and push. */
@@ -275,7 +275,7 @@ class ImportClient
     /** @var string Caller-selected state directory for this filesystem root. */
     public $state_dir;
 
-    /** @var string Pull state directory for this remote Reprint API URL. */
+    /** @var string Pull state directory for this remote site address. */
     public $pull_state_directory;
 
     /** @var string Resolved filesystem root where the remote filesystem is reconstructed. */
@@ -539,7 +539,7 @@ class ImportClient
     /**
      * @param array $options { Optional client settings. Unknown keys are ignored.
      *     @type bool        $insecure                        Allow HTTP and skip HTTPS certificate checks. Also enabled by REPRINT_INSECURE_TLS=1.
-     *     @type bool        $allow_http                      Permit an HTTP remote Reprint API URL. Default false.
+     *     @type bool        $allow_http                      Permit an HTTP remote site address. Default false.
      *     @type string|null $signal_handling_command         Command whose signal handlers to register. Default null.
      *     @type string|null $selected_remote_state_directory Remote state directory override. Default null.
      * }
@@ -684,7 +684,7 @@ class ImportClient
     {
         if (!$allow_http && strncasecmp($remote_reprint_api_url, 'http://', 7) === 0) {
             throw new InvalidArgumentException(
-                'The remote Reprint API URL you provided uses HTTP. '
+                'The remote site address you provided uses HTTP. '
                 . 'HTTP is unencrypted, so transferring a site over it can expose its data, including passwords, to eavesdropping. '
                 . 'Provide an HTTPS URL, or pass --insecure to accept this risk.'
             );
@@ -994,7 +994,7 @@ class ImportClient
         $process_lock = $process_lock ?? new ReprintProcessLock($this->state_dir);
         if (!$process_lock->is_held()) {
             throw new InvalidArgumentException(
-                'ImportClient requires a held Reprint process lock.'
+                'ImportClient requires a held transfer process lock.'
             );
         }
         $this->verbose_mode = $options["verbose"] ?? false;
@@ -1445,7 +1445,7 @@ class ImportClient
             if ($command === 'pull' && $this->credential['scheme'] === 'key' && ( $this->credential['source'] ?? '' ) === 'state') {
                 $key_message =
                     "Key for this site: {$this->credential['path']}\n"
-                    . "Deleting the state directory destroys it, so the enrolled public key stops working; Tools > Reprint Server can also remove that key.";
+                    . "Deleting the state directory destroys it, so the enrolled public key stops working; Migrator > Pull and Push can also remove that key.";
                 // The plain terminal presentation drops JSONL records, so it
                 // gets the same text once, below the pull summary.
                 $this->progress->print_line("\033[2m{$key_message}\033[0m\n");
@@ -1625,7 +1625,7 @@ class ImportClient
             'files-diff requires <remote-state-directory>/local_index.jsonl. '
             . 'files-pull writes it from completed local mutations; files-push '
             . 'writes it after the target finishes applying the push. Use the same '
-            . 'remote Reprint API URL and state directory.';
+            . 'remote site address and state directory.';
 
         $plan_directory = wp_join_unix_paths($push_state_directory, 'files-diff-plan');
         try {
@@ -1872,7 +1872,7 @@ class ImportClient
      *
      * One open sender performs at most one step per loop turn. A planned stop
      * cancels any open multipart request before close() releases sender
-     * resources. The caller retains the Reprint process lock throughout.
+     * resources. The caller retains the transfer process lock throughout.
      * Terminal sender outcomes are reported without retrying or opening a
      * replacement; this process never opens a second sender.
      *
@@ -2385,7 +2385,7 @@ class ImportClient
      * @return array {
      *     Validated files-push command context.
      *
-     *     @type string $remote_reprint_api_url Remote Reprint API URL.
+     *     @type string $remote_reprint_api_url Remote site address.
      *     @type string $filesystem_root  Resolved filesystem root being sent.
      *     @type string $push_state_directory Local push state directory.
      * }
@@ -2406,7 +2406,7 @@ class ImportClient
         }
         if (preg_match('/(?:\?|&)SECRET_KEY(?:=|&|$)/', $remote_reprint_api_url) === 1) {
             throw new InvalidArgumentException(
-                'files-push does not accept SECRET_KEY in the remote Reprint API URL; pass --secret=TOKEN.'
+                'files-push does not accept SECRET_KEY in the remote site address; pass --secret=TOKEN.'
             );
         }
 
@@ -2429,8 +2429,8 @@ class ImportClient
         $scheme = strtolower( (string) parse_url($remote_reprint_api_url, PHP_URL_SCHEME) );
         if ($scheme !== 'https' && !( $scheme === 'http' && $allow_http === true )) {
             throw new InvalidArgumentException(
-                'The files-push remote Reprint API URL must use HTTPS: ' . $masked_remote_reprint_api_url
-                . '. Pass --insecure only for a remote Reprint API URL you trust.'
+                'The files-push remote site address must use HTTPS: ' . $masked_remote_reprint_api_url
+                . '. Pass --insecure only for a remote site address you trust.'
             );
         }
         $resolved_local_filesystem_root = realpath($filesystem_root);
@@ -2447,7 +2447,7 @@ class ImportClient
     }
 
     /**
-     * Resolves the local push state directory for a remote Reprint API URL.
+     * Resolves the local push state directory for a remote site address.
      *
      * This method deliberately does not require a secret or HTTPS. files-diff
      * identifies the pull source by URL but makes no network request.
@@ -2464,14 +2464,14 @@ class ImportClient
             self::mask_url_credentials($remote_reprint_api_url);
         if (strpos($remote_reprint_api_url, '#') !== false) {
             throw new InvalidArgumentException(
-                'The ' . $command . ' remote Reprint API URL must not contain a fragment: ' . $masked_remote_reprint_api_url . '.'
+                'The ' . $command . ' remote site address must not contain a fragment: ' . $masked_remote_reprint_api_url . '.'
             );
         }
         $remote_reprint_api_url_user = parse_url($remote_reprint_api_url, PHP_URL_USER);
         $remote_reprint_api_url_password = parse_url($remote_reprint_api_url, PHP_URL_PASS);
         if (is_string($remote_reprint_api_url_user) || is_string($remote_reprint_api_url_password)) {
             throw new InvalidArgumentException(
-                'The ' . $command . ' remote Reprint API URL must not contain URL user-info: ' . $masked_remote_reprint_api_url . '.'
+                'The ' . $command . ' remote site address must not contain URL user-info: ' . $masked_remote_reprint_api_url . '.'
             );
         }
         if (is_link($filesystem_root)) {
@@ -2613,7 +2613,7 @@ class ImportClient
         $lines[] = '  Key id:      ' . $generated['key_id'];
         $lines[] = '  Stored at:   ' . $generated['path'];
         $lines[] = '';
-        $lines[] = 'Enroll this public key on the site under Tools → Reprint Server,';
+        $lines[] = 'Enroll this public key on the site under Migrator > Pull and Push,';
         if ($generated_by_pull) {
             $lines[] = 'then run the same command again:';
         } elseif ($stored_in_state) {
@@ -2701,14 +2701,14 @@ class ImportClient
      */
     private static function keygen_command(string $remote_reprint_api_url, string $state_dir): string
     {
-        return 'reprint keygen ' . escapeshellarg($remote_reprint_api_url) . ' --state-dir=' . escapeshellarg($state_dir);
+        return 'wp migrator remote keygen ' . escapeshellarg($remote_reprint_api_url) . ' --state-dir=' . escapeshellarg($state_dir);
     }
 
     /**
      * Builds the signer files-push and db-push hand to their stream client, from the same resolution every command uses.
      *
      * @param array  $options                Parsed CLI options; reads `secret` and `private_key`.
-     * @param string $remote_reprint_api_url Remote Reprint API URL, named in the no-credential message.
+     * @param string $remote_reprint_api_url Remote site address, named in the no-credential message.
      * @param string $state_dir              `--state-dir`, named in the no-credential message.
      * @param string $remote_state_directory `<state-dir>/remotes/<md5>` searched for key.pem.
      */
@@ -3258,7 +3258,7 @@ class ImportClient
     private function get_multisite_preflight_error($selection): ?string
     {
         if (!is_array($selection)) {
-            return 'The preflight response lacks a multisite selection object. Update the remote Reprint Server.';
+            return 'The preflight response lacks a multisite selection object. Update the Migrator on the remote site.';
         }
         foreach (['site_id', 'network_id'] as $field) {
             $value = $selection[$field] ?? null;
@@ -3569,7 +3569,7 @@ class ImportClient
             $proto_detail = "Remote protocol v{$remote_ver} does not match client protocol v" . PULL_PROTOCOL_VERSION . ". Update the export plugin.";
         } elseif ($remote_ver > PULL_PROTOCOL_VERSION) {
             $proto_ok = false;
-            $proto_detail = "Remote protocol v{$remote_ver} does not match client protocol v" . PULL_PROTOCOL_VERSION . ". Update the Reprint client.";
+            $proto_detail = "Remote protocol v{$remote_ver} does not match client protocol v" . PULL_PROTOCOL_VERSION . ". Update the Migrator.";
         } else {
             $proto_ok = true;
             $proto_detail = "remote v{$remote_ver}, client v" . PULL_PROTOCOL_VERSION;
@@ -5976,7 +5976,7 @@ class ImportClient
                 "",
             ),
             "pass" => (string) $option_then_recorded(
-                $options["target_pass"] ?? null,
+                $options["target_pass"] ?? (false !== getenv("MYSQL_PASSWORD") ? getenv("MYSQL_PASSWORD") : null),
                 $recorded_target["pass"] ?? null,
                 "",
             ),
@@ -7265,7 +7265,7 @@ class ImportClient
         if (!$parsed_url || !isset($parsed_url['scheme'], $parsed_url['host'])) {
             if ($this->remote_reprint_api_url === '') {
                 throw new InvalidArgumentException(
-                    '--new-site-url requires a positional remote Reprint API URL. '
+                    '--new-site-url requires a positional remote site address. '
                     . 'Use --rewrite-url FROM TO when no remote URL is available.'
                 );
             }
@@ -7624,7 +7624,7 @@ class ImportClient
         ) {
             throw new RuntimeException(
                 "Cannot continue db-apply because its saved stage is not supported by this " .
-                "Reprint version. Run db-apply --abort to start again.",
+                "Migrator version. Run db-apply --abort to start again.",
             );
         }
 
@@ -10678,7 +10678,7 @@ class ImportClient
         $cursor_data = $cursor_json === false ? null : json_decode($cursor_json, true);
         if (!is_array($cursor_data)) {
             throw new RuntimeException(
-                "MySQL contains a {$command} position that Reprint cannot read. " .
+                "MySQL contains a {$command} position that Migrator cannot read. " .
                 "Run {$command} --abort to start again."
             );
         }
@@ -12768,7 +12768,7 @@ class ImportClient
     }
 
     /** Honest non-browser User-Agent used when no saved choice exists. */
-    private const DEFAULT_USER_AGENT = "Reprint/1.0";
+    private const DEFAULT_USER_AGENT = "Migrator/1.5";
 
     /**
      * Browser User-Agent candidates retained for preflight fallback.
@@ -13121,12 +13121,12 @@ class ImportClient
             $msg = $redirect_url
                 ? "Wrong URL. The server redirected to {$redirect_url} " .
                   "(HTTP {$http_code}).\n\n" .
-                  "Reprint does not follow redirects to avoid silently " .
+                  "Migrator does not follow redirects to avoid silently " .
                   "connecting to the wrong server. Retry with the target " .
                   "URL above."
                 : "Wrong URL. The server returned a redirect (HTTP {$http_code}) " .
                   "instead of the export API.\n\n" .
-                  "Reprint does not follow redirects. Check whether the site " .
+                  "Migrator does not follow redirects. Check whether the site " .
                   "uses http vs https or www vs non-www and retry with the " .
                   "canonical URL.";
             return ['code' => 'REDIRECT', 'message' => $msg];
@@ -13150,7 +13150,7 @@ class ImportClient
                         "This site's host has OpenSSL, so it accepts key authentication only; " .
                         "connection tokens are not accepted there.\n\n" .
                         "Run `" . self::keygen_command($this->remote_reprint_api_url, $this->state_dir) . "` " .
-                        "(or `reprint pull` with no --secret) and enroll the printed key under Tools > Reprint Server.",
+                        "(or `wp migrator pull` with no --secret) and enroll the printed key under Migrator > Pull and Push.",
                 ];
             }
             if ($server_reason === 'requires_token_auth') {
@@ -13158,18 +13158,18 @@ class ImportClient
                     'code' => 'AUTH_REQUIRES_TOKEN',
                     'message' =>
                         "This site's host has no OpenSSL, so it accepts connection-token authentication only.\n\n" .
-                        "Pass --secret=TOKEN using the connection token configured under Tools > Reprint Server.",
+                        "Pass --secret=TOKEN using the connection token configured under Migrator > Pull and Push.",
                 ];
             }
             if ($server_reason === 'not_configured') {
                 if ($using_key) {
                     $not_configured_message =
                         "This site requires key authentication but has no keys enrolled. " .
-                        "Enroll this public key under Tools > Reprint Server." . $key_hint;
+                        "Enroll this public key under Migrator > Pull and Push." . $key_hint;
                 } else {
                     $not_configured_message =
                         "This site has no connection token configured. " .
-                        "Set one under Tools > Reprint Server, or enroll a key if the host supports it.";
+                        "Set one under Migrator > Pull and Push, or enroll a key if the host supports it.";
                 }
                 return ['code' => 'AUTH_NOT_CONFIGURED', 'message' => $not_configured_message];
             }
@@ -13177,7 +13177,7 @@ class ImportClient
                 return [
                     'code' => 'AUTH_UNKNOWN_KEY',
                     'message' =>
-                        "This key is not enrolled on the site. Enroll it under Tools > Reprint Server, " .
+                        "This key is not enrolled on the site. Enroll it under Migrator > Pull and Push, " .
                         "or check that the key id matches an enrolled key." . $key_hint,
                 ];
             }
@@ -13188,7 +13188,7 @@ class ImportClient
                     'message' =>
                         "No credential was provided and the remote site requires authentication.\n\n" .
                         "Run `" . self::keygen_command($this->remote_reprint_api_url, $this->state_dir) . "` and enroll " .
-                        "the printed key, or pass --secret=TOKEN with the connection token from Tools > Reprint Server.",
+                        "the printed key, or pass --secret=TOKEN with the connection token from Migrator > Pull and Push.",
                 ];
             }
 
@@ -13197,7 +13197,7 @@ class ImportClient
                     'code' => 'AUTH_FAILED',
                     'message' =>
                         "The request was blocked (HTTP {$http_code}) but the " .
-                        "server did not say why. The Reprint Server plugin always " .
+                        "server did not say why. Pull and Push on the remote site always " .
                         "explains authentication failures, so something " .
                         "upstream is blocking the request — a server-level " .
                         "firewall, .htaccess rule, or security plugin.",
@@ -13209,8 +13209,8 @@ class ImportClient
                     'code' => 'AUTH_KEY_UNSUPPORTED',
                     'message' =>
                         "The site rejected the key signature without a reason code, which an older " .
-                        "Reprint Server plugin does when it does not understand key authentication.\n\n" .
-                        "Ask the site owner to update the Reprint Server plugin, or use --secret with a connection token.",
+                        "Pull and Push on the remote site does when it does not understand key authentication.\n\n" .
+                        "Ask the site owner to update the Pull and Push on the remote site, or use --secret with a connection token.",
                 ];
             }
 
@@ -13221,7 +13221,7 @@ class ImportClient
                     'code' => 'AUTH_SECRET_MISMATCH',
                     'message' =>
                         "Wrong connection token. The --secret value does not match " .
-                        "the one configured under Tools > Reprint Server in wp-admin.",
+                        "the one configured under Migrator > Pull and Push in wp-admin.",
                 ];
             }
 
@@ -13285,7 +13285,7 @@ class ImportClient
                 'code' => 'WORDFENCE_BLOCKED',
                 'message' =>
                     "Wordfence blocked this machine (HTTP {$http_code}). Its request " .
-                    "limit or another firewall rule stopped Reprint.\n\n" .
+                    "limit or another firewall rule stopped the transfer.\n\n" .
                     "Wait for a temporary block to expire, then resume. If it " .
                     "keeps happening, ask the site administrator to raise the " .
                     "limit or allowlist this machine's IP address.",
@@ -13297,21 +13297,21 @@ class ImportClient
             return [
                 'code' => 'EXPORT_NOT_CONFIGURED',
                 'message' =>
-                    "The Reprint Server plugin is installed but not configured. " .
+                    "Pull and Push on the remote site is installed but not configured. " .
                     "The server reported: {$server_msg}",
             ];
         }
 
         // ── Not found ────────────────────────────────────────────
         if ($http_code === 404) {
-            $msg = "The Reprint Server plugin is not installed on the remote site.";
+            $msg = "Pull and Push on the remote site is not installed on the remote site.";
             if ($looks_like_html) {
                 $msg .= " The server returned an HTML 404 page instead of " .
                          "the export API.";
             } else {
                 $msg .= " The server returned HTTP 404.";
             }
-            $msg .= "\n\nRun `php reprint.phar install-server` for setup " .
+            $msg .= "\n\nRun `wp migrator remote install-server` for setup " .
                      "instructions.";
             return ['code' => 'NOT_FOUND', 'message' => $msg];
         }
@@ -13350,10 +13350,10 @@ class ImportClient
                 'code' => 'HTML_RESPONSE',
                 'http_code' => $http_code,
                 'message' =>
-                    "The Reprint Server plugin is not installed on the remote site. " .
+                    "Pull and Push on the remote site is not installed on the remote site. " .
                     "The server returned an HTML page (HTTP {$http_code}) " .
                     "instead of a JSON API response.\n\n" .
-                    "Run `php reprint.phar install-server` for setup " .
+                    "Run `wp migrator remote install-server` for setup " .
                     "instructions.",
             ];
         }
@@ -15464,7 +15464,7 @@ if (
         echo "Mirror any WordPress site over HTTP.\n";
         echo "Version " . get_importer_version() . "\n";
         echo "\n";
-        echo "Usage: reprint <command> <remote-reprint-api-url> [options]\n";
+        echo "Usage: wp migrator remote <command> <site-url> [options]\n";
         echo "\n";
 
         $high = array_filter($command_info, fn($i) => ($i['level'] ?? 'low') === 'high');
@@ -15524,7 +15524,7 @@ if (
         }
 
         $info = $command_info[$command];
-        $usage = $info["usage"] ?? "reprint {$command} <remote-reprint-api-url> --state-dir=DIR --fs-root=DIR [options]";
+        $usage = $info["usage"] ?? "reprint {$command} <site-url> --state-dir=DIR --fs-root=DIR [options]";
         echo "Usage: {$usage}\n";
         echo "\n";
         echo $info["description"];
@@ -15567,7 +15567,7 @@ if (
     /**
      * Render the install-server guide.
      *
-     * Shows the download URL for the Reprint Server plugin matching this
+     * Shows the download URL for the Pull and Push on the remote site matching this
      * version of reprint, and step-by-step installation instructions.
      */
     function _cli_render_install_server(): void
@@ -15583,9 +15583,9 @@ if (
         $repo = "WordPress/reprint";
         $zip_url = "https://github.com/{$repo}/releases/download/{$version}/reprint-exporter-wp.zip";
 
-        echo "{$bold}Install the Reprint Server Plugin{$reset}\n";
+        echo "{$bold}Install the Pull and Push Plugin{$reset}\n";
         echo "\n";
-        echo "The Reprint Server plugin must be installed on the WordPress site you\n";
+        echo "Pull and Push on the remote site must be installed on the WordPress site you\n";
         echo "want to mirror. It exposes the HTTP API that reprint connects to.\n";
         echo "\n";
 
@@ -15593,7 +15593,7 @@ if (
         echo "\n";
         if ($is_dev) {
             echo "  You are running an unreleased development build ({$version}).\n";
-            echo "  Install the Reprint Server plugin from the same branch:\n";
+            echo "  Install the Pull and Push on the remote site from the same branch:\n";
             echo "\n";
             echo "  {$dim}composer build:server-plugin{$reset}\n";
             echo "\n";
@@ -15609,23 +15609,23 @@ if (
         echo "\n";
         echo "  1. Log in to wp-admin\n";
         echo "  2. Go to Plugins → Add New Plugin → Upload Plugin\n";
-        echo "  3. Upload reprint-exporter-wp.zip and activate Reprint Server\n";
+        echo "  3. Upload reprint-exporter-wp.zip and activate Pull and Push\n";
         echo "\n";
         echo "{$bold}Step 3: Enroll a key{$reset}\n";
         echo "\n";
         echo "  1. Run reprint against the site; with no credential it generates a key,\n";
         echo "     prints the public half, and stops with exit code 4:\n";
         echo "\n";
-        echo "     {$dim}php reprint.phar pull https://your-site.com \\\n";
+        echo "     {$dim}wp migrator remote pull https://your-site.com \\\n";
         echo "       --state-dir=./state --fs-root=./files{$reset}\n";
         echo "\n";
-        echo "     (reprint keygen https://your-site.com --state-dir=./state does the same\n";
+        echo "     (wp migrator remote keygen https://your-site.com --state-dir=./state does the same\n";
         echo "     without starting a pull)\n";
-        echo "  2. In wp-admin, go to Tools → Reprint Server and enroll the printed key\n";
+        echo "  2. In wp-admin, go to Migrator > Pull and Push and enroll the printed key\n";
         echo "  3. Run the same command again; the key is found in --state-dir\n";
         echo "\n";
         echo "  Only a host without OpenSSL uses a connection token instead: enter one\n";
-        echo "  under Tools → Reprint Server and pass it with --secret=YOUR_SECRET.\n";
+        echo "  under Migrator > Pull and Push and pass it with --secret=YOUR_SECRET.\n";
         echo "\n";
     }
 
@@ -15701,7 +15701,7 @@ if (
         "post-process" => [
             "level" => "high",
             "short" => "Run selected post-migration tasks on the local site",
-            "usage" => "reprint post-process [<remote-reprint-api-url>] --fs-root=WORDPRESS_ROOT [--state-dir=DIR] [--tasks=TASKS]",
+            "usage" => "wp migrator remote post-process [<site-url>] --fs-root=WORDPRESS_ROOT [--state-dir=DIR] [--tasks=TASKS]",
             "description" =>
                 "Runs all tasks by default. --tasks selects only the named tasks.\n" .
                 "Tasks always run in this order, stopping at the first failure:\n\n" .
@@ -15719,19 +15719,19 @@ if (
                 "are made. An explicit HTTP source URL requires --insecure.\n" .
                 "Failing-plugin recovery alone needs no migration state.\n\n" .
                 "Prints JSON with per-task results. Exit 0 means all selected tasks\n" .
-                "completed; exit 1 means processing stopped. Uses Reprint's PHP binary.\n" .
+                "completed; exit 1 means processing stopped. Uses Migrator's PHP binary.\n" .
                 "Does not check page rendering or the web server.\n",
         ],
         "recover" => [
             "level" => "high",
             "short" => "Load WordPress, deactivating plugins that cause fatal errors",
-            "usage" => "reprint recover --fs-root=WORDPRESS_ROOT",
+            "usage" => "wp migrator remote recover --fs-root=WORDPRESS_ROOT",
             "description" =>
                 "Requires wp-load.php in a separate PHP process. If a fatal error points\n" .
                 "to one active regular plugin, deactivates it and tries again. Plugin\n" .
                 "files and data are kept; deactivation hooks are not run. Stops on\n" .
                 "other failures. Does not deactivate plugins on multisite.\n\n" .
-                "Uses the same PHP binary as Reprint. Checks startup only, not pages\n" .
+                "Uses the same PHP binary as Migrator. Checks startup only, not pages\n" .
                 "or the web server. No remote URL, connection token, or state directory\n" .
                 "is needed. Prints a JSON result with disabled_plugins and their errors.\n" .
                 "Exits 0 when wp-load.php loads, or 1 when it cannot complete.\n",
@@ -15761,30 +15761,30 @@ if (
                 "Examples:\n" .
                 "  # Download files and database without applying SQL. The first run\n" .
                 "  # with no credential generates a key, prints it for enrollment under\n" .
-                "  # Tools → Reprint Server, and exits 4; the second run uses that key:\n" .
-                "  reprint pull https://example.com \\\n" .
+                "  # Migrator > Pull and Push, and exits 4; the second run uses that key:\n" .
+                "  wp migrator remote pull https://example.com \\\n" .
                 "    --state-dir=./state --fs-root=./files\n" .
                 "\n" .
                 "  # Full clone with MySQL database apply and URL rewriting:\n" .
-                "  reprint pull https://example.com \\\n" .
+                "  wp migrator remote pull https://example.com \\\n" .
                 "    --state-dir=./state --fs-root=./files \\\n" .
                 "    --target-user=root --target-db=wp_local \\\n" .
                 "    --new-site-url=http://localhost:8881\n" .
                 "\n" .
                 "  # Full clone with SQLite, flattened layout, and PHP built-in server:\n" .
-                "  reprint pull https://example.com \\\n" .
+                "  wp migrator remote pull https://example.com \\\n" .
                 "    --state-dir=./state --fs-root=./files \\\n" .
                 "    --target-engine=sqlite \\\n" .
                 "    --new-site-url=http://localhost:8881 \\\n" .
                 "    --flatten-to=./site --runtime=php-builtin --output-dir=./runtime\n" .
                 "\n" .
                 "  # Prepare a Playground runtime but let another process start it:\n" .
-                "  reprint pull https://example.com \\\n" .
+                "  wp migrator remote pull https://example.com \\\n" .
                 "    --state-dir=./state --fs-root=./files \\\n" .
                 "    --runtime=playground-cli --start-runtime=none --output-dir=./runtime\n" .
                 "\n" .
                 "  # Host without OpenSSL: pass the connection token instead of a key:\n" .
-                "  reprint pull https://example.com \\\n" .
+                "  wp migrator remote pull https://example.com \\\n" .
                 "    --secret=TOKEN --state-dir=./state --fs-root=./files\n",
         ],
         "pull-files" => [
@@ -15800,10 +15800,10 @@ if (
                 "without running the database stages.\n",
             "extra" =>
                 "Examples:\n" .
-                "  reprint pull-files https://example.com \\\n" .
+                "  wp migrator remote pull-files https://example.com \\\n" .
                 "    --secret=TOKEN --state-dir=./state --fs-root=./files\n" .
                 "\n" .
-                "  reprint pull-files https://example.com \\\n" .
+                "  wp migrator remote pull-files https://example.com \\\n" .
                 "    --secret=TOKEN --state-dir=./state --fs-root=./files \\\n" .
                 "    --include=:wp-content: --exclude=:wp-uploads:\n",
         ],
@@ -15822,31 +15822,31 @@ if (
                 "options, pull-db applies the dump to SQLite by default.\n",
             "extra" =>
                 "Examples:\n" .
-                "  reprint pull-db https://example.com \\\n" .
+                "  wp migrator remote pull-db https://example.com \\\n" .
                 "    --secret=TOKEN --state-dir=./state --fs-root=./files \\\n" .
                 "    --target-engine=sqlite\n" .
                 "\n" .
-                "  reprint pull-db https://example.com \\\n" .
+                "  wp migrator remote pull-db https://example.com \\\n" .
                 "    --secret=TOKEN --state-dir=./state --fs-root=./files \\\n" .
                 "    --target-user=root --target-db=wp_local \\\n" .
                 "    --new-site-url=http://localhost:8881\n",
         ],
         "install-server" => [
             "level" => "high",
-            "short" => "Show how to install the Reprint Server plugin on your site",
+            "short" => "Show how to install the Pull and Push on the remote site on your site",
             "description" =>
-                "Prints the download URL for the Reprint Server WordPress plugin that\n" .
+                "Prints the download URL for the Pull and Push WordPress plugin that\n" .
                 "matches this version of reprint, and step-by-step installation\n" .
                 "instructions.\n" .
                 "\n" .
-                "The Reprint Server plugin must be installed on the remote site before\n" .
+                "Pull and Push on the remote site must be installed on the remote site before\n" .
                 "any other reprint command can connect to it.\n",
             "extra" => null,
         ],
         "keygen" => [
             "level" => "low",
             "short" => "Generate a private key for one remote site",
-            "usage" => "reprint keygen <remote-reprint-api-url> --state-dir=DIR [--out=PATH] [--force]",
+            "usage" => "wp migrator remote keygen <site-url> --state-dir=DIR [--out=PATH] [--force]",
             "description" =>
                 "Generates a 3072-bit RSA keypair and stores the private half at\n" .
                 "  <state-dir>/remotes/<md5-of-url>/key.pem   (mode 0600)\n" .
@@ -15854,11 +15854,11 @@ if (
                 "finds it there; no --private-key-path flag is needed.\n" .
                 "\n" .
                 "Prints the public key as one line. Paste it into the site under\n" .
-                "Tools > Reprint Server. Deleting the state directory destroys the\n" .
+                "Migrator > Pull and Push. Deleting the state directory destroys the\n" .
                 "private half, so the enrolled key stops working; the settings page\n" .
                 "can also remove it.\n" .
                 "\n" .
-                "`reprint pull` generates a key itself when none exists, so this\n" .
+                "`wp migrator pull` generates a key itself when none exists, so this\n" .
                 "command is for scripts that want a deterministic first run.\n",
             "extra" => null,
         ],
@@ -15926,13 +15926,13 @@ if (
         "files-diff" => [
             "level" => "low",
             "short" => "Compare local files with the local index",
-            "usage" => "reprint files-diff <remote-reprint-api-url> --state-dir=DIR --fs-root=DIR [--progress=auto|tty|jsonl|compact]",
+            "usage" => "wp migrator remote files-diff <site-url> --state-dir=DIR --fs-root=DIR [--progress=auto|tty|jsonl|compact]",
             "description" =>
                 "Shows which local paths a files-push would send or delete, comparing\n" .
                 "the filesystem root at --fs-root with the local index for this remote\n" .
-                "Reprint API URL. files-pull advances that index after completed local\n" .
+                "site address. files-pull advances that index after completed local\n" .
                 "mutations, and files-push writes it after the target confirms commit.\n" .
-                "Use the same remote Reprint API URL, state directory, and filesystem\n" .
+                "Use the same remote site address, state directory, and filesystem\n" .
                 "root for these commands.\n" .
                 "The output is a local minimized push operation plan before target\n" .
                 "exclusions, not a path-for-path filesystem log. Like files-push, its\n" .
@@ -15952,7 +15952,7 @@ if (
         "files-push" => [
             "level" => "low",
             "short" => "Push one local file tree without database work",
-            "usage" => "reprint files-push <remote-reprint-api-url> --state-dir=DIR --fs-root=DIR (--secret=TOKEN or --private-key-path=PATH, or a key from `reprint keygen`) [--insecure] [--progress=MODE] [--verbose]",
+            "usage" => "wp migrator remote files-push <site-url> --state-dir=DIR --fs-root=DIR (--secret=TOKEN or --private-key-path=PATH, or a key from `wp migrator remote keygen`) [--insecure] [--progress=MODE] [--verbose]",
             "description" =>
                 "Sends the remote document root's local tree beneath --fs-root.\n" .
                 "This is a low-level, files-only command: it performs no database work,\n" .
@@ -16011,7 +16011,7 @@ if (
         "db-push" => [
             "level" => "low",
             "short" => "Stage a full database overwrite for explicit confirmation",
-            "usage" => "reprint db-push <remote-reprint-api-url> --state-dir=DIR (--secret=TOKEN or --private-key-path=PATH, or a key from `reprint keygen`) [options]",
+            "usage" => "wp migrator remote db-push <site-url> --state-dir=DIR (--secret=TOKEN or --private-key-path=PATH, or a key from `wp migrator remote keygen`) [options]",
             "description" => "Streams local database rows into private hosted tables, rewriting URLs on the client without a full dump or frozen snapshot. Prints the table list and review token without changing live tables.\nRequires a host-configured standalone API route. Stop all writers before --commit. Clear caches and verify the site before --cleanup.\n",
             "extra" => "Initial limits: InnoDB target tables, 256 tables, 128 columns per table, 1 MiB per row before and after rewriting. No multisite, foreign keys crossing the selected site boundary, triggers, events, or routines.\n",
         ],
@@ -16042,14 +16042,14 @@ if (
         "pull-metadata" => [
             "level" => "low",
             "short" => "Print local pull metadata for host integrations as JSON",
-            "usage" => "reprint pull-metadata <remote-reprint-api-url> --state-dir=DIR",
+            "usage" => "wp migrator remote pull-metadata <site-url> --state-dir=DIR",
             "description" =>
                 "Prints pull lifecycle, artifact availability, and source-site\n" .
-                "metadata for host integrations. The remote Reprint API URL selects\n" .
+                "metadata for host integrations. The remote site address selects\n" .
                 "the state; no network calls are made.\n",
             "extra" =>
                 "Example:\n" .
-                "  reprint pull-metadata https://example.com --state-dir=./state | jq '.hasCompletedOnce'\n",
+                "  wp migrator remote pull-metadata https://example.com --state-dir=./state | jq '.hasCompletedOnce'\n",
         ],
         "db-apply" => [
             "level" => "low",
@@ -16061,12 +16061,12 @@ if (
                 "target database credentials to state for use by apply-runtime.\n",
             "extra" =>
                 "MySQL example:\n" .
-                "  reprint db-apply https://example.com --state-dir=./state --fs-root=./files \\\n" .
+                "  wp migrator remote db-apply https://example.com --state-dir=./state --fs-root=./files \\\n" .
                 "    --target-user=root --target-db=wp_new \\\n" .
                 "    --rewrite-url https://old.com https://new.com\n" .
                 "\n" .
                 "SQLite example:\n" .
-                "  reprint db-apply https://example.com --state-dir=./state --fs-root=./files \\\n" .
+                "  wp migrator remote db-apply https://example.com --state-dir=./state --fs-root=./files \\\n" .
                 "    --target-engine=sqlite --target-sqlite-path=/path/to/db.sqlite \\\n" .
                 "    --rewrite-url https://old.com https://new.com\n",
         ],
@@ -16074,7 +16074,7 @@ if (
             "level" => "low",
             "short" => "Rewrite URLs in an existing live database",
             "usage" =>
-                "reprint db-rewrite-urls [<remote-reprint-api-url>] " .
+                "wp migrator remote db-rewrite-urls [<site-url>] " .
                 "--state-dir=DIR [options]",
             "description" =>
                 "Rewrites URL-bearing values in a live MySQL or SQLite database,\n" .
@@ -16092,7 +16092,7 @@ if (
                 "database recorded by db-apply.\n" .
                 "\n" .
                 "Example:\n" .
-                "  reprint db-rewrite-urls --state-dir=./state \\\n" .
+                "  wp migrator remote db-rewrite-urls --state-dir=./state \\\n" .
                 "    --rewrite-url https://old.com https://new.com\n",
         ],
         "flat-docroot" => [
@@ -16117,7 +16117,7 @@ if (
             "level" => "low",
             "short" => "Move wp-content entries only the local site has into the pulled tree",
             "usage" =>
-                "reprint merge-wp-content <remote-reprint-api-url> --state-dir=DIR " .
+                "wp migrator remote merge-wp-content <site-url> --state-dir=DIR " .
                 "--fs-root=DIR --from=DIR",
             "description" =>
                 "Folds the wp-content directory named by --from into the one the\n" .
@@ -16132,7 +16132,7 @@ if (
                 "\n" .
                 "Run this before flat-docroot, which replaces the local wp-content\n" .
                 "with a symlink and would otherwise delete whatever only that\n" .
-                "directory held. The remote Reprint API URL selects the state that\n" .
+                "directory held. The remote site address selects the state that\n" .
                 "says where the source site kept wp-content, its plugins, its\n" .
                 "mu-plugins and its uploads; no network calls are made.\n",
             "extra" =>
@@ -16146,14 +16146,14 @@ if (
                 "no release, and push them to the source site later.\n" .
                 "\n" .
                 "Example:\n" .
-                "  reprint merge-wp-content https://example.com --state-dir=./state \\\n" .
+                "  wp migrator remote merge-wp-content https://example.com --state-dir=./state \\\n" .
                 "    --fs-root=./files --from=./site/wp-content\n",
         ],
         "apply-runtime" => [
             "level" => "low",
             "short" => "Generate server config and prepare the site to run locally",
             "usage" =>
-                "reprint apply-runtime <remote-reprint-api-url> --state-dir=DIR " .
+                "wp migrator remote apply-runtime <site-url> --state-dir=DIR " .
                 "(--fs-root=DIR|--flat-document-root=DIR) [options]",
             "description" =>
                 "Generates server configuration (runtime.php, nginx.conf or start.sh)\n" .
@@ -16164,7 +16164,7 @@ if (
                 "Embeds the target database in runtime.php: the one named by the\n" .
                 "--target-* options, or the one db-apply connected to.\n" .
                 "\n" .
-                "The remote Reprint API URL selects the state used to generate the\n" .
+                "The remote site address selects the state used to generate the\n" .
                 "runtime configuration; no network calls are made.\n" .
                 "\n" .
                 "Pass --fs-root for the raw download directory (the remote document_root\n" .
@@ -16211,15 +16211,15 @@ if (
                 "\n" .
                 "Examples:\n" .
                 "  # From raw download directory:\n" .
-                "  reprint apply-runtime https://example.com --state-dir=./state \\\n" .
+                "  wp migrator remote apply-runtime https://example.com --state-dir=./state \\\n" .
                 "    --fs-root=./files --output-dir=./runtime --runtime=php-builtin\n" .
                 "\n" .
                 "  # From flattened layout:\n" .
-                "  reprint apply-runtime https://example.com --state-dir=./state \\\n" .
+                "  wp migrator remote apply-runtime https://example.com --state-dir=./state \\\n" .
                 "    --flat-document-root=./flat --output-dir=./runtime --runtime=php-builtin\n" .
                 "\n" .
                 "  # Point the runtime at a database db-apply did not create:\n" .
-                "  reprint apply-runtime https://example.com --state-dir=./state \\\n" .
+                "  wp migrator remote apply-runtime https://example.com --state-dir=./state \\\n" .
                 "    --flat-document-root=./flat --output-dir=./runtime --runtime=php-builtin \\\n" .
                 "    --target-engine=sqlite --target-sqlite-path=./flat/wp-content/database/.ht.sqlite\n" .
                 "\n" .
@@ -16303,7 +16303,7 @@ if (
         exit($reprint_recover_result['status'] === 'complete' ? 0 : 1);
     }
 
-    // Most commands name the remote Reprint API URL whose state they use.
+    // Most commands name the remote site address whose state they use.
     // db-rewrite-urls can select the only saved remote or use command-local state.
     $reprint_remote_reprint_api_url_argument = $argv[2] ?? null;
     $reprint_has_remote_reprint_api_url =
@@ -16311,8 +16311,8 @@ if (
         && $reprint_remote_reprint_api_url_argument !== ''
         && strpos($reprint_remote_reprint_api_url_argument, '-') !== 0;
     if (!$reprint_has_remote_reprint_api_url && $command !== 'db-rewrite-urls') {
-        fwrite(STDERR, "Error: <remote-reprint-api-url> is required\n");
-        fwrite(STDERR, "Usage: reprint {$command} <remote-reprint-api-url> --state-dir=DIR --fs-root=DIR [options]\n");
+        fwrite(STDERR, "Error: <site-url> is required\n");
+        fwrite(STDERR, "Usage: wp migrator remote {$command} <site-url> --state-dir=DIR --fs-root=DIR [options]\n");
         exit(1);
     }
     $remote_reprint_api_url = $reprint_has_remote_reprint_api_url
@@ -16362,9 +16362,9 @@ if (
     if (!$state_dir) {
         fwrite(STDERR, "Error: --state-dir=DIR is required\n");
         if ($command === 'db-rewrite-urls') {
-            fwrite(STDERR, "Usage: reprint db-rewrite-urls [<remote-reprint-api-url>] --state-dir=DIR [options]\n");
+            fwrite(STDERR, "Usage: wp migrator remote db-rewrite-urls [<site-url>] --state-dir=DIR [options]\n");
         } else {
-            fwrite(STDERR, "Usage: reprint {$command} <remote-reprint-api-url> --state-dir=DIR --fs-root=DIR [options]\n");
+            fwrite(STDERR, "Usage: wp migrator remote {$command} <site-url> --state-dir=DIR --fs-root=DIR [options]\n");
         }
         exit(1);
     }
@@ -16403,7 +16403,7 @@ if (
                     fwrite(
                         STDERR,
                         "Error: --state-dir contains more than one saved remote. "
-                        . "Provide <remote-reprint-api-url> to select one.\n"
+                        . "Provide <site-url> to select one.\n"
                     );
                     exit(1);
                 }
@@ -16421,7 +16421,7 @@ if (
     }
     if (!$filesystem_root && !$flat_document_root && !in_array($command, ["pull-metadata", "keygen", "db-push"], true)) {
         fwrite(STDERR, "Error: --fs-root=DIR is required\n");
-        fwrite(STDERR, "Usage: reprint {$command} <remote-reprint-api-url> --state-dir=DIR --fs-root=DIR [options]\n");
+        fwrite(STDERR, "Usage: wp migrator remote {$command} <site-url> --state-dir=DIR --fs-root=DIR [options]\n");
         exit(1);
     }
     if (!$filesystem_root) {
@@ -16515,7 +16515,7 @@ if (
         );
         // EXIT_AFTER_PULL controls whether we hand control back to
         // the caller after pull returns. Default true: standard CLI
-        // invocations (reprint pull, the phar bin, e2e tests) get the
+        // invocations (wp migrator remote pull, the phar bin, e2e tests) get the
         // exit() they expect. Embedders that include the phar from a
         // web SAPI — the Playground wizard in reprint-import.php is
         // the live case — define EXIT_AFTER_PULL=false so cleanup

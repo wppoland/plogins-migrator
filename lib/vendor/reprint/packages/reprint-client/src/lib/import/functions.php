@@ -6,9 +6,9 @@ use PDO;
 use RuntimeException;
 
 /**
- * Build the fixed WordPress admin Referer for a remote Reprint API URL.
+ * Build the fixed WordPress admin Referer for a remote site address.
  *
- * @param string $remote_reprint_api_url Remote Reprint API URL.
+ * @param string $remote_reprint_api_url Remote site address.
  * @return string|null Same-origin WordPress Media Library URL, or null when
  *                     the remote URL has no scheme or host.
  */
@@ -52,7 +52,7 @@ function unsupported_media_type_error_detail(): string
 		'request\'s media type. Check the target\'s logs for a media-type rejection. Some web application ' .
 		'firewalls also return this status when the source IP address is greylisted and the request asks for a ' .
 		'non-text response. In that case, changing Reprint\'s Accept header to text/html would only replace this ' .
-		'response with a JavaScript challenge. Reprint cannot complete that challenge. If the firewall caused ' .
+		'response with a JavaScript challenge. Migrator cannot complete that challenge. If the firewall caused ' .
 		'it, ask the host to allowlist this machine\'s source IP address.';
 }
 
@@ -88,7 +88,7 @@ function apply_curl_proxy_from_environment($curl_handle): ?string
  * Send the cookie set by ZipWP's "continue with temporary site" button.
  *
  * @param resource|object $curl_handle            cURL handle to configure.
- * @param string          $remote_reprint_api_url Remote Reprint API URL.
+ * @param string          $remote_reprint_api_url Remote site address.
  */
 function apply_zipwp_access_cookie($curl_handle, string $remote_reprint_api_url): void
 {

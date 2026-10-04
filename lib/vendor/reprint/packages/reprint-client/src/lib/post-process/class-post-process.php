@@ -56,7 +56,7 @@ final class PostProcess {
                     $saved_states = glob( $state_directory . '/remotes/*/pull/state.json' );
                     $saved_states = false === $saved_states ? array() : array_values( array_filter( $saved_states, 'is_file' ) );
                     if ( count( $saved_states ) > 1 ) {
-                        throw new RuntimeException( '--state-dir contains more than one saved remote. Provide <remote-reprint-api-url> to select one.' );
+                        throw new RuntimeException( '--state-dir contains more than one saved remote. Provide <site-url> to select one.' );
                     }
                     if ( array() === $saved_states ) {
                         throw new RuntimeException( 'No saved migration state found in --state-dir.' );

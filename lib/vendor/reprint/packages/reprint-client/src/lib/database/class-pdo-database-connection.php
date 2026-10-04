@@ -55,7 +55,7 @@ class PdoDatabaseConnection implements DatabaseConnection {
         if (!flock($handle, LOCK_EX | LOCK_NB)) {
             fclose($handle);
             // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- CLI filesystem error, not HTML.
-            throw new RuntimeException('Another Reprint import is using the SQLite database: ' . $file);
+            throw new RuntimeException('Another transfer import is using the SQLite database: ' . $file);
         }
         $this->sqlite_import_lock = $handle;
     }

@@ -68,7 +68,7 @@ class MultipartPushStreamClient
     /** Maximum JSON response bytes retained from the target. */
     private const MAX_RESPONSE_BYTES = 1024 * 1024;
 
-    /** @var string Remote Reprint API URL used for every signed request target. */
+    /** @var string Remote site address used for every signed request target. */
     private string $remote_reprint_api_url;
 
     /** @var bool Whether HTTPS certificate checks are disabled for this client. */
@@ -178,7 +178,7 @@ class MultipartPushStreamClient
      * @param array<string,mixed> $options {
      *     Transport, authentication, and limit options.
      *
-     *     @type string $remote_reprint_api_url Required remote Reprint API URL. Must use HTTPS
+     *     @type string $remote_reprint_api_url Required remote site address. Must use HTTPS
      *         unless `allow_http` or `insecure` is true, or REPRINT_INSECURE_TLS=1 is set.
      *     @type array<string,string> $request_context_headers Required non-empty
      *         header-name-to-value map selected by ImportClient.
@@ -186,7 +186,7 @@ class MultipartPushStreamClient
      *         exact method and request URL.
      *     @type bool $insecure Allow HTTP and skip HTTPS certificate checks.
      *         Default false; REPRINT_INSECURE_TLS=1 also enables this.
-     *     @type bool $allow_http Whether to permit an explicit HTTP remote Reprint API URL.
+     *     @type bool $allow_http Whether to permit an explicit HTTP remote site address.
      *         Default false.
      *     @type PushRequestSizer $request_sizer Request-body sizing state to
      *         reuse. Defaults to a new sizer.
@@ -210,7 +210,7 @@ class MultipartPushStreamClient
     {
         if (PHP_VERSION_ID < 80100) {
             throw new RuntimeException(
-                'reprint push requires PHP 8.1 or newer: streaming request bodies need CURL_READFUNC_PAUSE, '
+                'wp migrator remote push requires PHP 8.1 or newer: streaming request bodies need CURL_READFUNC_PAUSE, '
                 . 'which older PHP curl bindings interpret as end-of-body. See https://github.com/WordPress/reprint/issues/327.'
             );
         }
@@ -227,7 +227,7 @@ class MultipartPushStreamClient
         $allow_http = $options['allow_http'] ?? false;
         if (!is_bool($allow_http) || ($scheme !== 'https' && $scheme !== 'http') || ($scheme === 'http' && !$allow_http && !$this->insecure)) {
             throw new InvalidArgumentException(
-                'Push remote Reprint API URL must be https://, unless allow_http is true, insecure is true, or REPRINT_INSECURE_TLS=1 is set for an explicit http:// remote Reprint API URL.'
+                'Push remote site address must be https://, unless allow_http is true, insecure is true, or REPRINT_INSECURE_TLS=1 is set for an explicit http:// remote site address.'
             );
         }
         $envelope_signer = $options['envelope_signer'] ?? null;
@@ -715,8 +715,8 @@ class MultipartPushStreamClient
                 'status' => 'failed',
                 'reason' => 'redirected',
                 'detail' => $redirect_url === ''
-                    ? 'The remote redirected the upload. Use its final URL as the remote Reprint API URL.'
-                    : 'The remote redirected to ' . $redirect_url . '. Use that address as the remote Reprint API URL.',
+                    ? 'The remote redirected the upload. Use its final URL as the remote site address.'
+                    : 'The remote redirected to ' . $redirect_url . '. Use that address as the remote site address.',
                 'response' => null,
                 'parts_sent' => $this->parts_sent,
                 'body_bytes_sent' => $this->body_bytes_sent,
@@ -925,7 +925,7 @@ class MultipartPushStreamClient
             return [
                 'status' => 'failed',
                 'reason' => 'redirected',
-                'detail' => 'The remote redirected to ' . ($redirect_url === '' ? 'another address' : $redirect_url) . '. Use that address as the remote Reprint API URL.',
+                'detail' => 'The remote redirected to ' . ($redirect_url === '' ? 'another address' : $redirect_url) . '. Use that address as the remote site address.',
                 'response' => null,
                 'parts_sent' => 0,
                 'body_bytes_sent' => 0,

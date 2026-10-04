@@ -30,7 +30,7 @@ Back up daily or weekly and keep as many copies as you choose. Each scheduled ba
 
 **Pull and push between live sites**
 
-Copy a whole site to another server over HTTP, with no archive to download or upload and no SSH or FTP. On the site you are copying, switch on Migrator > Pull and Push and set a connection token. On the destination, run `wp migrator pull https://your-old-site.example --secret=<token>`. The files and the database travel in small pieces, an interrupted pull carries on where it stopped when you run it again, and the next run fetches only what changed. Addresses are rewritten while the database streams in, the database keeps its exact bytes so accented text survives, and the old host's own platform plugins and server-bound drop-ins are left behind. `wp migrator push` sends the destination's file changes back. This runs on the bundled [Reprint](https://github.com/WordPress/reprint) engine from WordPress.org contributors.
+Copy a whole site to another server over HTTP, with no archive to download or upload and no SSH or FTP. On the site you are copying, switch on Migrator > Pull and Push and set a connection token. On the destination, run `wp migrator pull https://your-old-site.example --secret=<token>`. The files and the database travel in small pieces, an interrupted pull carries on where it stopped when you run it again, and the next run fetches only what changed. Addresses are rewritten while the database streams in, the database keeps its exact bytes so accented text survives, and the old host's own platform plugins and server-bound drop-ins are left behind. `wp migrator push` sends the destination's file changes back.
 
 **A few things worth knowing**
 
@@ -51,7 +51,7 @@ For large sites where a browser request would time out, every job also runs from
 * In-browser export in short resumable steps with a progress bar and a direct download, plus drag-and-drop restore that uploads in 4 MB pieces
 * Scheduled backups, daily or weekly, with a retention rule
 * Pull a live site to another server over HTTP with `wp migrator pull`: resumable, and the next run fetches only the changes
-* Push file changes back with `wp migrator push`, and every other Reprint command through `wp migrator reprint`
+* Push file changes back with `wp migrator push`, and run the low-level transfer commands through `wp migrator remote`
 * Off-site copies to an FTP or FTPS server, or to a local or mounted folder
 * WP-CLI `export`, `import` and `replace` commands for sites too large for the browser
 * A snapshot of your database before every restore. If the database import or the URL rewrite fails, the previous database is put back automatically. If a later step fails, such as extracting files, the site is left partly restored and the message gives the path of the previous database dump to restore by hand
@@ -180,15 +180,15 @@ It is Migrator's own streaming format, not a ZIP. Restore it with Migrator, or c
 
 Only where you tell it to. Migrator creates no account and calls no service of ours. Backups stay in `wp-content/migrator-backups` unless you add an off-site destination (an FTP or FTPS server, or a folder outside the web root), and then a copy goes there. Scheduled backups older than your retention setting are deleted automatically.
 
-If you switch on Pull and Push, a site holding your connection token or an enrolled key can download this site's files and database, user password hashes included, from `?reprint-api`. It is off by default, nothing is answered without that credential, and you can switch it off again when the move is done.
+If you switch on Pull and Push, a site holding your connection token or an enrolled key can download this site's files and database, user password hashes included. It is off by default, nothing is answered without that credential, and you can switch it off again when the move is done.
 
 = How do I copy a live site to another server without downloading a backup? =
 
-Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push and set a connection token under Tools > Reprint Server. On the new one, run `wp migrator pull https://old-site.example --secret=<token>` with WP-CLI. The new site keeps its own WordPress core, wp-config.php and table prefix (the prefixes must match), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
+Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push and set a connection token there. On the new one, run `wp migrator pull https://old-site.example --secret=<token>` with WP-CLI. The new site keeps its own WordPress core, wp-config.php and table prefix (the prefixes must match), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
 
 = Can I send changes back to the original site? =
 
-Files, yes: `wp migrator push https://old-site.example --secret=<token>` sends what changed since the pull. The old site must grant push access on its Reprint Server screen, and its server needs a writable folder beside the web root on the same disk, where Reprint stages the upload before swapping it in. The database is pushed only to hosts that run the Reprint API on a standalone route; `wp migrator reprint db-push --help` explains it.
+Files, yes: `wp migrator push https://old-site.example --secret=<token>` sends what changed since the pull. The old site must grant push access on its Pull and Push screen, and its server needs a writable folder beside the web root on the same disk, where the upload is staged before it is swapped in. The database is pushed only to hosts that serve the transfer API on a standalone route; `wp migrator remote db-push --help` explains it.
 
 = Where are my backups stored? =
 
@@ -214,14 +214,6 @@ Comparing free editions:
 
 See the grid above for all five competitors. Vendor details as of July 2026.
 
-== Third-party code ==
-
-Pull and Push bundles, unmodified apart from translation domains, these GPL-2.0-or-later libraries in `lib/vendor/reprint`:
-
-* [Reprint](https://github.com/WordPress/reprint) server and client, by WordPress contributors
-* The MySQL parser from [SQLite Database Integration](https://github.com/WordPress/sqlite-database-integration), by WordPress contributors
-* The wp-php-toolkit components the client depends on (data-liberation, html, encoding, filesystem, http-client, bytestream, xml)
-
 == Screenshots ==
 
 1. The Migrator screen: create a backup with presets and exclusion options, alongside restore and your saved backups.
@@ -234,9 +226,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 == Changelog ==
 
 = 1.5.0 =
-* Added: Pull and Push. Copy a live site to another server over HTTP with `wp migrator pull`, resume an interrupted pull, fetch only the changes on the next run, and send file changes back with `wp migrator push`. Built on the bundled Reprint engine (WordPress/reprint 0.10.13). Off until you switch it on.
-* Added: `wp migrator reprint` runs any Reprint command, such as keygen, files-stats or db-push.
-* Added: a pull checks the disk space it needs before it starts, leaves the old host's platform plugins and server-bound drop-ins (object cache, page cache, database driver) behind, and passes the database password to the engine outside the process list.
+* Added: Pull and Push. Copy a live site to another server over HTTP with `wp migrator pull`, resume an interrupted pull, fetch only the changes on the next run, and send file changes back with `wp migrator push`. Off until you switch it on.
+* Added: `wp migrator remote` runs the low-level transfer commands, such as keygen, files-stats or db-push.
+* Added: a pull checks the disk space it needs before it starts, leaves the old host's platform plugins and server-bound drop-ins (object cache, page cache, database driver) behind, and keeps the database password out of the process list.
 * Changed: server-to-server transfer is now part of the free edition.
 
 

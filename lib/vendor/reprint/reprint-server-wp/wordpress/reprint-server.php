@@ -2,7 +2,7 @@
 
 namespace WordPress\Reprint\Server\Plugin;
 
-/** Bundled WordPress administrator adapter for Reprint Server. */
+/** Bundled WordPress administrator adapter for Pull and Push access. */
 
 class SettingsPage {
 
@@ -40,8 +40,8 @@ class SettingsPage {
             return;
         }
         $this->page_hook = add_management_page(
-            __('Reprint Server', 'plogins-migrator'),
-            __('Reprint Server', 'plogins-migrator'),
+            __('Pull and Push access', 'plogins-migrator'),
+            __('Pull and Push access', 'plogins-migrator'),
             'manage_options',
             'reprint-server',
             [$this, 'render_admin_page']
@@ -52,8 +52,8 @@ class SettingsPage {
     public function add_network_admin_menu(): void {
         $this->page_hook = add_submenu_page(
             'settings.php',
-            __('Reprint Server', 'plogins-migrator'),
-            __('Reprint Server', 'plogins-migrator'),
+            __('Pull and Push access', 'plogins-migrator'),
+            __('Pull and Push access', 'plogins-migrator'),
             'manage_network_options',
             'reprint-server',
             [$this, 'render_network_admin_page']
@@ -66,9 +66,9 @@ class SettingsPage {
             return;
         }
         $configuration = get_configuration_state();
-        echo '<div class="wrap"><h1>' . esc_html__('Reprint Server', 'plogins-migrator') . '</h1>';
+        echo '<div class="wrap"><h1>' . esc_html__('Pull and Push access', 'plogins-migrator') . '</h1>';
         echo '<p>' . esc_html__(
-            'This network token can pull any site in this network. Use the selected site’s home URL followed by ?reprint-api. Each pull creates a separate one-site network. Push is not supported.',
+            'This network token can pull any site in this network. Use the selected site’s home URL. Each pull creates a separate one-site network. Push is not supported.',
             'plogins-migrator'
         ) . '</p>';
         $this->render_push_access_notice();
@@ -192,7 +192,7 @@ class SettingsPage {
     /** Apply one push-access change and redirect back to the bundled page. */
     public function handle_push_access_save(): void {
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to manage Reprint Server.', 'plogins-migrator'));
+            wp_die(esc_html__('You are not allowed to manage Pull and Push access.', 'plogins-migrator'));
         }
 
         check_admin_referer('reprint_server_save_push_access');
@@ -250,7 +250,7 @@ class SettingsPage {
     private function require_manage_capability(): void {
         $capability = is_multisite() ? 'manage_network_options' : 'manage_options';
         if (!current_user_can($capability)) {
-            wp_die(esc_html__('You are not allowed to manage Reprint Server.', 'plogins-migrator'));
+            wp_die(esc_html__('You are not allowed to manage Pull and Push access.', 'plogins-migrator'));
         }
     }
 
@@ -275,7 +275,7 @@ class SettingsPage {
 
         $configuration = get_configuration_state();
         $connection_token = get_connection_token();
-        $remote_reprint_api_url = home_url('?reprint-api');
+        $remote_reprint_api_url = home_url('?migrator-api');
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -318,11 +318,11 @@ class SettingsPage {
                 <?php endif; ?>
 
                 <hr />
-                <h2><?php echo esc_html__('Remote Reprint API URL', 'plogins-migrator'); ?></h2>
+                <h2><?php echo esc_html__('Address for the pulling site', 'plogins-migrator'); ?></h2>
                 <p>
                 <?php
                 echo esc_html__(
-                    'Use this URL when another tool asks for the remote Reprint API URL.',
+                    'Use this URL when another tool asks for the address of this site.',
                     'plogins-migrator'
                 );
                 ?>
@@ -334,7 +334,7 @@ class SettingsPage {
                        readonly />
                 <button type="button"
                         class="button reprint-server-copy-url"
-                        data-copied-message="<?php echo esc_attr__('Remote Reprint API URL copied.', 'plogins-migrator'); ?>">
+                        data-copied-message="<?php echo esc_attr__('Address for the pulling site copied.', 'plogins-migrator'); ?>">
                     <?php echo esc_html__('Copy', 'plogins-migrator'); ?>
                 </button>
             <?php endif; ?>
@@ -424,7 +424,7 @@ class SettingsPage {
             <p class="description">
             <?php
             echo esc_html__(
-                'Paste the public key printed by "reprint keygen" or by "reprint pull". A PEM block or the single line are both accepted.',
+                'Paste the public key printed by "wp migrator remote keygen" or by "wp migrator pull". A PEM block or the single line are both accepted.',
                 'plogins-migrator'
             );
             ?>
@@ -579,12 +579,12 @@ class SettingsPage {
             'enroll_duplicate' => ['info', __('That public key is already enrolled.', 'plogins-migrator')],
             'enroll_file_override' => ['error', __('public-keys.php is active. Edit that file to change enrolled keys.', 'plogins-migrator')],
             'enroll_storage_failure' => ['error', __('Failed to save the public key.', 'plogins-migrator')],
-            'enroll_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'plogins-migrator')],
+            'enroll_runtime_missing' => ['error', __('The Pull and Push runtime is missing. Reinstall Migrator.', 'plogins-migrator')],
             'key_removed' => ['success', __('Public key removed.', 'plogins-migrator')],
             'remove_unknown' => ['error', __('That key is not enrolled.', 'plogins-migrator')],
             'remove_file_override' => ['error', __('public-keys.php is active. Edit that file to change enrolled keys.', 'plogins-migrator')],
             'remove_storage_failure' => ['error', __('Failed to remove the public key.', 'plogins-migrator')],
-            'remove_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'plogins-migrator')],
+            'remove_runtime_missing' => ['error', __('The Pull and Push runtime is missing. Reinstall Migrator.', 'plogins-migrator')],
             'key_push_saved' => ['success', __('Push access for the key updated.', 'plogins-migrator')],
             'key_push_unchanged' => ['success', __('Push access for the key was already up to date.', 'plogins-migrator')],
             'key_push_unknown' => ['error', __('That key is not enrolled.', 'plogins-migrator')],
@@ -593,7 +593,7 @@ class SettingsPage {
             'key_push_managed' => ['info', __('Push access is managed by your hosting provider.', 'plogins-migrator')],
             'key_push_file_override' => ['error', __('public-keys.php is active. Push grants cannot be stored for file-provided keys.', 'plogins-migrator')],
             'key_push_storage_failure' => ['error', __('Failed to save push access for the key.', 'plogins-migrator')],
-            'key_push_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'plogins-migrator')],
+            'key_push_runtime_missing' => ['error', __('The Pull and Push runtime is missing. Reinstall Migrator.', 'plogins-migrator')],
         ];
         if (!isset($notices[$result])) {
             return;

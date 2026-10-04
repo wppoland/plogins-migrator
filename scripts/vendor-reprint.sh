@@ -73,6 +73,61 @@ find "${DEST}" \( -name 'phpunit.xml*' -o -name 'phpstan*.neon*' -o -name 'phpcs
 find "${DEST}/reprint-server-wp" -name '*.php' -not -path "${DEST}/reprint-server-wp/vendor/*" -print0 \
     | xargs -0 perl -0pi -e "s/(\b(?:__|_e|esc_html__|esc_html_e|esc_attr__|esc_attr_e|_x|_n|esc_html_x|esc_attr_x)\(\s*(?:'(?:[^'\\\\]|\\\\.)*'\s*,\s*)+)'reprint'(\s*\))/\\1'plogins-migrator'\\2/g"
 
+# The credentials screen and the endpoint's messages are part of Migrator's
+# Pull and Push feature, so they speak about Migrator, not the library.
+perl -pi -e '
+    s/the remote Reprint API URL/the address of this site/g;
+    s/Remote Reprint API URL/Address for the pulling site/g;
+    s/"reprint keygen" or by "reprint pull"/"wp migrator remote keygen" or by "wp migrator pull"/g;
+    s/Tools > Reprint Server/Migrator > Pull and Push/g;
+    s/Reprint Server API (error|exception): /Pull and Push API $1: /g;
+    s/Run composer install in (the plugin directory|reprint-server-wp) or (reinstall|rebuild) the release package\./Reinstall Migrator./g;
+    s/home URL followed by \?reprint-api/home URL/g;
+    s/home_url\(\x27\?reprint-api\x27\)/home_url(\x27?migrator-api\x27)/g;
+    s/Reprint Server runtime/Pull and Push runtime/g;
+    s/manage Reprint Server/manage Pull and Push access/g;
+    s/Reprint Server/Pull and Push access/g;
+' "${DEST}/reprint-server-wp/lib.php" "${DEST}"/reprint-server-wp/wordpress/*.php
+
+# The client's terminal messages name the library and its own CLI; inside
+# Migrator they point at Migrator's screen and wp migrator commands instead.
+find "${DEST}/packages/reprint-client/src" "${DEST}/packages/reprint-client/bin" -type f \( -name '*.php' -o -name 'reprint-client' \) -print0 \
+    | xargs -0 perl -pi -e '
+        s/Tools (?:>|\x{2192}|\xe2\x86\x92) Reprint Server/Migrator > Pull and Push/g;
+        s/Run `php reprint\.phar install-server` for setup instructions\./Switch on Migrator > Pull and Push on the source site./g;
+        s/php reprint\.phar /wp migrator remote /g;
+        s/`reprint (pull|push)`/`wp migrator $1`/g;
+        s/`reprint ([a-z-]+)/`wp migrator remote $1/g;
+        s/"reprint (keygen|pull)"/"wp migrator remote $1"/g;
+        s/Usage: reprint /Usage: wp migrator remote /g;
+        s/(["\x27(])reprint ([a-z]+(?:-[a-z]+)*)\b/$1wp migrator remote $2/g;
+        s/<remote-reprint-api-url>/<site-url>/g;
+        s/^(\s*["\x27]?\s*)reprint (pull|push|keygen|preflight|files-[a-z]+|db-[a-z-]+|pull-[a-z]+|flat-docroot|merge-wp-content|apply-runtime|post-process|recover|install-server) /$1wp migrator remote $2 /g;
+        s/remote Reprint API URL/remote site address/g;
+        s/Reprint API URL/site address/g;
+        s/(?:The )?Reprint Server plugin/Pull and Push on the remote site/g;
+        s/remote Reprint Server/Migrator on the remote site/g;
+        s/Reprint Server/Pull and Push/g;
+        s/Reprint client/Migrator/g;
+        s/Reprint version/Migrator version/g;
+        s/\bReprint (does|cannot|can|will|could|needs|uses|saves|stores|keeps|found|expects|requires|reads)\b/Migrator $1/g;
+        s/the Reprint state directory/the transfer state directory/g;
+        s/(the|held|Another) Reprint (process|import)/$1 transfer $2/g;
+        s/stopped Reprint\./stopped the transfer./g;
+        s/Uses Reprint/Uses Migrator/g;
+        s/as Reprint\./as Migrator./g;
+        s/previous Reprint build/previous Migrator version/g;
+        s/"Reprint\/1\.0"/"Migrator\/1.5"/g;
+    '
+
+# db-apply takes the target password only as --target-pass, which every user on
+# the server can read in the process list (upstream issue #24). Let it fall back
+# to MYSQL_PASSWORD, as db-pull already does.
+perl -0pi -e 's/\$options\["target_pass"\] \?\? null,/\$options["target_pass"] ?? (false !== getenv("MYSQL_PASSWORD") ? getenv("MYSQL_PASSWORD") : null),/' \
+    "${DEST}/packages/reprint-client/src/import.php"
+grep -q 'getenv("MYSQL_PASSWORD") ? getenv' "${DEST}/packages/reprint-client/src/import.php" \
+    || { echo "MYSQL_PASSWORD fallback did not apply; check import.php" >&2; exit 1; }
+
 # Upstream ships its own plugin header in reprint-server-wp/index.php. Inside
 # Migrator that file is included, never activated, so the header only confuses
 # WordPress's plugin scanner when someone unzips us one level too deep.

@@ -38,11 +38,11 @@ final class Client
      */
     public static function apiUrl(string $url): string
     {
-        if (str_contains($url, 'reprint-api')) {
+        if (str_contains($url, Source::QUERY_VAR) || str_contains($url, 'reprint-api')) {
             return $url;
         }
 
-        return $url . (str_contains($url, '?') ? '&' : '?') . 'reprint-api';
+        return $url . (str_contains($url, '?') ? '&' : '?') . Source::QUERY_VAR;
     }
 
     /**
@@ -55,7 +55,7 @@ final class Client
     {
         $host = (string) wp_parse_url($url, PHP_URL_HOST);
         $slug = sanitize_key($host) . '-' . substr(md5(self::apiUrl(untrailingslashit($url))), 0, 8);
-        $base = $this->workspace->path('reprint/' . $slug);
+        $base = $this->workspace->path('remote/' . $slug);
 
         return [
             'state' => $base . '/state',
@@ -79,7 +79,7 @@ final class Client
         // phpcs:ignore Generic.PHP.ForbiddenFunctions.Found -- WP-CLI only: the client is a separate command-line program.
         $process = proc_open($command, [STDIN, STDOUT, STDERR], $pipes, null, array_merge(getenv(), $env));
         if (! is_resource($process)) {
-            throw new \RuntimeException('Could not start the Reprint client. proc_open is disabled on this server.');
+            throw new \RuntimeException('Could not start the transfer process. proc_open is disabled on this server.');
         }
 
         return proc_close($process);
@@ -97,7 +97,7 @@ final class Client
         // phpcs:ignore Generic.PHP.ForbiddenFunctions.Found -- WP-CLI only, see run().
         $process = proc_open($command, [1 => ['pipe', 'w'], 2 => STDERR], $pipes);
         if (! is_resource($process)) {
-            throw new \RuntimeException('Could not start the Reprint client. proc_open is disabled on this server.');
+            throw new \RuntimeException('Could not start the transfer process. proc_open is disabled on this server.');
         }
         $out = (string) stream_get_contents($pipes[1]);
         fclose($pipes[1]);

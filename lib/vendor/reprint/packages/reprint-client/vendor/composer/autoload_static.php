@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInita2a266828566daf810453cfa5c98e96c
+class ComposerStaticInit19a2b22c11a51e29154a933870d41236
 {
     public static $files = array (
         'c8f84af3c24cff85f963d6926f4b2d42' => __DIR__ . '/..' . '/wp-php-toolkit/filesystem/functions.php',
@@ -350,7 +350,7 @@ class ComposerStaticInita2a266828566daf810453cfa5c98e96c
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->classMap = ComposerStaticInita2a266828566daf810453cfa5c98e96c::$classMap;
+            $loader->classMap = ComposerStaticInit19a2b22c11a51e29154a933870d41236::$classMap;
 
         }, null, ClassLoader::class);
     }
