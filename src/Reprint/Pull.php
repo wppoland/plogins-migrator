@@ -143,12 +143,11 @@ final class Pull
                 array_push($args, '--rewrite-url', $old, untrailingslashit($target[$to]));
             }
         }
-        if ('' !== (string) DB_PASSWORD) {
-            $args[] = '--target-pass=' . DB_PASSWORD;
-        }
 
         ($this->log)('Replacing the database and rewriting addresses…');
-        $code = $this->client->run($args);
+        // Through the environment, not --target-pass: an argument shows in the
+        // process list to every user on the server (Reprint issue #24).
+        $code = $this->client->run($args, ['MYSQL_PASSWORD' => (string) DB_PASSWORD]);
         if (0 !== $code) {
             ($this->log)('The import failed, restoring the previous database…');
             if (! $importer->restoreDatabase($rollback)) {
