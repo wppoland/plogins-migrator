@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Rebuild lib/reprint from WordPress/reprint at a pinned tag plus our patch series.
+# Rebuild lib/vendor/reprint from WordPress/reprint at a pinned tag plus our patch series.
 #
 # Why not Composer: the Packagist build of wp-php-toolkit/reprint-client 0.10.13
 # fatals on its first line, it loads the MySQL parser from the
 # sqlite-database-integration git submodule, which the Packagist archive does
 # not contain. So we vendor from the git tag, submodule included.
 #
-# Layout under lib/reprint mirrors the upstream repo root, because the client
+# It sits under a folder named vendor because it is a third-party library kept
+# as upstream wrote it, and Plugin Check skips vendor folders for that reason.
+#
+# Layout under lib/vendor/reprint mirrors the upstream repo root, because the client
 # finds the parser by walking up from its own path:
 #   reprint-server-wp/                 source role (runs inside WordPress)
 #   packages/reprint-client/           target role (runs as a separate PHP process)
@@ -23,7 +26,7 @@ set -euo pipefail
 REPRINT_TAG="${REPRINT_TAG:-v0.10.13}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PATCHES="${ROOT}/scripts/reprint-patches"
-DEST="${ROOT}/lib/reprint"
+DEST="${ROOT}/lib/vendor/reprint"
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
 
@@ -61,6 +64,15 @@ rsync -a --exclude tests \
     "${DEST}/lib/sqlite-database-integration/packages/mysql-on-sqlite/"
 cp LICENSE "${DEST}/LICENSE"
 
+# Development files have no place in a plugin package (wp.org rejects
+# phpunit.xml as "application files").
+find "${DEST}" \( -name 'phpunit.xml*' -o -name 'phpstan*.neon*' -o -name 'phpcs.xml*' -o -name '.editorconfig' \) -delete
+
+# The server's admin screen ships under Migrator, so its strings belong to
+# Migrator's text domain or they can never be translated.
+find "${DEST}/reprint-server-wp" -name '*.php' -not -path "${DEST}/reprint-server-wp/vendor/*" -print0 \
+    | xargs -0 perl -0pi -e "s/(\b(?:__|_e|esc_html__|esc_html_e|esc_attr__|esc_attr_e|_x|_n|esc_html_x|esc_attr_x)\(\s*(?:'(?:[^'\\\\]|\\\\.)*'\s*,\s*)+)'reprint'(\s*\))/\\1'plogins-migrator'\\2/g"
+
 # Upstream ships its own plugin header in reprint-server-wp/index.php. Inside
 # Migrator that file is included, never activated, so the header only confuses
 # WordPress's plugin scanner when someone unzips us one level too deep.
@@ -72,4 +84,4 @@ perl -0pi -e 's/^ \* (Plugin Name|Plugin URI|Version|Requires PHP|Author|License
     [ -f "${PATCHES}/SERIES" ] && sed 's/^/  patch: /' "${PATCHES}/SERIES"
 } > "${DEST}/VERSION"
 
-echo "lib/reprint rebuilt from ${REPRINT_TAG}: $(du -sh "${DEST}" | cut -f1)"
+echo "lib/vendor/reprint rebuilt from ${REPRINT_TAG}: $(du -sh "${DEST}" | cut -f1)"

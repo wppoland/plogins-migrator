@@ -40,8 +40,8 @@ class SettingsPage {
             return;
         }
         $this->page_hook = add_management_page(
-            __('Reprint Server', 'reprint'),
-            __('Reprint Server', 'reprint'),
+            __('Reprint Server', 'plogins-migrator'),
+            __('Reprint Server', 'plogins-migrator'),
             'manage_options',
             'reprint-server',
             [$this, 'render_admin_page']
@@ -52,8 +52,8 @@ class SettingsPage {
     public function add_network_admin_menu(): void {
         $this->page_hook = add_submenu_page(
             'settings.php',
-            __('Reprint Server', 'reprint'),
-            __('Reprint Server', 'reprint'),
+            __('Reprint Server', 'plogins-migrator'),
+            __('Reprint Server', 'plogins-migrator'),
             'manage_network_options',
             'reprint-server',
             [$this, 'render_network_admin_page']
@@ -66,10 +66,10 @@ class SettingsPage {
             return;
         }
         $configuration = get_configuration_state();
-        echo '<div class="wrap"><h1>' . esc_html__('Reprint Server', 'reprint') . '</h1>';
+        echo '<div class="wrap"><h1>' . esc_html__('Reprint Server', 'plogins-migrator') . '</h1>';
         echo '<p>' . esc_html__(
             'This network token can pull any site in this network. Use the selected site’s home URL followed by ?reprint-api. Each pull creates a separate one-site network. Push is not supported.',
-            'reprint'
+            'plogins-migrator'
         ) . '</p>';
         $this->render_push_access_notice();
         $this->render_configuration_status($configuration);
@@ -79,7 +79,7 @@ class SettingsPage {
         $this->render_connection_token_field();
         submit_button();
         echo '</form>';
-        echo '<hr /><h2>' . esc_html__('Public keys', 'reprint') . '</h2>';
+        echo '<hr /><h2>' . esc_html__('Public keys', 'plogins-migrator') . '</h2>';
         $this->render_public_keys_section($configuration);
         echo '</div>';
     }
@@ -87,7 +87,7 @@ class SettingsPage {
     /** Validate network capability and nonce before updating the network token. */
     public function handle_network_token_save(): void {
         if (!is_multisite() || !current_user_can('manage_network_options')) {
-            wp_die(esc_html__('You are not allowed to manage this network.', 'reprint'));
+            wp_die(esc_html__('You are not allowed to manage this network.', 'plogins-migrator'));
         }
         check_admin_referer('reprint_server_save_network_token');
         $connection_token = isset($_POST[CONNECTION_TOKEN_OPTION]) && is_string($_POST[CONNECTION_TOKEN_OPTION])
@@ -95,7 +95,7 @@ class SettingsPage {
             : '';
         $result = change_connection_token($connection_token);
         if ($result === 'storage_failure') {
-            wp_die(esc_html__('The network connection token could not be saved.', 'reprint'));
+            wp_die(esc_html__('The network connection token could not be saved.', 'plogins-migrator'));
         }
         wp_safe_redirect(network_admin_url('settings.php?page=reprint-server'));
         exit;
@@ -105,13 +105,13 @@ class SettingsPage {
     public function register_settings_fields(): void {
         add_settings_section(
             'reprint_server_connection',
-            __('Connection token', 'reprint'),
+            __('Connection token', 'plogins-migrator'),
             [$this, 'render_connection_section'],
             'reprint-server'
         );
         add_settings_field(
             CONNECTION_TOKEN_OPTION,
-            __('Connection token', 'reprint'),
+            __('Connection token', 'plogins-migrator'),
             [$this, 'render_connection_token_field'],
             'reprint-server',
             'reprint_server_connection',
@@ -126,7 +126,7 @@ class SettingsPage {
             : admin_url('tools.php?page=reprint-server');
         array_unshift(
             $links,
-            '<a href="' . esc_url($url) . '">' . esc_html__('Settings', 'reprint') . '</a>'
+            '<a href="' . esc_url($url) . '">' . esc_html__('Settings', 'plogins-migrator') . '</a>'
         );
         return $links;
     }
@@ -157,7 +157,7 @@ class SettingsPage {
     public function render_connection_section(): void {
         echo '<p>' . esc_html__(
             'Paste the connection token supplied by your tool, or generate a random token and use it in your tool. Save Changes to apply the token.',
-            'reprint'
+            'plogins-migrator'
         ) . '</p>';
     }
 
@@ -175,16 +175,16 @@ class SettingsPage {
                 class="button reprint-server-toggle-token"
                 aria-controls="reprint_server_connection_token"
                 aria-pressed="false"
-                aria-label="<?php echo esc_attr__('Show connection token', 'reprint'); ?>"
-                data-show-label="<?php echo esc_attr__('Show connection token', 'reprint'); ?>"
-                data-hide-label="<?php echo esc_attr__('Hide connection token', 'reprint'); ?>">
+                aria-label="<?php echo esc_attr__('Show connection token', 'plogins-migrator'); ?>"
+                data-show-label="<?php echo esc_attr__('Show connection token', 'plogins-migrator'); ?>"
+                data-hide-label="<?php echo esc_attr__('Hide connection token', 'plogins-migrator'); ?>">
             <span class="dashicons dashicons-visibility" aria-hidden="true"></span>
         </button>
         <button type="button"
                 class="button reprint-server-generate-token"
                 aria-controls="reprint_server_connection_token"
-                data-generated-message="<?php echo esc_attr__('Random connection token generated. Save Changes to apply it.', 'reprint'); ?>">
-            <?php echo esc_html__('Generate new token', 'reprint'); ?>
+                data-generated-message="<?php echo esc_attr__('Random connection token generated. Save Changes to apply it.', 'plogins-migrator'); ?>">
+            <?php echo esc_html__('Generate new token', 'plogins-migrator'); ?>
         </button>
         <?php
     }
@@ -192,7 +192,7 @@ class SettingsPage {
     /** Apply one push-access change and redirect back to the bundled page. */
     public function handle_push_access_save(): void {
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to manage Reprint Server.', 'reprint'));
+            wp_die(esc_html__('You are not allowed to manage Reprint Server.', 'plogins-migrator'));
         }
 
         check_admin_referer('reprint_server_save_push_access');
@@ -250,7 +250,7 @@ class SettingsPage {
     private function require_manage_capability(): void {
         $capability = is_multisite() ? 'manage_network_options' : 'manage_options';
         if (!current_user_can($capability)) {
-            wp_die(esc_html__('You are not allowed to manage Reprint Server.', 'reprint'));
+            wp_die(esc_html__('You are not allowed to manage Reprint Server.', 'plogins-migrator'));
         }
     }
 
@@ -283,7 +283,7 @@ class SettingsPage {
             <?php
             echo esc_html__(
                 'Allow an external tool to download your site\'s database and files.',
-                'reprint'
+                'plogins-migrator'
             );
             ?>
             </p>
@@ -299,18 +299,18 @@ class SettingsPage {
             </form>
 
             <hr />
-            <h2><?php echo esc_html__('Public keys', 'reprint'); ?></h2>
+            <h2><?php echo esc_html__('Public keys', 'plogins-migrator'); ?></h2>
             <?php $this->render_public_keys_section($configuration); ?>
 
             <?php if ($configuration['is_configured']): ?>
                 <?php if ($connection_token !== null && $connection_token !== ''): ?>
                     <hr />
-                    <h2><?php echo esc_html__('Push access', 'reprint'); ?></h2>
+                    <h2><?php echo esc_html__('Push access', 'plogins-migrator'); ?></h2>
                     <p>
                     <?php
                     echo esc_html__(
                         'You do not need push access when moving this site to another host.',
-                        'reprint'
+                        'plogins-migrator'
                     );
                     ?>
                     </p>
@@ -318,12 +318,12 @@ class SettingsPage {
                 <?php endif; ?>
 
                 <hr />
-                <h2><?php echo esc_html__('Remote Reprint API URL', 'reprint'); ?></h2>
+                <h2><?php echo esc_html__('Remote Reprint API URL', 'plogins-migrator'); ?></h2>
                 <p>
                 <?php
                 echo esc_html__(
                     'Use this URL when another tool asks for the remote Reprint API URL.',
-                    'reprint'
+                    'plogins-migrator'
                 );
                 ?>
                 </p>
@@ -334,8 +334,8 @@ class SettingsPage {
                        readonly />
                 <button type="button"
                         class="button reprint-server-copy-url"
-                        data-copied-message="<?php echo esc_attr__('Remote Reprint API URL copied.', 'reprint'); ?>">
-                    <?php echo esc_html__('Copy', 'reprint'); ?>
+                        data-copied-message="<?php echo esc_attr__('Remote Reprint API URL copied.', 'plogins-migrator'); ?>">
+                    <?php echo esc_html__('Copy', 'plogins-migrator'); ?>
                 </button>
             <?php endif; ?>
         </div>
@@ -353,16 +353,16 @@ class SettingsPage {
             if (is_multisite()) {
                 $file_detail = esc_html__(
                     'This page updates only the network option. Remove secret.php to use the stored option value.',
-                    'reprint'
+                    'plogins-migrator'
                 );
             } else {
                 $file_detail = esc_html__(
                     'This page and the REST API update only the site option. Remove secret.php to use the stored option value.',
-                    'reprint'
+                    'plogins-migrator'
                 );
             }
             $message = '<strong><code>secret.php</code> '
-                . esc_html__('override is active.', 'reprint')
+                . esc_html__('override is active.', 'plogins-migrator')
                 . '</strong> '
                 . $file_detail;
             $this->render_notice('warning', $message);
@@ -370,27 +370,27 @@ class SettingsPage {
 
         if (!$configuration['is_configured']) {
             $message = '<strong>'
-                . esc_html__('Not configured yet.', 'reprint')
+                . esc_html__('Not configured yet.', 'plogins-migrator')
                 . '</strong> '
                 . ( $key_host
-                    ? esc_html__('Enter a connection token or enroll a public key to get started.', 'reprint')
-                    : esc_html__('Enter a connection token to get started.', 'reprint')
+                    ? esc_html__('Enter a connection token or enroll a public key to get started.', 'plogins-migrator')
+                    : esc_html__('Enter a connection token to get started.', 'plogins-migrator')
                 );
             $this->render_notice('warning', $message);
             return;
         }
 
         if ($configuration['push_enabled']) {
-            $message = '<strong>' . esc_html__('Connected for downloads and push.', 'reprint') . '</strong> '
+            $message = '<strong>' . esc_html__('Connected for downloads and push.', 'plogins-migrator') . '</strong> '
                 . ( $key_host
-                    ? esc_html__('The connection token or an enrolled key can change files on this site.', 'reprint')
-                    : esc_html__('The current connection token can change files on this site.', 'reprint')
+                    ? esc_html__('The connection token or an enrolled key can change files on this site.', 'plogins-migrator')
+                    : esc_html__('The current connection token can change files on this site.', 'plogins-migrator')
                 );
         } else {
-            $message = '<strong>' . esc_html__('Connected for downloads.', 'reprint') . '</strong> '
+            $message = '<strong>' . esc_html__('Connected for downloads.', 'plogins-migrator') . '</strong> '
                 . ( $key_host
-                    ? esc_html__('Neither the connection token nor an enrolled key can change files on this site.', 'reprint')
-                    : esc_html__('The connection token cannot change files on this site.', 'reprint')
+                    ? esc_html__('Neither the connection token nor an enrolled key can change files on this site.', 'plogins-migrator')
+                    : esc_html__('The connection token cannot change files on this site.', 'plogins-migrator')
                 );
         }
         $this->render_notice('info', $message);
@@ -403,42 +403,42 @@ class SettingsPage {
      */
     private function render_public_keys_section(array $configuration): void {
         if ($configuration['required_scheme'] !== 'key') {
-            echo '<p class="description">' . esc_html__('Public keys need OpenSSL, which this host does not have.', 'reprint') . '</p>';
+            echo '<p class="description">' . esc_html__('Public keys need OpenSSL, which this host does not have.', 'plogins-migrator') . '</p>';
             return;
         }
         $file_override = $configuration['has_public_keys_file'];
         $post_url = admin_url('admin-post.php');
         if ($file_override) {
             $this->render_notice('warning', '<strong><code>public-keys.php</code> '
-                . esc_html__('override is active.', 'reprint') . '</strong> '
-                . esc_html__('Keys come from that file; this page cannot change them.', 'reprint'));
+                . esc_html__('override is active.', 'plogins-migrator') . '</strong> '
+                . esc_html__('Keys come from that file; this page cannot change them.', 'plogins-migrator'));
         }
         ?>
         <form method="post" action="<?php echo esc_url($post_url); ?>">
             <input type="hidden" name="action" value="reprint_server_enroll_public_key" />
             <?php wp_nonce_field('reprint_server_enroll_public_key'); ?>
             <p>
-                <label for="reprint_server_public_key"><?php echo esc_html__('Public key', 'reprint'); ?></label><br />
+                <label for="reprint_server_public_key"><?php echo esc_html__('Public key', 'plogins-migrator'); ?></label><br />
                 <textarea id="reprint_server_public_key" name="reprint_server_public_key" rows="4" class="large-text code"<?php disabled($file_override); ?>></textarea>
             </p>
             <p class="description">
             <?php
             echo esc_html__(
                 'Paste the public key printed by "reprint keygen" or by "reprint pull". A PEM block or the single line are both accepted.',
-                'reprint'
+                'plogins-migrator'
             );
             ?>
             </p>
-            <?php submit_button(__('Enroll key', 'reprint'), 'secondary', 'submit', true, $file_override ? ['disabled' => 'disabled'] : []); ?>
+            <?php submit_button(__('Enroll key', 'plogins-migrator'), 'secondary', 'submit', true, $file_override ? ['disabled' => 'disabled'] : []); ?>
         </form>
 
         <?php if ($configuration['enrolled_keys'] !== []): ?>
         <table class="widefat striped reprint-server-key-table">
             <thead>
                 <tr>
-                    <th><?php echo esc_html__('Key id', 'reprint'); ?></th>
-                    <th><?php echo esc_html__('Added', 'reprint'); ?></th>
-                    <th><?php echo esc_html__('May push', 'reprint'); ?></th>
+                    <th><?php echo esc_html__('Key id', 'plogins-migrator'); ?></th>
+                    <th><?php echo esc_html__('Added', 'plogins-migrator'); ?></th>
+                    <th><?php echo esc_html__('May push', 'plogins-migrator'); ?></th>
                     <th></th>
                 </tr>
             </thead>
@@ -462,7 +462,7 @@ class SettingsPage {
                                     <?php checked($key_may_push); ?>
                                     <?php disabled(is_multisite() || !$configuration['push_supported'] || $configuration['managed_push_enabled'] !== null || $file_override); ?>
                                     onchange="this.form.submit()" />
-                                <?php echo esc_html__('Allow push', 'reprint'); ?>
+                                <?php echo esc_html__('Allow push', 'plogins-migrator'); ?>
                             </label>
                         </form>
                     </td>
@@ -471,7 +471,7 @@ class SettingsPage {
                             <input type="hidden" name="action" value="reprint_server_remove_public_key" />
                             <input type="hidden" name="reprint_server_key_id" value="<?php echo esc_attr($entry['key_id']); ?>" />
                             <?php wp_nonce_field('reprint_server_remove_public_key'); ?>
-                            <?php submit_button(__('Remove', 'reprint'), 'link-delete', 'submit', false, $file_override ? ['disabled' => 'disabled'] : []); ?>
+                            <?php submit_button(__('Remove', 'plogins-migrator'), 'link-delete', 'submit', false, $file_override ? ['disabled' => 'disabled'] : []); ?>
                         </form>
                     </td>
                 </tr>
@@ -493,7 +493,7 @@ class SettingsPage {
                 /* translators: %s: Current PHP version. */
                 __(
                 'Push access requires PHP 7.2 or newer. This site runs PHP %s. Downloads remain available.',
-                'reprint'
+                'plogins-migrator'
                 ),
                 PHP_VERSION
             );
@@ -506,13 +506,13 @@ class SettingsPage {
             <label>
                 <input type="checkbox"
                        value="1"<?php checked($token_push_enabled); ?><?php disabled(true); ?> />
-                <?php echo esc_html__('Allow push to change files on this site', 'reprint'); ?>
+                <?php echo esc_html__('Allow push to change files on this site', 'plogins-migrator'); ?>
             </label>
             <p class="description">
             <?php
             echo esc_html__(
                 'While enabled, anyone with the connection token can upload, replace, and delete files in this site\'s document root, except excluded paths.',
-                'reprint'
+                'plogins-migrator'
             );
             ?>
             </p>
@@ -520,7 +520,7 @@ class SettingsPage {
             <?php
             echo esc_html__(
                 'Push access is managed by your hosting provider.',
-                'reprint'
+                'plogins-migrator'
             );
             ?>
             </p>
@@ -536,18 +536,18 @@ class SettingsPage {
                 <input type="checkbox"
                        name="reprint_server_push_enabled"
                        value="1"<?php checked($token_push_enabled); ?> />
-                <?php echo esc_html__('Allow push to change files on this site', 'reprint'); ?>
+                <?php echo esc_html__('Allow push to change files on this site', 'plogins-migrator'); ?>
             </label>
             <p class="description">
             <?php
             echo esc_html__(
                 'While enabled, anyone with the connection token can upload, replace, and delete files in this site\'s document root, except excluded paths.',
-                'reprint'
+                'plogins-migrator'
             );
             ?>
             </p>
             <p class="submit">
-                <?php submit_button(__('Save push access', 'reprint'), 'secondary', 'submit', false); ?>
+                <?php submit_button(__('Save push access', 'plogins-migrator'), 'secondary', 'submit', false); ?>
             </p>
         </form>
         <?php
@@ -568,32 +568,32 @@ class SettingsPage {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The fixed query value selects a read-only notice.
         $result = sanitize_key(wp_unslash($_GET['reprint_server_notice']));
         $notices = [
-            'saved' => ['success', __('Push access updated.', 'reprint')],
-            'unchanged' => ['success', __('Push access was already up to date.', 'reprint')],
-            'unsupported' => ['error', __('Push access requires PHP 7.2 or newer. Downloads remain available.', 'reprint')],
-            'managed' => ['info', __('Push access is managed by your hosting provider.', 'reprint')],
-            'not_configured' => ['error', __('Configure a connection token before enabling push access.', 'reprint')],
-            'storage_failure' => ['error', __('Failed to save push access.', 'reprint')],
-            'enrolled' => ['success', __('Public key enrolled.', 'reprint')],
-            'enroll_invalid' => ['error', __('That is not a usable public key. Paste an RSA public key of at least 3072 bits, as a PEM block or one line.', 'reprint')],
-            'enroll_duplicate' => ['info', __('That public key is already enrolled.', 'reprint')],
-            'enroll_file_override' => ['error', __('public-keys.php is active. Edit that file to change enrolled keys.', 'reprint')],
-            'enroll_storage_failure' => ['error', __('Failed to save the public key.', 'reprint')],
-            'enroll_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'reprint')],
-            'key_removed' => ['success', __('Public key removed.', 'reprint')],
-            'remove_unknown' => ['error', __('That key is not enrolled.', 'reprint')],
-            'remove_file_override' => ['error', __('public-keys.php is active. Edit that file to change enrolled keys.', 'reprint')],
-            'remove_storage_failure' => ['error', __('Failed to remove the public key.', 'reprint')],
-            'remove_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'reprint')],
-            'key_push_saved' => ['success', __('Push access for the key updated.', 'reprint')],
-            'key_push_unchanged' => ['success', __('Push access for the key was already up to date.', 'reprint')],
-            'key_push_unknown' => ['error', __('That key is not enrolled.', 'reprint')],
-            'key_push_multisite' => ['info', __('Push is not supported on multisite networks.', 'reprint')],
-            'key_push_unsupported' => ['error', __('Push access requires PHP 7.2 or newer.', 'reprint')],
-            'key_push_managed' => ['info', __('Push access is managed by your hosting provider.', 'reprint')],
-            'key_push_file_override' => ['error', __('public-keys.php is active. Push grants cannot be stored for file-provided keys.', 'reprint')],
-            'key_push_storage_failure' => ['error', __('Failed to save push access for the key.', 'reprint')],
-            'key_push_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'reprint')],
+            'saved' => ['success', __('Push access updated.', 'plogins-migrator')],
+            'unchanged' => ['success', __('Push access was already up to date.', 'plogins-migrator')],
+            'unsupported' => ['error', __('Push access requires PHP 7.2 or newer. Downloads remain available.', 'plogins-migrator')],
+            'managed' => ['info', __('Push access is managed by your hosting provider.', 'plogins-migrator')],
+            'not_configured' => ['error', __('Configure a connection token before enabling push access.', 'plogins-migrator')],
+            'storage_failure' => ['error', __('Failed to save push access.', 'plogins-migrator')],
+            'enrolled' => ['success', __('Public key enrolled.', 'plogins-migrator')],
+            'enroll_invalid' => ['error', __('That is not a usable public key. Paste an RSA public key of at least 3072 bits, as a PEM block or one line.', 'plogins-migrator')],
+            'enroll_duplicate' => ['info', __('That public key is already enrolled.', 'plogins-migrator')],
+            'enroll_file_override' => ['error', __('public-keys.php is active. Edit that file to change enrolled keys.', 'plogins-migrator')],
+            'enroll_storage_failure' => ['error', __('Failed to save the public key.', 'plogins-migrator')],
+            'enroll_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'plogins-migrator')],
+            'key_removed' => ['success', __('Public key removed.', 'plogins-migrator')],
+            'remove_unknown' => ['error', __('That key is not enrolled.', 'plogins-migrator')],
+            'remove_file_override' => ['error', __('public-keys.php is active. Edit that file to change enrolled keys.', 'plogins-migrator')],
+            'remove_storage_failure' => ['error', __('Failed to remove the public key.', 'plogins-migrator')],
+            'remove_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'plogins-migrator')],
+            'key_push_saved' => ['success', __('Push access for the key updated.', 'plogins-migrator')],
+            'key_push_unchanged' => ['success', __('Push access for the key was already up to date.', 'plogins-migrator')],
+            'key_push_unknown' => ['error', __('That key is not enrolled.', 'plogins-migrator')],
+            'key_push_multisite' => ['info', __('Push is not supported on multisite networks.', 'plogins-migrator')],
+            'key_push_unsupported' => ['error', __('Push access requires PHP 7.2 or newer.', 'plogins-migrator')],
+            'key_push_managed' => ['info', __('Push access is managed by your hosting provider.', 'plogins-migrator')],
+            'key_push_file_override' => ['error', __('public-keys.php is active. Push grants cannot be stored for file-provided keys.', 'plogins-migrator')],
+            'key_push_storage_failure' => ['error', __('Failed to save push access for the key.', 'plogins-migrator')],
+            'key_push_runtime_missing' => ['error', __('The Reprint Server runtime is missing. Run composer install in the plugin directory or reinstall the release package.', 'plogins-migrator')],
         ];
         if (!isset($notices[$result])) {
             return;
@@ -604,7 +604,7 @@ class SettingsPage {
         if ($result === 'enrolled' && isset($_GET['reprint_server_key_id']) && is_string($_GET['reprint_server_key_id'])) {
             $message .= ' ' . sprintf(
                 /* translators: %s: Key id of the public key that was just enrolled. */
-                esc_html__('Key id: %s', 'reprint'),
+                esc_html__('Key id: %s', 'plogins-migrator'),
                 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The key id only labels a read-only notice.
                 '<code>' . esc_html(sanitize_key(wp_unslash($_GET['reprint_server_key_id']))) . '</code>'
             );

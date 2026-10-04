@@ -8,6 +8,8 @@ use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped, WordPress.WP.AlternativeFunctions -- WP-CLI only: messages go to a terminal, and the files are copied in bulk outside any request.
+
 /**
  * Sends this site's wp-content back to the site it was pulled from.
  *

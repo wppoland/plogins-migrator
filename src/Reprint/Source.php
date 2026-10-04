@@ -27,7 +27,7 @@ final class Source implements HasHooks
     public const PAGE_SLUG   = 'migrator-pull-push';
     public const SAVE_ACTION = 'migrator_reprint_source_save';
 
-    private const SERVER_ENTRY = '/lib/reprint/reprint-server-wp/index.php';
+    private const SERVER_ENTRY = '/lib/vendor/reprint/reprint-server-wp/index.php';
 
     /**
      * Runs while WordPress includes plugin files, before plugins_loaded: the
