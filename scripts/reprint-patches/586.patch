@@ -1,0 +1,912 @@
+From e637e0329e20a3c03ed118b077675992b7c454f3 Mon Sep 17 00:00:00 2001
+From: x <x@x>
+Date: Sun, 4 Oct 2026 23:19:00 +0200
+Subject: [PATCH] PR #586: [PHP] Support Unicode source hostnames in Cautious
+ rewriters
+
+---
+ composer.lock                                 | 184 ++++++++++++-
+ packages/reprint-client/composer.json         |   2 +
+ ...n-text-with-mixed-unknown-escape-rules.php | 100 +++++--
+ ...lass-cautious-url-base-rewrite-mapping.php | 256 ++++++++++++++++--
+ ...rInTextWithMixedUnknownEscapeRulesTest.php | 107 +++++++-
+ 5 files changed, 581 insertions(+), 68 deletions(-)
+
+diff --git a/composer.lock b/composer.lock
+index 7f9948c5..379fc4e5 100644
+--- a/composer.lock
++++ b/composer.lock
+@@ -6,6 +6,178 @@
+     ],
+     "content-hash": "bcb1b00bb8f980c11228035a7a1d4bd1",
+     "packages": [
++        {
++            "name": "symfony/polyfill-intl-idn",
++            "version": "v1.43.0",
++            "source": {
++                "type": "git",
++                "url": "https://github.com/symfony/polyfill-intl-idn.git",
++                "reference": "533d68cf99c8f8ee2e8893c59ed59192e92cfd74"
++            },
++            "dist": {
++                "type": "zip",
++                "url": "https://api.github.com/repos/symfony/polyfill-intl-idn/zipball/533d68cf99c8f8ee2e8893c59ed59192e92cfd74",
++                "reference": "533d68cf99c8f8ee2e8893c59ed59192e92cfd74",
++                "shasum": ""
++            },
++            "require": {
++                "php": ">=7.2",
++                "symfony/polyfill-intl-normalizer": "^1.10"
++            },
++            "suggest": {
++                "ext-intl": "For best performance"
++            },
++            "type": "library",
++            "extra": {
++                "thanks": {
++                    "url": "https://github.com/symfony/polyfill",
++                    "name": "symfony/polyfill"
++                }
++            },
++            "autoload": {
++                "files": [
++                    "bootstrap.php"
++                ],
++                "psr-4": {
++                    "Symfony\\Polyfill\\Intl\\Idn\\": ""
++                }
++            },
++            "notification-url": "https://packagist.org/downloads/",
++            "license": [
++                "MIT"
++            ],
++            "authors": [
++                {
++                    "name": "Laurent Bassin",
++                    "email": "laurent@bassin.info"
++                },
++                {
++                    "name": "Trevor Rowbotham",
++                    "email": "trevor.rowbotham@pm.me"
++                },
++                {
++                    "name": "Symfony Community",
++                    "homepage": "https://symfony.com/contributors"
++                }
++            ],
++            "description": "Symfony polyfill for intl's idn_to_ascii and idn_to_utf8 functions",
++            "homepage": "https://symfony.com",
++            "keywords": [
++                "compatibility",
++                "idn",
++                "intl",
++                "polyfill",
++                "portable",
++                "shim"
++            ],
++            "support": {
++                "source": "https://github.com/symfony/polyfill-intl-idn/tree/v1.43.0"
++            },
++            "funding": [
++                {
++                    "url": "https://symfony.com/sponsor",
++                    "type": "custom"
++                },
++                {
++                    "url": "https://github.com/fabpot",
++                    "type": "github"
++                },
++                {
++                    "url": "https://github.com/nicolas-grekas",
++                    "type": "github"
++                },
++                {
++                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
++                    "type": "tidelift"
++                }
++            ],
++            "time": "2026-09-23T14:40:04+00:00"
++        },
++        {
++            "name": "symfony/polyfill-intl-normalizer",
++            "version": "v1.43.0",
++            "source": {
++                "type": "git",
++                "url": "https://github.com/symfony/polyfill-intl-normalizer.git",
++                "reference": "ebd57ccc7edb93d632e184efbe7693d2517bab3b"
++            },
++            "dist": {
++                "type": "zip",
++                "url": "https://api.github.com/repos/symfony/polyfill-intl-normalizer/zipball/ebd57ccc7edb93d632e184efbe7693d2517bab3b",
++                "reference": "ebd57ccc7edb93d632e184efbe7693d2517bab3b",
++                "shasum": ""
++            },
++            "require": {
++                "php": ">=7.2"
++            },
++            "suggest": {
++                "ext-intl": "For best performance"
++            },
++            "type": "library",
++            "extra": {
++                "thanks": {
++                    "url": "https://github.com/symfony/polyfill",
++                    "name": "symfony/polyfill"
++                }
++            },
++            "autoload": {
++                "files": [
++                    "bootstrap.php"
++                ],
++                "psr-4": {
++                    "Symfony\\Polyfill\\Intl\\Normalizer\\": ""
++                },
++                "classmap": [
++                    "Resources/stubs"
++                ]
++            },
++            "notification-url": "https://packagist.org/downloads/",
++            "license": [
++                "MIT"
++            ],
++            "authors": [
++                {
++                    "name": "Nicolas Grekas",
++                    "email": "p@tchwork.com"
++                },
++                {
++                    "name": "Symfony Community",
++                    "homepage": "https://symfony.com/contributors"
++                }
++            ],
++            "description": "Symfony polyfill for intl's Normalizer class and related functions",
++            "homepage": "https://symfony.com",
++            "keywords": [
++                "compatibility",
++                "intl",
++                "normalizer",
++                "polyfill",
++                "portable",
++                "shim"
++            ],
++            "support": {
++                "source": "https://github.com/symfony/polyfill-intl-normalizer/tree/v1.43.0"
++            },
++            "funding": [
++                {
++                    "url": "https://symfony.com/sponsor",
++                    "type": "custom"
++                },
++                {
++                    "url": "https://github.com/fabpot",
++                    "type": "github"
++                },
++                {
++                    "url": "https://github.com/nicolas-grekas",
++                    "type": "github"
++                },
++                {
++                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
++                    "type": "tidelift"
++                }
++            ],
++            "time": "2026-09-23T22:02:09+00:00"
++        },
+         {
+             "name": "wp-php-toolkit/bytestream",
+             "version": "v0.10.1",
+@@ -362,11 +534,13 @@
+             "dist": {
+                 "type": "path",
+                 "url": "packages/reprint-client",
+-                "reference": "f367faa5a2cbe786c28eaafe8b88b5ddbd8cebec"
++                "reference": "0dedc626101ac7f7cd63b01a5a71df162af8f509"
+             },
+             "require": {
+                 "ext-pdo": "*",
+                 "php": ">=7.4",
++                "symfony/polyfill-intl-idn": "^1.31",
++                "symfony/polyfill-intl-normalizer": "^1.31",
+                 "wp-php-toolkit/data-liberation": "^0.10.1",
+                 "wp-php-toolkit/html": "^0.10.1",
+                 "wp-php-toolkit/reprint-server": "*@dev"
+@@ -2697,9 +2871,9 @@
+     "aliases": [],
+     "minimum-stability": "dev",
+     "stability-flags": {
+-        "phpcompatibility/php-compatibility": 15,
++        "wp-php-toolkit/reprint-server": 20,
+         "wp-php-toolkit/reprint-client": 20,
+-        "wp-php-toolkit/reprint-server": 20
++        "phpcompatibility/php-compatibility": 15
+     },
+     "prefer-stable": true,
+     "prefer-lowest": false,
+@@ -2708,6 +2882,6 @@
+         "ext-pdo": "*",
+         "ext-pdo_mysql": "*"
+     },
+-    "platform-dev": {},
+-    "plugin-api-version": "2.9.0"
++    "platform-dev": [],
++    "plugin-api-version": "2.3.0"
+ }
+diff --git a/packages/reprint-client/composer.json b/packages/reprint-client/composer.json
+index 736c58e7..d5d8d555 100644
+--- a/packages/reprint-client/composer.json
++++ b/packages/reprint-client/composer.json
+@@ -9,6 +9,8 @@
+     "require": {
+         "php": ">=7.4",
+         "ext-pdo": "*",
++        "symfony/polyfill-intl-idn": "^1.31",
++        "symfony/polyfill-intl-normalizer": "^1.31",
+         "wp-php-toolkit/data-liberation": "^0.10.1",
+         "wp-php-toolkit/html": "^0.10.1",
+         "wp-php-toolkit/reprint-server": "*@dev"
+diff --git a/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-processor-in-text-with-mixed-unknown-escape-rules.php b/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-processor-in-text-with-mixed-unknown-escape-rules.php
+index 20fd428b..4960fd85 100644
+--- a/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-processor-in-text-with-mixed-unknown-escape-rules.php
++++ b/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-processor-in-text-with-mixed-unknown-escape-rules.php
+@@ -37,14 +37,19 @@
+  * fallback, including selected-site links. Only callers with parsed URL fields
+  * can decide which site a complete path selects; this scanner does not guess
+  * path boundaries or copy the remaining text into a temporary URL.
++ * changes it. Candidate Unicode path segments are normalized only for the
++ * comparison. The bytes outside the replaced slice remain unchanged.
+  *
+  * Supported sources:
+  *
+- * - ASCII domains and IPv4 or IPv6 addresses, with an optional port.
+- * - An optional initial path containing only bytes from `!` (0x21) through
+- *   `~` (0x7E). Spaces and multibyte characters are rejected. That path is
+- *   part of the source base and is removed with it. A root slash is the URL
+- *   separator rather than a removable path, so it remains after replacement. Mapping
++ * - ASCII or Unicode IDN source domains and IPv4 or IPv6 addresses, with
++ *   an optional port. Unicode and Punycode spellings of the same IDN match.
++ * - An optional initial path containing valid UTF-8 without whitespace or
++ *   control characters. Composed and decomposed characters may be mixed in
++ *   one path and still match the same source base. That path is part of the
++ *   source base and is removed with it. A root slash is the URL separator
++ *   rather than a removable path,
++ *   so it remains after replacement. Mapping
+  *   https://source.example/media to
+  *   https://destination.example changes
+  *   https://source.example/media/logo.png to
+@@ -77,18 +82,21 @@
+  *   Unicode domains are not supported. Punycode domains, IPv4 addresses, and
+  *   hosts with a trailing dot are supported. These limits apply only to this
+  *   fallback; they do not restrict the migration destination.
+- * - Unicode source domains and paths are not supported.
+  *
+  * CSS hexadecimal escapes such as https\3a \2f \2f ... and percent-encoded
+  * separators are not recognized. They need a parser for the enclosing format.
+  * Complete PHP serializations, JSON documents, and block markup must likewise
+  * be parsed first; pass only the resulting text leaves to this processor.
+  *
+- * The HTTP(S) scheme and authority are matched case-insensitively. A configured
+- * source path remains byte-for-byte and case-sensitive because URL paths may
+- * name different resources when their case differs. A scheme may begin at the
+- * start of the value or after a byte other than an ASCII letter, plus sign, or
+- * hyphen. Scheme-less authorities use a stricter boundary so the scanner does
++ * Ordinary ASCII authorities use a literal pattern and never run IDNA. A
++ * mapping with a Unicode or `xn--` source hostname also checks literal Unicode
++ * candidates through IDNA. The HTTP(S) scheme and authority are matched
++ * case-insensitively. A configured
++ * source path remains case-sensitive because URL paths may name different
++ * resources when their case differs. Canonically equivalent composed and
++ * decomposed Unicode spellings match. A scheme may begin at the start of the
++ * value or after a byte other than an ASCII letter, plus sign, or hyphen.
++ * Scheme-less authorities use a stricter boundary so the scanner does
+  * not mistake part of another URL or identifier for a match. A dot or colon
+  * immediately after the configured base is rejected: it may continue the host
+  * name or introduce a port which the mapping did not include.
+@@ -116,6 +124,9 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules {
+     /**
+      * @var array<int, array{
+      *     source_authority: string,
++     *     source_ascii_host: string,
++     *     source_host_uses_idn: bool,
++     *     unicode_source_path_segments_in_nfd: array<int, string>,
+      *     source_path: string,
+      *     source_base: string,
+      *     target_domain: string,
+@@ -148,6 +159,9 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules {
+     /**
+      * @var array{
+      *     source_authority: string,
++     *     source_ascii_host: string,
++     *     source_host_uses_idn: bool,
++     *     unicode_source_path_segments_in_nfd: array<int, string>,
+      *     source_path: string,
+      *     source_base: string,
+      *     target_domain: string,
+@@ -276,6 +290,9 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules {
+     /**
+      * @return array{
+      *     source_authority: string,
++     *     source_ascii_host: string,
++     *     source_host_uses_idn: bool,
++     *     unicode_source_path_segments_in_nfd: array<int, string>,
+      *     source_path: string,
+      *     source_base: string,
+      *     target_domain: string,
+@@ -298,13 +315,60 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules {
+             if (!array_key_exists($mapping_index, $this->next_matches)
+                 || ( $this->next_matches[$mapping_index] !== null
+                     && $this->next_matches[$mapping_index]['authority'][1] < $this->bytes_already_scanned )) {
+-                $found = preg_match(
+-                    $mapping['pattern'],
+-                    $this->text,
+-                    $matches,
+-                    PREG_OFFSET_CAPTURE,
+-                    $this->bytes_already_scanned
+-                );
++                $search_from = $this->bytes_already_scanned;
++                while (true) {
++                    $found = preg_match(
++                        $mapping['pattern'],
++                        $this->text,
++                        $matches,
++                        PREG_OFFSET_CAPTURE,
++                        $search_from
++                    );
++                    if (
++                        $found !== 1
++                        || (
++                            !$mapping['source_host_uses_idn']
++                            && $mapping['unicode_source_path_segments_in_nfd'] === []
++                        )
++                    ) {
++                        break;
++                    }
++
++                    $candidate_matches_mapping = true;
++                    if (
++                        isset($matches['unicode_host'])
++                        && $matches['unicode_host'][1] !== -1
++                    ) {
++                        $candidate_matches_mapping =
++                            CautiousURLBaseRewriteMapping::to_ascii_idn_hostname(
++                                $matches['unicode_host'][0]
++                            ) === $mapping['source_ascii_host'];
++                    }
++
++                    foreach (
++                        $mapping['unicode_source_path_segments_in_nfd']
++                        as $unicode_path_segment_index => $source_path_segment_in_nfd
++                    ) {
++                        $candidate_path_segment_in_nfd = Normalizer::normalize(
++                            $matches[
++                                'unicode_path_segment_' . $unicode_path_segment_index
++                            ][0],
++                            Normalizer::FORM_D
++                        );
++                        if ($candidate_path_segment_in_nfd !== $source_path_segment_in_nfd) {
++                            $candidate_matches_mapping = false;
++                            break;
++                        }
++                    }
++
++                    if ($candidate_matches_mapping) {
++                        break;
++                    }
++
++                    $search_from =
++                        $matches['authority'][1]
++                        + strlen($matches['authority'][0]);
++                }
+                 $this->next_matches[$mapping_index] = $found === 1 ? $matches : null;
+             }
+             $matches = $this->next_matches[$mapping_index];
+diff --git a/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-rewrite-mapping.php b/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-rewrite-mapping.php
+index 619806e3..d659701c 100644
+--- a/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-rewrite-mapping.php
++++ b/packages/reprint-client/src/lib/url-rewrite/class-cautious-url-base-rewrite-mapping.php
+@@ -15,6 +15,9 @@ class CautiousURLBaseRewriteMapping {
+     /**
+      * @var array<int, array{
+      *     source_authority: string,
++     *     source_ascii_host: string,
++     *     source_host_uses_idn: bool,
++     *     unicode_source_path_segments_in_nfd: array<int, string>,
+      *     source_path: string,
+      *     source_base: string,
+      *     target_domain: string,
+@@ -40,6 +43,16 @@ class CautiousURLBaseRewriteMapping {
+     /**
+      * Prepares source URL base => target URL pairs.
+      *
++     * A source may include an initial valid UTF-8 path without whitespace or
++     * control characters. A target must be an HTTP(S) URL with a supported
++     * domain, optional port, and optional restricted path:
++     *
++     * ```
++     * [
++     *     'https://source.example/media' => 'https://destination.example/assets',
++     * ]
++     * ```
++     *
+      * Invalid pairs are skipped as a whole. They cannot produce a partial
+      * domain replacement.
+      *
+@@ -113,6 +126,9 @@ class CautiousURLBaseRewriteMapping {
+      *
+      * @return array<int, array{
+      *     source_authority: string,
++     *     source_ascii_host: string,
++     *     source_host_uses_idn: bool,
++     *     unicode_source_path_segments_in_nfd: array<int, string>,
+      *     source_path: string,
+      *     source_base: string,
+      *     target_domain: string,
+@@ -167,6 +183,9 @@ class CautiousURLBaseRewriteMapping {
+     /**
+      * @return array{
+      *     source_authority: string,
++     *     source_ascii_host: string,
++     *     source_host_uses_idn: bool,
++     *     unicode_source_path_segments_in_nfd: array<int, string>,
+      *     source_path: string,
+      *     source_base: string,
+      *     target_domain: string,
+@@ -189,19 +208,58 @@ class CautiousURLBaseRewriteMapping {
+         // A source URL ending at its authority uses / as the URL separator,
+         // not as an initial path to remove. Leave its original spelling alone.
+         $source_path = $source['path'] === '/' ? '' : $source['path'];
++        $unicode_source_path_segments_in_nfd = [];
++        foreach (explode('/', substr($source_path, 1)) as $source_path_segment) {
++            if (preg_match('/[\x80-\xFF]/', $source_path_segment) !== 1) {
++                continue;
++            }
++
++            // NFD writes é as e followed by a combining accent. Store every
++            // configured Unicode segment in NFD. The scanner converts each
++            // captured candidate segment to NFD before comparing the two.
++            $source_path_segment_in_nfd = Normalizer::normalize(
++                $source_path_segment,
++                Normalizer::FORM_D
++            );
++            if (!is_string($source_path_segment_in_nfd)) {
++                return null;
++            }
++            $unicode_source_path_segments_in_nfd[] =
++                $source_path_segment_in_nfd;
++        }
++
++        $source_authority_pattern = '(?i:' . preg_quote($source['authority'], '~') . ')';
++        if ($source['host_uses_idn']) {
++            // This branch locates Unicode authority candidates. IDNA below
++            // decides whether each candidate names the configured host.
++            $unicode_host_character = "[^\\s<>@/\\\\:?#,!;()\\[\\]{}>\"']";
++            $source_authority_pattern =
++                '(?:' . $source_authority_pattern
++                . '|(?<unicode_host>(?=' . $unicode_host_character . '*[\\x80-\\xFF])'
++                . $unicode_host_character . '+)'
++                . ( $source['port'] === null ? '' : ':' . $source['port'] )
++                . ')';
++        }
++
+         $target_path = $source_url === $target_url ? $source_path : $target['path'];
+ 
+         return [
+-            'source_authority' => $source['authority'],
+-            'source_path'      => $source_path,
+-            'source_base'      => $source['authority'] . $source_path,
+-            'target_domain'    => $target['host'],
+-            'target_scheme'    => $target['scheme'],
+-            'target_path'      => $target_path,
+-            'target_port'      => $target['port'],
+-            'pattern'          => $this->create_url_candidate_pattern(
++            'source_authority'     => $source['authority'],
++            'source_ascii_host'    => $source['ascii_host'],
++            'source_host_uses_idn' => $source['host_uses_idn'],
++            'unicode_source_path_segments_in_nfd' =>
++                $unicode_source_path_segments_in_nfd,
++            'source_path'          => $source_path,
++            'source_base'          => $source['authority'] . $source_path,
++            // A same-URL rule compares its target with the ASCII source
++            // authority, so an IDN exclusion keeps the matched bytes.
++            'target_domain'        => $source_url === $target_url ? $source['ascii_host'] : $target['host'],
++            'target_scheme'        => $target['scheme'],
++            'target_path'          => $target_path,
++            'target_port'          => $target['port'],
++            'pattern'              => $this->create_url_candidate_pattern(
+                 $source['scheme'],
+-                $source['authority'],
++                $source_authority_pattern,
+                 $source_path,
+                 $target_path !== ''
+             ),
+@@ -218,7 +276,7 @@ class CautiousURLBaseRewriteMapping {
+      */
+     private function create_url_candidate_pattern(
+         string $source_scheme,
+-        string $source_authority,
++        string $source_authority_pattern,
+         string $source_path,
+         bool $requires_path_slash
+     ): string
+@@ -226,13 +284,37 @@ class CautiousURLBaseRewriteMapping {
+         $separator_escape = '\\\\{0,8}';
+         $source_path_pattern = '';
+         if ($source_path !== '') {
++            $source_path_suffix_pattern = '';
++            $unicode_path_segment_index = 0;
++            foreach (
++                explode('/', substr($source_path, 1))
++                as $source_path_segment_index => $source_path_segment
++            ) {
++                if ($source_path_segment_index > 0) {
++                    $source_path_suffix_pattern .= $separator_escape . '/';
++                }
++                // Capture Unicode segments and compare them in NFD after
++                // matching. One regexp then handles any mixture of composed
++                // and decomposed characters without listing every combination.
++                if (preg_match('/[\x80-\xFF]/', $source_path_segment) !== 1) {
++                    $source_path_suffix_pattern .= preg_quote(
++                        $source_path_segment,
++                        '~'
++                    );
++                    continue;
++                }
++
++                $source_path_suffix_pattern .=
++                    '(?<unicode_path_segment_' . $unicode_path_segment_index . '>'
++                    . '(?=[^/?#\x00-\x20\x7F]*[\x80-\xFF])'
++                    . '[^/?#\x00-\x20\x7F]+?'
++                    . ')';
++                ++$unicode_path_segment_index;
++            }
++
+             $source_path_pattern =
+                 '(?<path_slash>' . $separator_escape . '/)'
+-                . str_replace(
+-                    '/',
+-                    $separator_escape . '/',
+-                    preg_quote(substr($source_path, 1), '~')
+-                );
++                . $source_path_suffix_pattern;
+         }
+         $candidate_boundary_pattern = '(?=
+             $
+@@ -261,7 +343,7 @@ class CautiousURLBaseRewriteMapping {
+                 (?:[^\s<>@/\\\\]+@)?
+             )?
+             (?<base>
+-                (?<authority>(?i:' . preg_quote($source_authority, '~') . '))
++                (?<authority>' . $source_authority_pattern . ')
+                 ' . $source_path_pattern . '
+             )
+             ' . $candidate_boundary_pattern . '
+@@ -269,7 +351,15 @@ class CautiousURLBaseRewriteMapping {
+     }
+ 
+     /**
+-     * @return array{scheme: string, host: string, authority: string, path: string, port: int|null}|null
++     * @return array{
++     *     scheme: string,
++     *     host: string,
++     *     ascii_host: string,
++     *     host_uses_idn: bool,
++     *     authority: string,
++     *     path: string,
++     *     port: int|null
++     * }|null
+      */
+     private function get_supported_url_parts(string $url, bool $is_source_url): ?array
+     {
+@@ -292,40 +382,146 @@ class CautiousURLBaseRewriteMapping {
+         $scheme = strtolower( (string) $parts['scheme'] );
+         $host = (string) $parts['host'];
+         $path = isset($parts['path']) ? (string) $parts['path'] : '';
++        if ($is_source_url) {
++            // parse_url() replaces control-valued bytes with underscores.
++            // Some UTF-8 continuation bytes fall in that range. Read the
++            // source authority and path from the configured URL after
++            // parse_url() has checked its structure.
++            $authority_separator_at = strpos($url, '://');
++            if ($authority_separator_at === false) {
++                return null;
++            }
++            $authority_starts_at = $authority_separator_at + 3;
++            $path_starts_at = strpos($url, '/', $authority_starts_at);
++            $source_authority = $path_starts_at === false
++                ? substr($url, $authority_starts_at)
++                : substr(
++                    $url,
++                    $authority_starts_at,
++                    $path_starts_at - $authority_starts_at
++                );
++            if (isset($parts['port'])) {
++                $port_suffix = ':' . $parts['port'];
++                if (substr($source_authority, -strlen($port_suffix)) !== $port_suffix) {
++                    return null;
++                }
++                $host = substr($source_authority, 0, -strlen($port_suffix));
++            } else {
++                $host = $source_authority;
++            }
++            $path = $path_starts_at === false ? '' : substr($url, $path_starts_at);
++        }
++
+         // A target base's final slash is supplied by the candidate suffix.
+         // Remove only one: an empty component such as /scope:123// is still
+         // unsupported. Keep source paths literal for matching and exclusions.
+         if (!$is_source_url && substr($path, -1) === '/') {
+             $path = substr($path, 0, -1);
+         }
+-        $has_unsupported_target_path =
+-            !$is_source_url
+-            && $path !== ''
+-            && preg_match('#^/[A-Za-z0-9_:-]+(?:/[A-Za-z0-9_:-]+)*$#', $path) !== 1;
+         // These limits apply only to literal replacement in unknown text.
+         // A parsed HTTP host can contain quotes, but inserting one could end
+         // the surrounding value. Hostname syntax keeps output to letters,
+         // digits, hyphens and dots; IPv4 and a trailing dot need no escaping.
+         // IPv6 sources can be matched and removed without inserting brackets.
+         // Format-aware rewriters accept the full URL and use their serializers.
+-        $literal_host = filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+-        $source_ip = $is_source_url && filter_var(trim($parsed->hostname, '[]'), FILTER_VALIDATE_IP) !== false;
++        $host_is_ascii_domain = $this->is_literal_hostname($host);
++        $host_is_ip_address =
++            $is_source_url
++            && !$host_is_ascii_domain
++            && $this->is_ip_address($host);
++        $host_contains_punycode_label =
++            $host_is_ascii_domain
++            && stripos('.' . $host, '.xn--') !== false;
++        $host_uses_idn =
++            $is_source_url
++            && (
++                $host_contains_punycode_label
++                || ( !$host_is_ascii_domain && !$host_is_ip_address )
++            );
++        $ascii_host = $host;
++        if ($host_uses_idn) {
++            if (
++                !$host_is_ascii_domain
++                && preg_match('/^[\p{L}\p{M}\p{N}.-]+$/u', $host) !== 1
++            ) {
++                return null;
++            }
++            $ascii_host = self::to_ascii_idn_hostname($host);
++            if ($ascii_host === null) {
++                return null;
++            }
++        }
++
++        $has_unsupported_target_path =
++            !$is_source_url
++            && $path !== ''
++            && preg_match('#^/[A-Za-z0-9_:-]+(?:/[A-Za-z0-9_:-]+)*$#', $path) !== 1;
++        // Source paths may contain Unicode segments, which the scanner
++        // compares in NFD. Inserted target paths stay printable ASCII.
++        $path_is_supported = $is_source_url
++            ? preg_match('/^[^\p{Z}\p{C}]*$/u', $path) === 1
++            : $this->contains_only_exclamation_mark_through_tilde_bytes($path);
++        $host_is_supported =
++            $host_is_ascii_domain
++            || $host_is_ip_address
++            || (
++                $host_uses_idn
++                && $this->is_literal_hostname($ascii_host)
++            );
+         if (( $scheme !== 'http' && $scheme !== 'https' )
+             || ( !$is_source_url && $has_unsupported_target_path )
+-            || !( $literal_host || $source_ip )
+-            || !$this->contains_only_exclamation_mark_through_tilde_bytes($path)) {
++            || !$host_is_supported
++            || !$path_is_supported) {
+             return null;
+         }
+ 
+         return [
+-            'scheme'    => $scheme,
+-            'host'      => $host,
+-            'authority' => $host . ( isset( $parts['port'] ) ? ':' . $parts['port'] : '' ),
+-            'path'      => $path,
+-            'port'      => isset($parts['port']) ? (int) $parts['port'] : null,
++            'scheme'        => $scheme,
++            'host'          => $host,
++            'ascii_host'    => $ascii_host,
++            'host_uses_idn' => $host_uses_idn,
++            'authority'     => $ascii_host . ( isset( $parts['port'] ) ? ':' . $parts['port'] : '' ),
++            'path'          => $path,
++            'port'          => isset($parts['port']) ? (int) $parts['port'] : null,
+         ];
+     }
+ 
++    /**
++     * Converts a Unicode or Punycode hostname to its lowercase ASCII form.
++     *
++     * Returns null when IDNA rejects the hostname.
++     */
++    public static function to_ascii_idn_hostname(string $hostname): ?string
++    {
++        $idn_info = [];
++        $ascii_hostname = idn_to_ascii(
++            $hostname,
++            IDNA_NONTRANSITIONAL_TO_ASCII | IDNA_USE_STD3_RULES,
++            INTL_IDNA_VARIANT_UTS46,
++            $idn_info
++        );
++        if (
++            !is_string($ascii_hostname)
++            || $ascii_hostname === ''
++            || ( $idn_info['errors'] ?? 0 ) !== 0
++        ) {
++            return null;
++        }
++
++        return strtolower($ascii_hostname);
++    }
++
++    private function is_ip_address(string $host): bool
++    {
++        return filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) !== false;
++    }
++
++    /** Letters, digits, hyphens and dots, including IPv4 and a trailing dot. */
++    private function is_literal_hostname(string $host): bool
++    {
++        return filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
++    }
++
+     private function contains_only_exclamation_mark_through_tilde_bytes(string $path): bool
+     {
+         return $path === '' || preg_match('/^[\x21-\x7E]+$/', $path) === 1;
+diff --git a/tests/UrlRewriting/CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest.php b/tests/UrlRewriting/CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest.php
+index 80f7190f..7c872ca1 100644
+--- a/tests/UrlRewriting/CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest.php
++++ b/tests/UrlRewriting/CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest.php
+@@ -367,6 +367,41 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest extends Test
+                 'url("https:\\/\\/xn--bcher-kva.example\\/media\\/logo.png");',
+                 ['https://source.example' => 'https://xn--bcher-kva.example'],
+             ],
++            'decomposed Unicode source host' => [
++                'https://mu' . "\u{0308}" . 'nich.example/media/logo.png',
++                'https://destination.example/media/logo.png',
++                ['https://münich.example' => 'https://destination.example'],
++            ],
++            'all-Arabic Unicode source host' => [
++                'https://مثال.إختبار/media/logo.png',
++                'https://destination.example/media/logo.png',
++                ['https://مثال.إختبار' => 'https://destination.example'],
++            ],
++            'Unicode source host with a configured path' => [
++                'https://bücher.example/media/logo.png',
++                'https://destination.example/logo.png',
++                ['https://bücher.example/media' => 'https://destination.example'],
++            ],
++            'Punycode candidate for a Unicode source host' => [
++                'https://xn--mnich-kva.example/media/logo.png',
++                'https://destination.example/media/logo.png',
++                ['https://münich.example' => 'https://destination.example'],
++            ],
++            'Unicode candidate for a Punycode source host' => [
++                'https://münich.example/media/logo.png',
++                'https://destination.example/media/logo.png',
++                ['https://xn--mnich-kva.example' => 'https://destination.example'],
++            ],
++            'escaped Unicode source host with a configured port' => [
++                'https:\\/\\/mu' . "\u{0308}" . 'nich.example:8443\\/media\\/logo.png',
++                'https:\\/\\/destination.example\\/media\\/logo.png',
++                ['https://münich.example:8443' => 'https://destination.example'],
++            ],
++            'configured Unicode host after a different Unicode host' => [
++                'https://zürich.example/media/a.png https://münich.example/media/b.png',
++                'https://zürich.example/media/a.png https://destination.example/media/b.png',
++                ['https://münich.example' => 'https://destination.example'],
++            ],
+             'complete literal source base' => [
+                 'https://source.example/media/logo.png',
+                 'https://destination.example/logo.png',
+@@ -472,6 +507,35 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest extends Test
+                 'https://destination.example/assets-2026/_private/logo.png',
+                 ['https://source.example/media' => 'https://destination.example/assets-2026/_private'],
+             ],
++            'decomposed source path matches a composed mapping' => [
++                'https://source.example/cafe' . "\u{0301}" . '/logo.png',
++                'https://destination.example/assets/logo.png',
++                [
++                    'https://source.example/caf' . "\u{00E9}" =>
++                        'https://destination.example/assets',
++                ],
++            ],
++            'composed source path matches a decomposed mapping' => [
++                'https://source.example/caf' . "\u{00E9}" . '/logo.png',
++                'https://destination.example/assets/logo.png',
++                [
++                    'https://source.example/cafe' . "\u{0301}" =>
++                    'https://destination.example/assets',
++                ],
++            ],
++            'mixed canonical forms within one source path segment' => [
++                'https:\\/\\/source.example\\/cafe' . "\u{0301}" . 'naïve\\/logo.png',
++                'https:\\/\\/destination.example\\/assets\\/logo.png',
++                [
++                    'https://source.example/cafénaïve' =>
++                    'https://destination.example/assets',
++                ],
++            ],
++            'other Unicode source path matches its exact spelling' => [
++                'https://source.example/🚤/logo.png',
++                'https://destination.example/logo.png',
++                ['https://source.example/🚤' => 'https://destination.example'],
++            ],
+             'escaped target path copies the protocol slash spelling' => [
+                 'https:\\/\\/source.example\\/media\\/logo.png',
+                 'https:\\/\\/destination.example\\/assets\\/logo.png',
+@@ -573,6 +637,19 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest extends Test
+                 'https://SOURCE.EXAMPLE/Media/logo.png',
+                 ['https://source.example/media' => 'https://destination.example'],
+             ],
++            'compatibility-equivalent source path stays distinct' => [
++                'https://source.example/' . "\u{FB01}" . '/logo.png',
++                'https://source.example/' . "\u{FB01}" . '/logo.png',
++                ['https://source.example/fi' => 'https://destination.example'],
++            ],
++            'canonically different Unicode source path stays distinct' => [
++                'https://source.example/cafe' . "\u{0301}" . 'naive/logo.png',
++                'https://source.example/cafe' . "\u{0301}" . 'naive/logo.png',
++                [
++                    'https://source.example/cafénaïve' =>
++                    'https://destination.example/assets',
++                ],
++            ],
+             'target path has a dot segment' => [
+                 'https://source.example/media/logo.png',
+                 'https://source.example/media/logo.png',
+@@ -628,16 +705,6 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest extends Test
+                 'https://source.example/media/logo.png',
+                 ['https://source.example/media' => 'https://destination.example#part'],
+             ],
+-            'source domain contains Unicode characters' => [
+-                'https://bücher.example/media/logo.png',
+-                'https://bücher.example/media/logo.png',
+-                ['https://bücher.example/media' => 'https://destination.example'],
+-            ],
+-            'source path contains Unicode characters' => [
+-                'https://source.example/über-uns/logo.png',
+-                'https://source.example/über-uns/logo.png',
+-                ['https://source.example/über-uns' => 'https://destination.example'],
+-            ],
+             'source mapping has a username and password' => [
+                 'https://user:password@source.example/media/logo.png',
+                 'https://user:password@source.example/media/logo.png',
+@@ -723,16 +790,26 @@ class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRulesTest extends Test
+                 'https://source.example/media/logo.png',
+                 ['https://source.example' => 'https://🚤.example'],
+             ],
++            'Unicode target domain' => [
++                'https://source.example/media/logo.png',
++                'https://source.example/media/logo.png',
++                ['https://source.example' => 'https://bücher.example'],
++            ],
++            'Unicode candidate has an unconfigured port' => [
++                'https://münich.example:8443/media/logo.png',
++                'https://münich.example:8443/media/logo.png',
++                ['https://münich.example' => 'https://destination.example'],
++            ],
++            'Unicode candidate is a subdomain of the configured host' => [
++                'https://cdn.münich.example/media/logo.png',
++                'https://cdn.münich.example/media/logo.png',
++                ['https://münich.example' => 'https://destination.example'],
++            ],
+             'source domain contains an emoji' => [
+                 'https://🚤.example/media/logo.png',
+                 'https://🚤.example/media/logo.png',
+                 ['https://🚤.example' => 'https://destination.example'],
+             ],
+-            'configured source path contains an emoji' => [
+-                'https://source.example/🚤/logo.png',
+-                'https://source.example/🚤/logo.png',
+-                ['https://source.example/🚤' => 'https://destination.example'],
+-            ],
+             'configured source path contains a space byte' => [
+                 'https://source.example/media archive/logo.png',
+                 'https://source.example/media archive/logo.png',
+-- 
+2.50.0
+

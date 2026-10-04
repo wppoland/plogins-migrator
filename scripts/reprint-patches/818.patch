@@ -1,0 +1,441 @@
+From ca85edbc059a61a9d563b7f843e15c40433228db Mon Sep 17 00:00:00 2001
+From: x <x@x>
+Date: Sun, 4 Oct 2026 22:49:48 +0200
+Subject: [PATCH] PR #818: Exclude Reprint from new pulls by default
+
+---
+ README.md                                     | 17 ++++++++++-------
+ packages/reprint-client/src/import.php        |  4 ++--
+ .../src/lib/state/class-pull-state.php        |  2 +-
+ tests/Import/CssFileDownloadTest.php          |  1 +
+ tests/Import/FetchListProgressTest.php        |  2 +-
+ tests/Import/FilesPullDiffCheckpointTest.php  |  2 +-
+ tests/Import/FilesPullLocalIndexTest.php      |  2 ++
+ tests/Import/NewSiteUrlSqliteTest.php         |  1 +
+ tests/Import/OnlyCliParseTest.php             |  1 +
+ tests/Import/OnlyFilesPathPrefixTest.php      |  3 ++-
+ tests/Import/PreflightErrorOutputTest.php     |  2 ++
+ tests/Import/PullFilterOptionTest.php         | 19 ++++++++++---------
+ tests/Import/PullIndexWalTest.php             |  2 +-
+ tests/Import/ReprintExclusionHttpTest.php     |  2 +-
+ tests/Import/ReprintExclusionTest.php         |  4 ++--
+ tests/Import/UnixSymlinkPathTest.php          |  2 +-
+ .../Import/fixtures/command-report-router.php |  1 +
+ .../fixtures/compact-progress-router.php      |  1 +
+ tests/Import/fixtures/retry-later-router.php  |  1 +
+ tests/PushEndpointsTest.php                   |  1 +
+ tests/e2e/lib/test-helpers.js                 |  5 +++++
+ 21 files changed, 48 insertions(+), 27 deletions(-)
+
+diff --git a/README.md b/README.md
+index a24af4aa..d0424df8 100644
+--- a/README.md
++++ b/README.md
+@@ -499,16 +499,17 @@ to omit a specific directory when you know the site does not need it.
+ 
+ **Reprint plugin and connection state**
+ 
+-For example, `pull --exclude-reprint` skips the source Reprint plugin directory,
+-leaves its connection token out of `db.sql`, and removes its entry from the
+-imported `active_plugins` list. Other plugins and their settings stay.
++For example, `pull` with a new state directory skips the source Reprint plugin
++directory, leaves its connection token out of `db.sql`, and removes its entry
++from the imported `active_plugins` list. Other plugins and their settings stay.
+ 
+-New pulls include Reprint unless you pass `--exclude-reprint`. The same flag
+-works with `pull-files`, `pull-db`, `files-pull`, and `db-pull`:
++New pulls exclude Reprint unless you pass `--include-reprint`. The explicit
++`--exclude-reprint` flag also works with `pull-files`, `pull-db`, `files-pull`,
++and `db-pull`:
+ 
+ ```bash
+ php reprint.phar pull "$URL" --secret="$SECRET" \
+-    --state-dir="$STATE_DIR" --fs-root="$FS_ROOT" --exclude-reprint
++    --state-dir="$STATE_DIR" --fs-root="$FS_ROOT"
+ ```
+ 
+ The source reports its installed plugin path, including renamed directories
+@@ -524,7 +525,9 @@ It stops if decoding and re-encoding the untouched list does not reproduce both
+ the serialized PHP bytes and the bytes stored in the source column.
+ 
+ The choice is saved in the state directory. Later pulls keep it without
+-repeating the flag. `--include-reprint` selects inclusion again; the two flags cannot be combined. Finish an unfinished pull
++repeating the flag. `--include-reprint` selects inclusion again; the two flags
++cannot be combined. Only new state defaults to exclusion; existing state keeps
++its saved choice. Finish an unfinished pull
+ or use `--abort` before changing its choice. State written before this option
+ existed keeps the previous inclusion behavior.
+ 
+diff --git a/packages/reprint-client/src/import.php b/packages/reprint-client/src/import.php
+index 36fae9fc..3dd0db9f 100755
+--- a/packages/reprint-client/src/import.php
++++ b/packages/reprint-client/src/import.php
+@@ -15113,7 +15113,7 @@ if (
+             'name' => 'exclude-reprint',
+             'type' => 'flag',
+             'target' => 'exclude_reprint',
+-            'help' => 'Omit the source Reprint plugin, credentials, and activation entries (saved in state; requires an updated source server)',
++            'help' => 'Omit the source Reprint plugin, credentials, and activation entries (default for new state; requires an updated source server)',
+             'help_section' => 'global',
+             'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'db-pull'],
+         ],
+@@ -15122,7 +15122,7 @@ if (
+             'type' => 'flag',
+             'target' => 'exclude_reprint',
+             'flag_value' => false,
+-            'help' => 'Keep the source Reprint plugin and connection state (default for new state; saved in state)',
++            'help' => 'Keep the source Reprint plugin and connection state (saved in state)',
+             'help_section' => 'global',
+             'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'db-pull'],
+         ],
+diff --git a/packages/reprint-client/src/lib/state/class-pull-state.php b/packages/reprint-client/src/lib/state/class-pull-state.php
+index 7b1801a6..9f31bda4 100644
+--- a/packages/reprint-client/src/lib/state/class-pull-state.php
++++ b/packages/reprint-client/src/lib/state/class-pull-state.php
+@@ -68,7 +68,7 @@ class PullState
+     /** Keep host platform plugins through file download and db-apply. */
+     public bool $include_host_plugins = true;
+     /** Omit the source Reprint plugin and its connection state from pulls. */
+-    public bool $exclude_reprint = false;
++    public bool $exclude_reprint = true;
+     /** @var string|null User-Agent that worked during preflight. */
+     public ?string $user_agent = null;
+     public ?int $max_allowed_packet = null;
+diff --git a/tests/Import/CssFileDownloadTest.php b/tests/Import/CssFileDownloadTest.php
+index 5d0f2e43..d5140d66 100644
+--- a/tests/Import/CssFileDownloadTest.php
++++ b/tests/Import/CssFileDownloadTest.php
+@@ -99,6 +99,7 @@ class CssFileDownloadTest extends TestCase {
+         \write_current_pull_state($client, [
+             'preflight' => ['http_code' => 200, 'data' => [
+                 'ok' => true,
++                'reprint_plugin' => null,
+                 'runtime' => ['document_root' => $this->source],
+                 'wp_detect' => ['roots' => [['path' => $this->source]]],
+             ]],
+diff --git a/tests/Import/FetchListProgressTest.php b/tests/Import/FetchListProgressTest.php
+index c81f9d7b..ad2f007a 100644
+--- a/tests/Import/FetchListProgressTest.php
++++ b/tests/Import/FetchListProgressTest.php
+@@ -93,7 +93,7 @@ class FetchListProgressTest extends TestCase
+     private function writeState(array $state): void
+     {
+         \write_current_pull_state($this->makeClient(), array_replace_recursive([
+-            "preflight" => ["data" => ["ok" => true], "http_code" => 200],
++            "preflight" => ["data" => ["ok" => true, "reprint_plugin" => null], "http_code" => 200],
+             "follow_symlinks" => false,
+         ], $state));
+     }
+diff --git a/tests/Import/FilesPullDiffCheckpointTest.php b/tests/Import/FilesPullDiffCheckpointTest.php
+index 587213b6..636c64bd 100644
+--- a/tests/Import/FilesPullDiffCheckpointTest.php
++++ b/tests/Import/FilesPullDiffCheckpointTest.php
+@@ -498,7 +498,7 @@ final class FilesPullDiffCheckpointTest extends TestCase
+                 'current_stage' => 'diff',
+             ],
+             'preflight' => [
+-                'data' => ['ok' => true],
++                'data' => ['ok' => true, 'reprint_plugin' => null],
+                 'http_code' => 200,
+             ],
+             'follow_symlinks' => false,
+diff --git a/tests/Import/FilesPullLocalIndexTest.php b/tests/Import/FilesPullLocalIndexTest.php
+index 83b88b16..20c0d2b5 100644
+--- a/tests/Import/FilesPullLocalIndexTest.php
++++ b/tests/Import/FilesPullLocalIndexTest.php
+@@ -1585,6 +1585,7 @@ final class FilesPullLocalIndexTest extends TestCase
+             'http_code' => 200,
+             'data' => [
+                 'ok' => true,
++                'reprint_plugin' => null,
+                 'capabilities' => [
+                     'base64_path_parameters' => true,
+                 ],
+@@ -1721,6 +1722,7 @@ if ($endpoint === 'preflight') {
+     header('Content-Type: application/json');
+     echo json_encode(array(
+         'ok' => true,
++        'reprint_plugin' => null,
+         'capabilities' => array(
+             'base64_path_parameters' => true,
+         ),
+diff --git a/tests/Import/NewSiteUrlSqliteTest.php b/tests/Import/NewSiteUrlSqliteTest.php
+index f036687c..17d74ccd 100644
+--- a/tests/Import/NewSiteUrlSqliteTest.php
++++ b/tests/Import/NewSiteUrlSqliteTest.php
+@@ -475,6 +475,7 @@ class NewSiteUrlSqliteTest extends TestCase
+         $this->writeState($exportUrl, [
+             'preflight' => [
+                 'data' => [
++                    'reprint_plugin' => null,
+                     'database' => ['wp' => ['table_prefix' => 'wp_']],
+                 ],
+             ],
+diff --git a/tests/Import/OnlyCliParseTest.php b/tests/Import/OnlyCliParseTest.php
+index 7a4e0e10..a7263eab 100644
+--- a/tests/Import/OnlyCliParseTest.php
++++ b/tests/Import/OnlyCliParseTest.php
+@@ -160,6 +160,7 @@ PHP, var_export($requestsLog, true)));
+     {
+         $data = array(
+             'ok' => true,
++            'reprint_plugin' => null,
+             'capabilities' => array(
+                 'base64_path_parameters' => true,
+             ),
+diff --git a/tests/Import/OnlyFilesPathPrefixTest.php b/tests/Import/OnlyFilesPathPrefixTest.php
+index c0852a1f..042fafaa 100644
+--- a/tests/Import/OnlyFilesPathPrefixTest.php
++++ b/tests/Import/OnlyFilesPathPrefixTest.php
+@@ -73,7 +73,7 @@ class OnlyFilesPathPrefixTest extends TestCase
+     private function client(array $preflightData): \ImportClient
+     {
+         $c = new \ImportClient('https://src.example/export.php', $this->stateDir, $this->fsRoot);
+-        $c->get_state()->set_preflight_record(array('data' => $preflightData));
++        $c->get_state()->set_preflight_record(array('data' => array('reprint_plugin' => null) + $preflightData));
+         $this->set($c, 'audit_log_file', $this->tempDir . '/audit.log');
+         return $c;
+     }
+@@ -126,6 +126,7 @@ class OnlyFilesPathPrefixTest extends TestCase
+             ),
+             'preflight' => array(
+                 'data' => array(
++                    'reprint_plugin' => null,
+                     'database' => array(
+                         'wp' => array(
+                             'paths_urls' => array(
+diff --git a/tests/Import/PreflightErrorOutputTest.php b/tests/Import/PreflightErrorOutputTest.php
+index 3c6df333..3f30bc34 100644
+--- a/tests/Import/PreflightErrorOutputTest.php
++++ b/tests/Import/PreflightErrorOutputTest.php
+@@ -196,6 +196,7 @@ final class PreflightErrorOutputTest extends TestCase {
+     {
+         $preflight_body = json_encode([
+             'ok' => true,
++            'reprint_plugin' => null,
+             'protocol_version' => PULL_PROTOCOL_VERSION,
+             'filesystem' => ['ok' => true],
+             'database' => ['connected' => true],
+@@ -283,6 +284,7 @@ final class PreflightErrorOutputTest extends TestCase {
+     {
+         $payload = [
+             'ok' => true,
++            'reprint_plugin' => null,
+             'protocol_version' => PULL_PROTOCOL_VERSION + 1,
+             'filesystem' => ['ok' => true],
+             'database' => ['connected' => true],
+diff --git a/tests/Import/PullFilterOptionTest.php b/tests/Import/PullFilterOptionTest.php
+index 37666a99..210a4662 100644
+--- a/tests/Import/PullFilterOptionTest.php
++++ b/tests/Import/PullFilterOptionTest.php
+@@ -74,6 +74,7 @@ class PullFilterFakeClient extends \ImportClient
+             "http_code" => 200,
+             "data" => [
+                 "ok" => true,
++                "reprint_plugin" => null,
+                 "database" => [
+                     "wp" => [
+                         "wp_version" => "6.8",
+@@ -317,7 +318,7 @@ class PullFilterOptionTest extends TestCase
+                 "started_by_command" => "pull",
+                 "last_completed_stage" => "preflight",
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+@@ -349,7 +350,7 @@ class PullFilterOptionTest extends TestCase
+                 "started_by_command" => "pull",
+                 "last_completed_stage" => "preflight",
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+@@ -380,7 +381,7 @@ class PullFilterOptionTest extends TestCase
+                 "started_by_command" => "pull-db",
+                 "last_completed_stage" => null,
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+         file_put_contents($this->stateDir . '/db.sql', "SELECT 1;\n");
+ 
+@@ -572,7 +573,7 @@ class PullFilterOptionTest extends TestCase
+                 "stage_sequence" => ["preflight", "files-pull"],
+                 "last_completed_stage" => "preflight",
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+@@ -595,7 +596,7 @@ class PullFilterOptionTest extends TestCase
+                 "completion_state" => "complete",
+                 "current_stage" => null,
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+@@ -623,7 +624,7 @@ class PullFilterOptionTest extends TestCase
+                 "stage_sequence" => ["preflight", "files-pull"],
+                 "last_completed_stage" => "preflight",
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+@@ -717,7 +718,7 @@ class PullFilterOptionTest extends TestCase
+                 "stage_sequence" => ["preflight", "files-pull"],
+                 "last_completed_stage" => "preflight",
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+@@ -754,7 +755,7 @@ class PullFilterOptionTest extends TestCase
+                 "stage_sequence" => ["preflight", "db-pull", "db-apply"],
+                 "last_completed_stage" => "preflight",
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+@@ -783,7 +784,7 @@ class PullFilterOptionTest extends TestCase
+                 "completion_state" => "complete",
+                 "current_stage" => null,
+             ],
+-            "preflight" => ["http_code" => 200, "data" => ["ok" => true]],
++            "preflight" => ["http_code" => 200, "data" => ["ok" => true, "reprint_plugin" => null]],
+         ]);
+ 
+         $client = $this->makeClient();
+diff --git a/tests/Import/PullIndexWalTest.php b/tests/Import/PullIndexWalTest.php
+index 3fbfe276..2efe301e 100644
+--- a/tests/Import/PullIndexWalTest.php
++++ b/tests/Import/PullIndexWalTest.php
+@@ -237,7 +237,7 @@ final class PullIndexWalTest extends TestCase
+         );
+         \write_current_pull_state($this->client(), [
+             'preflight' => [
+-                'data' => ['ok' => true],
++                'data' => ['ok' => true, 'reprint_plugin' => null],
+                 'http_code' => 200,
+             ],
+         ]);
+diff --git a/tests/Import/ReprintExclusionHttpTest.php b/tests/Import/ReprintExclusionHttpTest.php
+index ed5ecc47..5652a36c 100644
+--- a/tests/Import/ReprintExclusionHttpTest.php
++++ b/tests/Import/ReprintExclusionHttpTest.php
+@@ -100,7 +100,7 @@ class ReprintExclusionHttpTest extends TestCase
+ 
+     public static function exclusion_modes(): array
+     {
+-        return [['--exclude-reprint', true], ['--include-reprint', false], ['', false]];
++        return [['--exclude-reprint', true], ['--include-reprint', false], ['', true]];
+     }
+ 
+     /** @dataProvider exclusion_modes */
+diff --git a/tests/Import/ReprintExclusionTest.php b/tests/Import/ReprintExclusionTest.php
+index 0e38e9d2..034afa33 100644
+--- a/tests/Import/ReprintExclusionTest.php
++++ b/tests/Import/ReprintExclusionTest.php
+@@ -87,9 +87,9 @@ class ReprintExclusionTest extends TestCase
+         $this->assertFalse(\PullState::from_array($data)->exclude_reprint);
+     }
+ 
+-    public function testNewStateIncludesReprintByDefault(): void
++    public function testNewStateExcludesReprintByDefault(): void
+     {
+-        $this->assertFalse((new \PullState())->exclude_reprint);
++        $this->assertTrue((new \PullState())->exclude_reprint);
+     }
+ 
+     public function testCannotChangeSelectionBetweenPipelineStages(): void
+diff --git a/tests/Import/UnixSymlinkPathTest.php b/tests/Import/UnixSymlinkPathTest.php
+index 02b21beb..d543249e 100644
+--- a/tests/Import/UnixSymlinkPathTest.php
++++ b/tests/Import/UnixSymlinkPathTest.php
+@@ -276,7 +276,7 @@ final class UnixSymlinkPathTest extends TestCase {
+         if (!is_dir($state_directory)) {
+             $client = new \ImportClient($this->url, $state_directory, $this->root . '/files', ['allow_http' => true]);
+             \write_current_pull_state($client, [
+-                'preflight' => ['data' => ['ok' => true, 'path_format' => 'unix', 'database' => ['wp' => ['paths_urls' => ['abspath' => $this->source]]], 'wp_detect' => ['roots' => [['path' => $this->source]]]], 'http_code' => 200],
++                'preflight' => ['data' => ['ok' => true, 'reprint_plugin' => null, 'path_format' => 'unix', 'database' => ['wp' => ['paths_urls' => ['abspath' => $this->source]]], 'wp_detect' => ['roots' => [['path' => $this->source]]]], 'http_code' => 200],
+             ]);
+         }
+         $command = array_merge([PHP_BINARY, dirname(__DIR__, 2) . '/packages/reprint-client/src/import.php',
+diff --git a/tests/Import/fixtures/command-report-router.php b/tests/Import/fixtures/command-report-router.php
+index 0d961b70..88110faa 100644
+--- a/tests/Import/fixtures/command-report-router.php
++++ b/tests/Import/fixtures/command-report-router.php
+@@ -8,6 +8,7 @@ if (!is_file('response.json') && ( $_POST['endpoint'] ?? '' ) === 'preflight') {
+     echo json_encode([
+         'ok' => true,
+         'protocol_version' => 3,
++        'reprint_plugin' => null,
+         'filesystem' => ['ok' => true],
+         'database' => ['connected' => true],
+         'wp_detect' => ['roots' => [['path' => getcwd() . '/remote']]],
+diff --git a/tests/Import/fixtures/compact-progress-router.php b/tests/Import/fixtures/compact-progress-router.php
+index 0d961b70..e6c46572 100644
+--- a/tests/Import/fixtures/compact-progress-router.php
++++ b/tests/Import/fixtures/compact-progress-router.php
+@@ -7,6 +7,7 @@ if (!is_file('response.json') && ( $_POST['endpoint'] ?? '' ) === 'preflight') {
+     // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON fixture, not HTML.
+     echo json_encode([
+         'ok' => true,
++        'reprint_plugin' => null,
+         'protocol_version' => 3,
+         'filesystem' => ['ok' => true],
+         'database' => ['connected' => true],
+diff --git a/tests/Import/fixtures/retry-later-router.php b/tests/Import/fixtures/retry-later-router.php
+index 7edf416c..49ee2ffa 100644
+--- a/tests/Import/fixtures/retry-later-router.php
++++ b/tests/Import/fixtures/retry-later-router.php
+@@ -11,6 +11,7 @@ if ($reprint_endpoint === 'preflight') {
+     header('Content-Type: application/json');
+     echo json_encode([
+         'ok' => true,
++        'reprint_plugin' => null,
+         'protocol_version' => 3,
+         'capabilities' => ['base64_path_parameters' => true],
+         'runtime' => ['document_root' => getcwd() . '/remote', 'ini_get_all' => []],
+diff --git a/tests/PushEndpointsTest.php b/tests/PushEndpointsTest.php
+index 2d5e9ee7..1c0c8fad 100644
+--- a/tests/PushEndpointsTest.php
++++ b/tests/PushEndpointsTest.php
+@@ -3040,6 +3040,7 @@ final class PushEndpointsTest extends TestCase {
+             'preflight' => [
+                 'http_code' => 200,
+                 'data' => [
++                    'reprint_plugin' => null,
+                     'runtime' => ['document_root' => $remote_document_root],
+                     'wp_detect' => ['roots' => [['path' => $remote_document_root]]],
+                     'database' => ['wp' => ['paths_urls' => [
+diff --git a/tests/e2e/lib/test-helpers.js b/tests/e2e/lib/test-helpers.js
+index fb03ce5e..2431b0a1 100644
+--- a/tests/e2e/lib/test-helpers.js
++++ b/tests/e2e/lib/test-helpers.js
+@@ -346,6 +346,11 @@ export function runImporter(url, outputDir, command, options = {}) {
+         } else if (secret) {
+             args.push(`--private-key-path=${getHarnessKey(secret).privateKeyPath}`);
+         }
++        // Whole-site copy tests compare every source file and row. Keep that
++        // behavior unless a test explicitly selects Reprint exclusion.
++        if (!extraArgs.includes('--include-reprint') && !extraArgs.includes('--exclude-reprint')) {
++            args.push('--include-reprint');
++        }
+         if (extraArgs.length > 0) {
+             args.push(...extraArgs);
+         }
+-- 
+2.50.0
+

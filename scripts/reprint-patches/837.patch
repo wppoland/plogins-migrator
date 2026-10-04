@@ -1,0 +1,413 @@
+From 4017850adf09b5783d5a47111c031191c1352e92 Mon Sep 17 00:00:00 2001
+From: x <x@x>
+Date: Sun, 4 Oct 2026 22:58:35 +0200
+Subject: [PATCH] PR #837: Keep the API reachable after database overwrite with
+ a standalone route
+
+---
+ bin/downgrade-server-plugin.php               |  1 +
+ docs/DATABASE-PUSH.md                         | 55 +++++++++----
+ docs/PUSH-SYNC.md                             | 17 ++--
+ reprint-server-wp/lib.php                     |  6 +-
+ reprint-server-wp/standalone.php              | 82 +++++++++++++++++++
+ .../DatabasePushHttpTest.php                  | 80 +++++++++++++++++-
+ .../SetValueFormatHttpTest.php                | 14 +++-
+ tests/fixtures/database-push-router.php       | 24 ++----
+ 8 files changed, 234 insertions(+), 45 deletions(-)
+ create mode 100644 reprint-server-wp/standalone.php
+
+diff --git a/bin/downgrade-server-plugin.php b/bin/downgrade-server-plugin.php
+index 315ac761..bb333000 100755
+--- a/bin/downgrade-server-plugin.php
++++ b/bin/downgrade-server-plugin.php
+@@ -32,6 +32,7 @@ $paths = [
+     $staging_root . '/reprint-server-wp/index.php',
+     $staging_root . '/reprint-server-wp/uninstall.php',
+     $staging_root . '/reprint-server-wp/lib.php',
++    $staging_root . '/reprint-server-wp/standalone.php',
+     $staging_root . '/reprint-server-wp/compat.php',
+     $staging_root . '/reprint-server-wp/wordpress',
+ ];
+diff --git a/docs/DATABASE-PUSH.md b/docs/DATABASE-PUSH.md
+index c247d616..6abd1856 100644
+--- a/docs/DATABASE-PUSH.md
++++ b/docs/DATABASE-PUSH.md
+@@ -70,30 +70,56 @@ database may deactivate the plugin or replace the token.
+ 
+ ## Host setup
+ 
+-The host supplies an API entry point which does **not** boot WordPress. It
+-must remain reachable while public requests are stopped. Its configuration
+-and credential live outside the document root. For example:
++The plugin bundle includes `standalone.php`. Point the client at
++`https://example.com/wp-content/plugins/reprint-server/standalone.php`.
++This route never loads WordPress or `wp-config.php`. Keep it reachable when
++stopping public requests for commit.
++
++Set the server environment variable `REPRINT_SERVER_CONFIG` to an absolute
++path outside the document root, for example `/srv/private/reprint-config.php`.
++For PHP-FPM, set it in the site's pool configuration:
++
++```ini
++env[REPRINT_SERVER_CONFIG] = /srv/private/reprint-config.php
++```
++
++The private PHP file supplies the existing database constants, the public keys
++file, and the API options. Use this site's actual paths and credentials:
+ 
+ ```php
+ <?php
+-// This private file defines ABSPATH, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD,
+-// and sets $GLOBALS['table_prefix'] to the one site's table prefix.
+-require '/srv/private/reprint-database-config.php';
+-
+-$plugin_directory = '/srv/site/wp-content/plugins/reprint-server/';
+-define('WordPress\\Reprint\\Server\\Plugin\\PLUGIN_DIR', $plugin_directory);
++define('ABSPATH', '/srv/site/');
++define('DB_HOST', 'localhost');
++define('DB_NAME', 'wordpress');
++define('DB_USER', 'wordpress');
++define('DB_PASSWORD', 'replace-with-the-database-password');
++$GLOBALS['table_prefix'] = 'wp_';
+ define('WordPress\\Reprint\\Server\\Plugin\\PUBLIC_KEYS_FILE', '/srv/private/reprint-public-keys.php');
+ define('REPRINT_SERVER_PUSH_ENABLED', true);
+-require $plugin_directory . 'vendor/autoload.php';
+-require $plugin_directory . 'lib.php';
+ 
+-\WordPress\Reprint\Server\Plugin\handle_api_request([
++return [
+     'docroot' => '/srv/site',
+     'reprint_directory' => '/srv/private/reprint',
+     'database_push' => true,
+-]);
++];
+ ```
+ 
++Create `/srv/private/reprint-public-keys.php` returning the enrolled public keys
++printed by `reprint keygen`. On a host without `openssl_verify()`, define
++`CONNECTION_TOKEN_FILE` instead and create `/srv/private/reprint-token.php` with
++`<?php return 'YOUR_RANDOM_SECRET';`, generating a long random secret, for
++example with `openssl rand -hex 32`. Restrict these files to the account running
++PHP. Do not commit credentials or put them in the plugin directory. The endpoint
++rejects configuration and token files inside the document root, including
++symlinks resolving there.
++
++Missing configuration disables the endpoint. Requests cannot choose a different
++configuration file. To revoke access, remove the private config, remove the key
++from the keys file, or rotate the private token. WordPress admin settings do not control this route. It remains
++available when the plugin is inactive, but removing the plugin files also
++removes the endpoint. Keep multisite on the WordPress route: this standalone
++configuration supports one site and does not discover network settings.
++
+ The server currently trusts DDL prepared by the authenticated client. It does
+ not parse SQL or guarantee that arbitrary client SQL stays within the selected
+ tables. A server-side parser remains a TODO; a keyword blacklist is not a SQL
+@@ -105,7 +131,8 @@ The keys file returns a list of one-line public keys, as printed by
+ accepts a connection token instead: define `CONNECTION_TOKEN_FILE` as a file
+ returning the shared secret as a PHP string. Either file is host-level
+ permission for destructive pushes, not a setting to expose to visitors.
+-Requests still require the existing signed push authentication and HTTPS.
++Requests still require the existing signed push authentication. Serve the route
++over HTTPS; the host supplies TLS.
+ `database_push` defaults to disabled. Setting it on a normal WordPress route
+ is insufficient: the host must actually provide the independent route.
+ 
+diff --git a/docs/PUSH-SYNC.md b/docs/PUSH-SYNC.md
+index 45062df9..859cc32e 100644
+--- a/docs/PUSH-SYNC.md
++++ b/docs/PUSH-SYNC.md
+@@ -648,14 +648,15 @@ Updating reprint itself is a separate concern, never part of a sync.
+ 
+ ## Escape hatch: commit without booting WordPress
+ 
+-Normally the endpoint runs through the WordPress boot because it is
+-convenient. But a commit step can break that boot — a fatal in a partially
+-committed plugin — so the same endpoint is also reachable as a standalone PHP file that
+-never loads WordPress: it reads database credentials from `wp-config.php`
+-directly and operates on the filesystem and database with reprint's own code.
+-The driver falls back to it automatically when the normal route stops
+-answering sensibly. This is what makes commit failures recoverable from the
+-outside instead of requiring SSH.
++The plugin bundle includes `standalone.php`, which calls the same API without
++loading WordPress. The host sets `REPRINT_SERVER_CONFIG` to a private PHP file
++containing database credentials, a file-backed token, and API options. Neither
++plugin activation nor the token in `wp_options` controls this route, so replacing
++the database cannot disable it. See [host setup](DATABASE-PUSH.md#host-setup).
++
++The client must use this remote Reprint API URL explicitly. Automatic fallback
++from the WordPress route is not implemented. The endpoint does not parse or
++execute `wp-config.php`; that file can itself load WordPress or arbitrary plugins.
+ 
+ ## Full database overwrite
+ 
+diff --git a/reprint-server-wp/lib.php b/reprint-server-wp/lib.php
+index 2e1d0310..8ef6429e 100644
+--- a/reprint-server-wp/lib.php
++++ b/reprint-server-wp/lib.php
+@@ -496,9 +496,9 @@ function update_push_authorization(bool $enabled): bool {
+ /**
+  * Handle an export API request.
+  *
+- * WordPress is already loaded at this point — DB credentials, $table_prefix,
+- * and the database layer (including the SQLite db.php drop-in when present)
+- * are all available.
++ * The WordPress route supplies DB credentials, $table_prefix, and its database
++ * layer (including the SQLite db.php drop-in when present). The standalone
++ * route instead supplies credentials and $table_prefix from private host config.
+  *
+  * The bundled plugin passes the `reprint_server_api_options` filter result here.
+  * A direct library embedder supplies the same trusted options array itself.
+diff --git a/reprint-server-wp/standalone.php b/reprint-server-wp/standalone.php
+new file mode 100644
+index 00000000..ae2c66d0
+--- /dev/null
++++ b/reprint-server-wp/standalone.php
+@@ -0,0 +1,82 @@
++<?php
++
++namespace WordPress\Reprint\Server\Plugin;
++
++// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Standalone entry point; WordPress is never loaded.
++
++// No WordPress bootstrap: the incoming database may deactivate this plugin or
++// replace its option-backed token. Only trusted host configuration is loaded.
++ini_set('display_errors', '0');
++header('Cache-Control: no-store');
++// FPM workers retain realpath results across requests. Recheck private paths
++// before loading config, not only later inside the shared request handler.
++clearstatcache(true);
++
++$reject_configuration = static function (string $detail): void {
++    http_response_code(503);
++    header('Content-Type: application/octet-stream');
++    echo json_encode(['status' => 'rejected', 'reason' => 'not_configured', 'detail' => $detail]);
++    exit;
++};
++
++$require_private_file = static function ($path, string $docroot) use ($reject_configuration): string {
++    $resolved = is_string($path) && $path !== '' ? realpath($path) : false;
++    if ($resolved === false || !is_file($resolved) || !is_readable($resolved)) {
++        $reject_configuration('Standalone Reprint requires a readable private configuration file and token file.');
++    }
++    $resolved = str_replace('\\', '/', $resolved);
++    $configured = str_replace('\\', '/', $path);
++    $docroot = rtrim(str_replace('\\', '/', $docroot), '/') . '/';
++    if ($configured[0] !== '/' && !preg_match('/^[A-Za-z]:\//', $configured)) {
++        $reject_configuration('Standalone Reprint configuration and token paths must be absolute.');
++    }
++    // Check the supplied path too: a public symlink to a private file still
++    // exposes that file through the web server's document root.
++    foreach ([$configured, $resolved] as $candidate) {
++        $inside = DIRECTORY_SEPARATOR === '\\'
++            ? strncasecmp($candidate, $docroot, strlen($docroot)) === 0
++            : strpos($candidate, $docroot) === 0;
++        if ($inside) {
++            $reject_configuration('Standalone Reprint configuration and token files must be outside the document root.');
++        }
++    }
++    return $resolved;
++};
++
++// This variable is set by the host, never by a request parameter or header.
++$config_path = getenv('REPRINT_SERVER_CONFIG');
++// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- DOCUMENT_ROOT is trusted web-server configuration.
++$web_docroot_path = (string) ( $_SERVER['DOCUMENT_ROOT'] ?? '' );
++$web_docroot = $web_docroot_path === '' ? false : realpath($web_docroot_path);
++if ($web_docroot === false || !is_dir($web_docroot)) {
++    $reject_configuration('Standalone Reprint requires DOCUMENT_ROOT to name an existing directory.');
++}
++$config_path = $require_private_file($config_path, $web_docroot);
++$options = require $config_path;
++if (!is_array($options) || !isset($options['docroot']) || !is_string($options['docroot'])) {
++    $reject_configuration('Standalone Reprint configuration must return API options with a docroot path.');
++}
++$docroot = realpath($options['docroot']);
++if ($docroot === false || !is_dir($docroot) || !defined('ABSPATH')) {
++    $reject_configuration('Standalone Reprint configuration must define ABSPATH and name an existing docroot.');
++}
++$require_private_file($config_path, $docroot);
++$token_constant = __NAMESPACE__ . '\\CONNECTION_TOKEN_FILE';
++$token_path = defined($token_constant) ? constant($token_constant) : null;
++
++define(__NAMESPACE__ . '\\PLUGIN_DIR', __DIR__ . '/');
++require __DIR__ . '/lib.php';
++if (load_server_runtime() === null) {
++    $reject_configuration('Reprint Server runtime is incomplete. Install the release bundle or run composer install in reprint-server-wp.');
++}
++// Hosts with openssl_verify() accept only enrolled public keys, and this route
++// cannot read keys stored in wp_options. Only token hosts need the token file.
++if (\WordPress\Reprint\Server\Utils::key_auth_required()) {
++    if (!has_public_keys_file()) {
++        $reject_configuration('Standalone Reprint on a host with OpenSSL requires a public-keys.php file; keys stored in the database are not read.');
++    }
++} else {
++    $require_private_file($token_path, $web_docroot);
++    $require_private_file($token_path, $docroot);
++}
++handle_api_request($options);
+diff --git a/tests/MySQLDumpProducer/DatabasePushHttpTest.php b/tests/MySQLDumpProducer/DatabasePushHttpTest.php
+index 34417228..f19a852b 100644
+--- a/tests/MySQLDumpProducer/DatabasePushHttpTest.php
++++ b/tests/MySQLDumpProducer/DatabasePushHttpTest.php
+@@ -27,7 +27,21 @@ class DatabasePushHttpTest extends MySQLDumpProducerTestBase {
+         $this->remote_reprint_api_url = 'http://' . $address . '/';
+         $environment = getenv();
+         $environment['REPRINT_DB_TEST_ROOT'] = $this->root;
+-        $this->server = proc_open([getenv('REPRINT_DB_PUSH_SERVER_PHP') ?: PHP_BINARY, '-d', 'post_max_size=2M', '-S', $address, __DIR__ . '/../fixtures/database-push-router.php'], [['pipe', 'r'], ['file', $this->root . '/server.log', 'a'], ['file', $this->root . '/server.log', 'a']], $pipes, null, $environment);
++        $environment['REPRINT_SERVER_CONFIG'] = $this->root . '/config.php';
++        file_put_contents($this->root . '/config.php', '<?php '
++            . 'define("ABSPATH", ' . var_export($this->root . '/site/', true) . ');'
++            . 'define("DB_HOST", ' . var_export(str_replace(';port=', ':', getenv('DB_HOST')), true) . ');'
++            . 'define("DB_NAME", ' . var_export($this->dbName . '_receiver', true) . ');'
++            . 'define("DB_USER", ' . var_export(getenv('DB_USER'), true) . ');'
++            . 'define("DB_PASSWORD", ' . var_export(getenv('DB_PASS'), true) . ');'
++            . '$GLOBALS["table_prefix"] = "wp_";'
++            . 'define("WordPress\\Reprint\\Server\\Plugin\\CONNECTION_TOKEN_FILE", ' . var_export($this->root . '/secret.php', true) . ');'
++            . 'define("REPRINT_SERVER_PUSH_ENABLED", true);'
++            . 'return ' . var_export(['docroot' => $this->root . '/site', 'reprint_directory' => $this->root . '/private', 'database_push' => true, 'maximum_part_bytes' => 16384], true) . ';');
++        // Booting WordPress would fail, even before the incoming options remove
++        // the plugin and its old option-backed connection token.
++        file_put_contents($this->root . '/site/wp-load.php', '<?php throw new RuntimeException("WordPress must not boot");');
++        $this->server = proc_open([getenv('REPRINT_DB_PUSH_SERVER_PHP') ?: PHP_BINARY, '-d', 'post_max_size=2M', '-S', $address, '-t', $this->root . '/site', __DIR__ . '/../fixtures/database-push-router.php'], [['pipe', 'r'], ['file', $this->root . '/server.log', 'a'], ['file', $this->root . '/server.log', 'a']], $pipes, null, $environment);
+         fclose($pipes[0]);
+         $deadline = microtime(true) + 5;
+         do {
+@@ -55,6 +69,70 @@ class DatabasePushHttpTest extends MySQLDumpProducerTestBase {
+         parent::tearDown();
+     }
+ 
++    public function testStandaloneRejectsUnsignedRequestsAndMissingConfig(): void {
++        $context = stream_context_create(['http' => ['ignore_errors' => true]]);
++        $url = $this->remote_reprint_api_url . '?endpoint=push_db_status';
++        $response = json_decode(file_get_contents($url, false, $context), true);
++        self::assertSame('auth_failed', $response['reason']);
++        // Removing the host's configuration disables the ready-made route.
++        unlink($this->root . '/config.php');
++        $response = json_decode(file_get_contents($url . '&REPRINT_SERVER_CONFIG=' . urlencode($this->root . '/secret.php'), false, $context), true);
++        self::assertSame('not_configured', $response['reason']);
++    }
++
++    public function testStandaloneRejectsConfigAndTokenInsideDocumentRoot(): void {
++        $context = stream_context_create(['http' => ['ignore_errors' => true]]);
++        $url = $this->remote_reprint_api_url . '?endpoint=push_db_status';
++        rename($this->root . '/secret.php', $this->root . '/site/secret.php');
++        symlink($this->root . '/site/secret.php', $this->root . '/secret.php');
++        $response = json_decode(file_get_contents($url, false, $context), true);
++        self::assertSame('not_configured', $response['reason']);
++        self::assertStringContainsString('outside', $response['detail']);
++        rename($this->root . '/config.php', $this->root . '/site/config.php');
++        symlink($this->root . '/site/config.php', $this->root . '/config.php');
++        $response = json_decode(file_get_contents($url, false, $context), true);
++        self::assertSame('not_configured', $response['reason']);
++        self::assertStringContainsString('outside', $response['detail']);
++    }
++
++    public function testStandaloneRejectsPublicTokenAliasToPrivateFile(): void {
++        symlink($this->root . '/secret.php', $this->root . '/site/token.php');
++        $config = file_get_contents($this->root . '/config.php');
++        file_put_contents($this->root . '/config.php', str_replace($this->root . '/secret.php', $this->root . '/site/token.php', $config));
++        $context = stream_context_create(['http' => ['ignore_errors' => true]]);
++        $response = json_decode(file_get_contents($this->remote_reprint_api_url . '?endpoint=push_db_status', false, $context), true);
++        self::assertSame('not_configured', $response['reason']);
++        self::assertStringContainsString('outside', $response['detail']);
++    }
++
++    public function testStandaloneAuthenticationSurvivesOptionsReplacementAndCleanup(): void {
++        $this->pdo->exec('CREATE TABLE wp_options (option_name varchar(191) PRIMARY KEY, option_value longtext) ENGINE=InnoDB');
++        $this->pdo->exec("INSERT INTO wp_options VALUES ('active_plugins', 'a:0:{}'), ('reprint_server_connection_token', 'different-token')");
++        $client = $this->client();
++        $processor = $this->processor($client);
++        try {
++            while ($processor->next_step()) {
++            }
++            $status = $processor->get_status();
++            $parameters = ['push_session_id' => $status['push_session_id']];
++            $commit = $client->send_push_request('POST', 'push_db_commit', $parameters + ['review' => $status['review'], 'writers_stopped' => 'yes'], ['accepted']);
++            self::assertSame('complete', $commit['status'], json_encode($commit));
++            self::assertSame('a:0:{}', $this->receiver->query("SELECT option_value FROM wp_options WHERE option_name='active_plugins'")->fetchColumn());
++            $client->close();
++            $client = $this->client();
++            do {
++                $result = $client->send_push_request('POST', 'push_db_cleanup', $parameters, ['accepted']);
++                self::assertSame('complete', $result['status'], json_encode($result));
++            } while ($result['response']['phase'] !== 'complete');
++            $result = $client->send_push_request('GET', 'push_db_status', $parameters, ['accepted']);
++            self::assertSame('complete', $result['status']);
++            self::assertSame('complete', $result['response']['phase']);
++        } finally {
++            $processor->close();
++            $client->close();
++        }
++    }
++
+     /**
+      * Interruption cases: confirmed rows stay copied; an incomplete row is read
+      * again; edits to unread rows are observed. Large rows cross request limits.
+diff --git a/tests/MySQLDumpProducer/SetValueFormatHttpTest.php b/tests/MySQLDumpProducer/SetValueFormatHttpTest.php
+index 8ba68db4..df8a5216 100644
+--- a/tests/MySQLDumpProducer/SetValueFormatHttpTest.php
++++ b/tests/MySQLDumpProducer/SetValueFormatHttpTest.php
+@@ -23,7 +23,19 @@ class SetValueFormatHttpTest extends MySQLDumpProducerTestBase {
+         $this->remote_reprint_api_url = 'http://' . $address . '/';
+         $environment = getenv();
+         $environment['REPRINT_DB_TEST_ROOT'] = $this->root;
+-        $this->server = proc_open([PHP_BINARY, '-d', 'post_max_size=2M', '-S', $address, __DIR__ . '/../fixtures/database-push-router.php'], [['pipe', 'r'], ['file', $this->root . '/server.log', 'a'], ['file', $this->root . '/server.log', 'a']], $pipes, null, $environment);
++        // The shared router is the standalone route, configured like DatabasePushHttpTest.
++        $environment['REPRINT_SERVER_CONFIG'] = $this->root . '/config.php';
++        file_put_contents($this->root . '/config.php', '<?php '
++            . 'define("ABSPATH", ' . var_export($this->root . '/site/', true) . ');'
++            . 'define("DB_HOST", ' . var_export(str_replace(';port=', ':', getenv('DB_HOST')), true) . ');'
++            . 'define("DB_NAME", ' . var_export($this->dbName . '_receiver', true) . ');'
++            . 'define("DB_USER", ' . var_export(getenv('DB_USER'), true) . ');'
++            . 'define("DB_PASSWORD", ' . var_export(getenv('DB_PASS'), true) . ');'
++            . '$GLOBALS["table_prefix"] = "wp_";'
++            . 'define("WordPress\\Reprint\\Server\\Plugin\\CONNECTION_TOKEN_FILE", ' . var_export($this->root . '/secret.php', true) . ');'
++            . 'define("REPRINT_SERVER_PUSH_ENABLED", true);'
++            . 'return ' . var_export(['docroot' => $this->root . '/site', 'reprint_directory' => $this->root . '/private', 'database_push' => true, 'maximum_part_bytes' => 16384], true) . ';');
++        $this->server = proc_open([PHP_BINARY, '-d', 'post_max_size=2M', '-S', $address, '-t', $this->root . '/site', __DIR__ . '/../fixtures/database-push-router.php'], [['pipe', 'r'], ['file', $this->root . '/server.log', 'a'], ['file', $this->root . '/server.log', 'a']], $pipes, null, $environment);
+         fclose($pipes[0]);
+         $deadline = microtime(true) + 5;
+         do {
+diff --git a/tests/fixtures/database-push-router.php b/tests/fixtures/database-push-router.php
+index b7ad8afe..e4722711 100644
+--- a/tests/fixtures/database-push-router.php
++++ b/tests/fixtures/database-push-router.php
+@@ -2,29 +2,17 @@
+ 
+ // The production library authenticates and dispatches every request. The host
+ // route uses file-backed credentials so replacing wp_options cannot remove it.
+-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+ if (getenv('REPRINT_DB_PUSH_SERVER_PHP') && class_exists('PDO', false)) {
+     throw new RuntimeException('The PDO-free push endpoint test must run without PDO.');
+ }
+-define('ABSPATH', getenv('REPRINT_DB_TEST_ROOT') . '/site/');
+-define('WordPress\\Reprint\\Server\\Plugin\\PLUGIN_DIR', dirname(__DIR__, 2) . '/reprint-server-wp/');
+-define('WordPress\\Reprint\\Server\\Plugin\\CONNECTION_TOKEN_FILE', getenv('REPRINT_DB_TEST_ROOT') . '/secret.php');
+-define('REPRINT_SERVER_PUSH_ENABLED', true);
+-define('DB_HOST', str_replace(';port=', ':', getenv('DB_HOST')));
+-define('DB_NAME', getenv('DB_NAME') . '_receiver');
+-define('DB_USER', getenv('DB_USER'));
+-define('DB_PASSWORD', getenv('DB_PASS'));
+-$GLOBALS['table_prefix'] = 'wp_';
+ register_shutdown_function(static function (): void {
+     file_put_contents(getenv('REPRINT_DB_TEST_ROOT') . '/requests', ($_GET['endpoint'] ?? '') . "\n", FILE_APPEND);
+ });
+ // This route models a host without openssl_verify(), so the file-backed
+-// connection token stays the scheme.
++// connection token stays the scheme. The class file is loaded directly because
++// standalone.php loads the runtime only after its configuration checks.
++if (!class_exists('WordPress\\Reprint\\Server\\Utils', false)) {
++    require_once dirname(__DIR__, 2) . '/packages/reprint-server/src/class-utils.php';
++}
+ \WordPress\Reprint\Server\Utils::override_key_auth_required_for_tests(false);
+-require dirname(__DIR__, 2) . '/reprint-server-wp/lib.php';
+-\WordPress\Reprint\Server\Plugin\handle_api_request([
+-    'docroot' => ABSPATH,
+-    'reprint_directory' => getenv('REPRINT_DB_TEST_ROOT') . '/private',
+-    'database_push' => true,
+-    'maximum_part_bytes' => 16384,
+-]);
++require dirname(__DIR__, 2) . '/reprint-server-wp/standalone.php';
+-- 
+2.50.0
+

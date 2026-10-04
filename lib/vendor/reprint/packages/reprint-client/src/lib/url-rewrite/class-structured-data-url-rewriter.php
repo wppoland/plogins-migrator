@@ -1,0 +1,1317 @@
+<?php
+
+use WordPress\DataLiberation\URL\WPURL;
+use WordPress\DataLiberation\URL\CSSURLProcessor;
+use WordPress\DataLiberation\Shortcode\ShortcodeProcessor;
+use function WordPress\DataLiberation\URL\is_child_url_of;
+
+/**
+ * Rewrites URLs in a single decoded database value by detecting the data
+ * format and applying the appropriate rewriting strategy.
+ *
+ * Format detection is try-and-fail after conservative syntax gates: construct
+ * the real parser, check if it accepted the input. The gates only skip parser
+ * attempts for byte prefixes that cannot contain string leaves for that format;
+ * the parsers themselves remain the authority on what's valid.
+ *
+ * 1. Serialized PHP → construct PhpSerializationProcessor, if not malformed,
+ *    iterate string values and recurse on each
+ * 2. JSON → construct JsonStringIterator, if not malformed, iterate string
+ *    values and recurse on each
+ * 3. Base64 → decode, recurse on decoded content, re-encode if changed
+ * 4. Shortcode markup → ShortcodeProcessor (block_markup hint), including
+ *    builder-specific body codecs selected by shortcode tag
+ * 5. Leaf text → HTML/block parsers (block_markup hint)
+ *    or CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules (default)
+ *
+ * Top-level HTML is never auto-detected — the caller must explicitly pass
+ * content_type='block_markup' for values known to contain HTML/block markup.
+ * The hint propagates through recursive calls so that leaf strings inside
+ * serialized PHP, JSON, or base64 eventually reach the HTML/block-markup
+ * path. Strings found in block attributes use naive syntax hints because no
+ * builder-specific schema is available there.
+ */
+class StructuredDataUrlRewriter
+{
+    const BLOCK_MARKUP = 'block_markup';
+    const PLAIN_TEXT = 'plain_text';
+
+    /** There are diminishing hit rate returns when dealing with values larger than this. */
+    private const VALUE_REWRITE_CACHE_MAX_INPUT_BYTES = 64 * 1024;
+    private const VALUE_REWRITE_CACHE_MAX_TOTAL_BYTES = 32 * 1024 * 1024;
+
+    private const URL_REWRITE_CACHE_MAX_INPUT_BYTES = 2 * 1024;
+    private const URL_REWRITE_CACHE_MAX_TOTAL_BYTES = 4 * 1024 * 1024;
+
+    /** @var string[] Source domains extracted from url_mapping keys, for quick-reject checks. */
+    private array $source_domains;
+
+    /** Prepared URL mapping shared by cautious text processors. */
+    private CautiousURLBaseRewriteMapping $cautious_url_base_rewrite_mapping;
+
+    /**
+     * Whether we are extracting one site from a multisite network.
+     * False for ordinary single-site migrations. True even when the selected
+     * site has no child-site URL paths, such as on a domain-based network.
+     * This flag does not select whole-network migration.
+     */
+    private bool $is_multisite_to_single_site_migration;
+
+    /**
+     * A literal < or > in a source base can cross HTML token boundaries.
+     * Keep those mappings on the per-token path. Other source bases can use
+     * one raw-text pass after a complete, comment-free HTML parse.
+     */
+    private bool $source_bases_contain_html_syntax = false;
+
+    /**
+     * Pre-parsed url_mapping: each entry is
+     *   [ 'from_url' => <parsed URL>, 'to_url' => <parsed URL> ]
+     * where <parsed URL> is whatever WPURL::parse() returns (declared as
+     * mixed here because WPURL::replace_base_url() accepts either a string
+     * or the parsed object form — we pass the object form for performance).
+     *
+     * Parsing is pure, deterministic work that used to happen inside
+     * rewrite_urls() on every leaf-value call. With N mappings and L leaves
+     * that's 2·N·L WPURL::parse() invocations. On a wp.com-shaped dump
+     * (N=120, L≈28k) that single loop dominated 94 % of db-apply wall time
+     * under WASM PHP. Hoisting it into the constructor collapses it to 2·N,
+     * which is effectively free.
+     *
+     * @var array<int, array{from_url: mixed, to_url: mixed}>
+     */
+    private array $parsed_mapping;
+
+    /** @var string Default base_url used by the URL processors (first from-url). */
+    private string $base_url;
+
+    /** @var string Cache namespace for this rewriter's URL mapping. */
+    private string $mapping_cache_key;
+
+    /** @var array<string, callable(string): string> Shortcode tag => encoded-body rewriter. */
+    private array $shortcode_body_rewriters;
+
+    /** @var array<string, array<string, array{rewrite: callable(string): string, hides_url: bool}>> */
+    private array $shortcode_attribute_rewriters;
+
+    /** @var array<string, true> Shortcode tags whose registered codecs may hide URLs. */
+    private array $shortcode_tags_with_hidden_urls;
+
+    /**
+     * Rewrites keyed by an entire value; hits only on an exact repeat.
+     *
+     * @var array{bytes: int, data: array<string, string>}
+     */
+    private array $value_rewrite_cache = ['bytes' => 0, 'data' => []];
+
+    /**
+     * Rewrites keyed by one URL found inside a value, including misses. An
+     * empty entry records a URL that matched no source base.
+     *
+     * @var array{bytes: int, data: array<string, string>}
+     */
+    private array $url_rewrite_cache = ['bytes' => 0, 'data' => []];
+
+    /**
+     * @param array<string, string> $url_mapping Source URL => target URL mapping.
+     * @param array<string, string[]>|null $selected_site_child_paths Other network
+     *     sites' paths below the selected site's URL, keyed by source HTTP(S) origin.
+     *     Pass null for an ordinary single-site migration. This keeps the cheaper
+     *     raw-text paths for block attributes and STYLE bodies.
+     *     Pass an array when extracting one network site into a single site,
+     *     even [] when there are no child-site paths. For example,
+     *     ['https://network.test' => ['/shop/news/']] keeps that child site's pages
+     *     at the source while migrating /shop. Neither null nor an array selects
+     *     whole-network migration. The importer chooses from its saved selection.
+     *     Paths are prepared once and shared by HTML and text rewriting.
+     */
+    public function __construct(array $url_mapping, ?array $selected_site_child_paths = null)
+    {
+        $this->is_multisite_to_single_site_migration = $selected_site_child_paths !== null;
+        $this->cautious_url_base_rewrite_mapping = new CautiousURLBaseRewriteMapping($url_mapping, $selected_site_child_paths ?? []);
+        $wpbakery_url_rewriter = new WPBakeryUrlRewriter(
+            function (string $value): string {
+                return $this->rewrite($value, self::BLOCK_MARKUP);
+            },
+            function (string $value): string {
+                return $this->rewrite_urls($value, self::PLAIN_TEXT);
+            }
+        );
+        $this->shortcode_body_rewriters = $wpbakery_url_rewriter->get_shortcode_body_rewriters();
+        $this->shortcode_attribute_rewriters = $wpbakery_url_rewriter->get_shortcode_attribute_rewriters();
+        $this->shortcode_tags_with_hidden_urls = array_fill_keys(
+            array_keys($this->shortcode_body_rewriters),
+            true
+        );
+        foreach ($this->shortcode_attribute_rewriters as $shortcode_tag => $attribute_rewriters) {
+            foreach ($attribute_rewriters as $attribute_rewriter) {
+                if ($attribute_rewriter['hides_url']) {
+                    $this->shortcode_tags_with_hidden_urls[$shortcode_tag] = true;
+                }
+            }
+        }
+
+        // Extract unique source domains for the quick-reject check.
+        $domains = [];
+        foreach (array_keys($url_mapping) as $from_url) {
+            $host = parse_url($from_url, PHP_URL_HOST);
+            if ($host !== null && $host !== false) {
+                $this->add_source_domain_variants($domains, $host);
+            }
+        }
+        $this->source_domains = array_keys($domains);
+
+        $from_urls = array_keys($url_mapping);
+        $this->base_url = $from_urls[0] ?? '';
+        if ($this->is_multisite_to_single_site_migration) {
+            // The first source is the site's base for relative links, not an asset
+            // rule. A base path describes a directory even without a trailing slash.
+            $this->base_url = $this->base_url !== '' ? rtrim($this->base_url, '/') . '/' : '';
+
+            // Longer source paths win, as in the cautious plain-text rewriter:
+            // https://network.test/uploads/sites/7 -> https://target.test/uploads
+            // https://network.test/news -> https://network.test/news (keep the child site)
+            // https://network.test -> https://target.test
+            // The media rule removes /sites/7; the broad site rule would retain it.
+            // Keep the original first source as the base above: "photo.jpg" must
+            // resolve against the site, not whichever media rule sorts first.
+            uksort($url_mapping, static function (string $first, string $second): int {
+                return strlen($second) <=> strlen($first);
+            });
+        }
+
+        // Parse the mapping once. Each WPURL::parse() does non-trivial work
+        // (scheme/host/path tokenisation, punycode, etc.) and used to be
+        // repeated on every leaf we rewrote.
+        $this->parsed_mapping = [];
+        foreach ($url_mapping as $from_url_string => $to_url_string) {
+            $this->source_bases_contain_html_syntax = $this->source_bases_contain_html_syntax
+                || strcspn($from_url_string, '<>') !== strlen($from_url_string);
+            $this->parsed_mapping[] = [
+                'from_url' => WPURL::parse($from_url_string),
+                'to_url'   => WPURL::parse($to_url_string),
+            ];
+        }
+        $this->mapping_cache_key = sha1(json_encode($url_mapping, JSON_UNESCAPED_SLASHES));
+    }
+
+    /**
+     * Rewrite URLs in a single decoded value.
+     *
+     * @param string      $value        The decoded database value.
+     * @param string|null $content_type Content type hint: null (auto-detect, plain text default),
+     *                                  'block_markup' (use StructuredBlockMarkupUrlProcessor), or 'skip' (no-op).
+     * @return string The rewritten value, or the original if no changes were made.
+     */
+    public function rewrite(string $value, ?string $content_type = null): string
+    {
+        if ($value === '') {
+            return $value;
+        }
+
+        if ($content_type === 'skip') {
+            return $value;
+        }
+
+        if ($content_type === null) {
+            $content_type = self::PLAIN_TEXT;
+        }
+
+        $cache_key = null;
+        if (strlen($value) <= self::VALUE_REWRITE_CACHE_MAX_INPUT_BYTES) {
+            $cache_key = sha1($content_type . "\0" . $value);
+
+            $cached = $this->get_cached_value_rewrite($cache_key, $content_type, $value);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        // Quick-reject values without an HTML URL attribute, a literal source
+        // domain, an encoding marker which may hide a source-domain byte, or a
+        // registered shortcode codec which may hide a complete URL. This avoids
+        // constructing the structured parsers for most values.
+        if (!$this->maybe_contains_rewritable_urls($value)) {
+            if (
+                self::BLOCK_MARKUP !== $content_type
+                || !$this->value_might_contain_hidden_shortcode_url($value)
+            ) {
+                return $value;
+            }
+        }
+
+        // Performance guard: avoid constructing the serialized-PHP parser for
+        // ordinary URL strings and block markup. The parser still owns
+        // validation once entered; this gate only skips first-byte shapes that
+        // cannot expose serialized string values for rewriting.
+        if ($this->could_be_php_serialization_with_strings($value)) {
+            $p = new PhpSerializationProcessor($value);
+            if (!$p->is_malformed()) {
+                while ($p->next_value()) {
+                    $original = $p->get_value();
+                    $rewritten = $this->rewrite($original, $content_type);
+                    if ($rewritten !== $original) {
+                        $p->set_value($rewritten);
+                    }
+                }
+                $rewritten_value = $p->get_updated_serialization();
+                if ($cache_key !== null) {
+                    $this->set_cached_value_rewrite($cache_key, $content_type, $value, $rewritten_value);
+                }
+                return $rewritten_value;
+            }
+        }
+
+        // Performance guard: avoid calling json_decode() for ordinary URL
+        // strings and block markup. JsonStringIterator still owns validation
+        // once entered; this gate only skips first non-whitespace bytes that
+        // cannot start a JSON value containing string leaves.
+        if ($this->could_be_json_with_strings($value)) {
+            $iter = new JsonStringIterator($value);
+            if (!$iter->is_malformed()) {
+                while ($iter->next_value()) {
+                    $original = $iter->get_value();
+                    $rewritten = $this->rewrite($original, $content_type);
+                    if ($rewritten !== $original) {
+                        $iter->set_value($rewritten);
+                    }
+                }
+                $rewritten_value = $iter->get_result();
+                if ($cache_key !== null) {
+                    $this->set_cached_value_rewrite($cache_key, $content_type, $value, $rewritten_value);
+                }
+                return $rewritten_value;
+            }
+        }
+
+        // Base64 decoding is temporarily disabled for performance.
+        // The base64 transport layer in SQL is already handled by
+        // Base64ValueScanner in SqlStatementRewriter — this block
+        // was for base64-within-base64 nesting which is rare in practice.
+
+        $original_value = $value;
+        if ($content_type === self::BLOCK_MARKUP) {
+            $value = $this->rewrite_shortcode_markup($value);
+        }
+
+        $rewritten_value = $this->rewrite_urls($value, $content_type);
+        if ($cache_key !== null) {
+            $this->set_cached_value_rewrite($cache_key, $content_type, $original_value, $rewritten_value);
+        }
+
+        return $rewritten_value;
+    }
+
+    /**
+     * Rewrite shortcode attributes and bodies without parsing their bytes as HTML.
+     *
+     * Attribute values receive the generic cautious URL-base replacement. Body
+     * decoding is selected separately from the shortcode tag, so an unknown
+     * builder's body remains opaque until its storage format is known.
+     * Rewriting attributes before HTML tokenization also keeps literal HTML in
+     * an attribute from being serialized as tags with different quote bytes.
+     */
+    private function rewrite_shortcode_markup(string $value): string
+    {
+        if (strpos($value, '[') === false) {
+            return $value;
+        }
+
+        $known_body_tokens = $this->value_might_contain_known_shortcode_body($value)
+            ? $this->find_known_shortcode_body_tokens($value)
+            : array();
+        $shortcodes = new ShortcodeProcessor($value);
+
+        while ($shortcodes->next_token()) {
+            if ($shortcodes->get_token_type() === ShortcodeProcessor::TOKEN_TEXT) {
+                $token_start = $shortcodes->get_token_start();
+                if ($token_start === null || !isset($known_body_tokens[$token_start])) {
+                    continue;
+                }
+
+                $body = $shortcodes->get_modifiable_text();
+                if ($body === null) {
+                    continue;
+                }
+                $rewritten_body = $this->rewrite_known_shortcode_body(
+                    $known_body_tokens[$token_start],
+                    $body
+                );
+                if ($rewritten_body !== $body) {
+                    $shortcodes->set_modifiable_text($rewritten_body);
+                }
+                continue;
+            }
+
+            if ($shortcodes->is_escaped()) {
+                continue;
+            }
+
+            $shortcode_tag = $shortcodes->get_tag();
+            if ($shortcode_tag === null) {
+                continue;
+            }
+
+            if ($shortcodes->is_tag_closer()) {
+                continue;
+            }
+
+            while ($shortcodes->next_attribute()) {
+                $attribute_value = $shortcodes->get_attribute_value();
+                if ($attribute_value === null) {
+                    continue;
+                }
+
+                $attribute_name = $shortcodes->get_attribute_name();
+                $shortcode_tag_key = strtolower($shortcode_tag);
+                $attribute_name_key = $attribute_name !== null
+                    ? strtolower($attribute_name)
+                    : null;
+                if (
+                    $attribute_name_key !== null
+                    && isset($this->shortcode_attribute_rewriters[$shortcode_tag_key][$attribute_name_key])
+                ) {
+                    $rewritten_attribute_value = (
+                        $this->shortcode_attribute_rewriters[$shortcode_tag_key][$attribute_name_key]['rewrite']
+                    )($attribute_value);
+                } else {
+                    $rewritten_attribute_value = $this->rewrite_urls(
+                        $attribute_value,
+                        self::PLAIN_TEXT
+                    );
+                }
+                if ($rewritten_attribute_value !== $attribute_value) {
+                    $shortcodes->set_attribute_value($rewritten_attribute_value);
+                }
+            }
+        }
+
+        return $shortcodes->get_updated_text();
+    }
+
+    public function value_might_contain_hidden_shortcode_url(string $value): bool
+    {
+        if (strpos($value, '[') === false) {
+            return false;
+        }
+
+        foreach ($this->shortcode_tags_with_hidden_urls as $shortcode_tag => $unused) {
+            if (stripos($value, '[' . $shortcode_tag) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Return decoded shortcode prefixes whose registered codecs may hide URLs.
+     *
+     * @return list<string>
+     */
+    public function get_shortcode_prefixes_that_may_hide_urls(): array
+    {
+        $prefixes = array();
+        foreach ($this->shortcode_tags_with_hidden_urls as $shortcode_tag => $unused) {
+            $prefixes[] = '[' . $shortcode_tag;
+        }
+
+        return $prefixes;
+    }
+
+    private function value_might_contain_known_shortcode_body(string $value): bool
+    {
+        foreach (array_keys($this->shortcode_body_rewriters) as $shortcode_tag) {
+            if (stripos($value, '[' . $shortcode_tag) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Find single text tokens enclosed by a matched known shortcode pair.
+     *
+     * A known encoded body containing nested shortcode tokens stays opaque.
+     * This keeps the body codec from receiving only part of its stored value.
+     *
+     * @return array<int, string> Text token byte offset => enclosing tag.
+     */
+    private function find_known_shortcode_body_tokens(string $value): array
+    {
+        $shortcodes = new ShortcodeProcessor($value);
+        $open_shortcodes = array();
+        $known_body_tokens = array();
+
+        while ($shortcodes->next_token()) {
+            if ($shortcodes->get_token_type() === ShortcodeProcessor::TOKEN_TEXT) {
+                if ($open_shortcodes === array()) {
+                    continue;
+                }
+
+                $index = count($open_shortcodes) - 1;
+                if (!$open_shortcodes[$index]['has_known_body_codec']) {
+                    continue;
+                }
+                if ($open_shortcodes[$index]['body_token_start'] !== null) {
+                    $open_shortcodes[$index]['body_is_complete'] = false;
+                    continue;
+                }
+
+                $open_shortcodes[$index]['body_token_start'] = $shortcodes->get_token_start();
+                continue;
+            }
+
+            if ($shortcodes->is_escaped()) {
+                if ($open_shortcodes !== array()) {
+                    $open_shortcodes[count($open_shortcodes) - 1]['body_is_complete'] = false;
+                }
+                continue;
+            }
+
+            $shortcode_tag = $shortcodes->get_tag();
+            if ($shortcode_tag === null) {
+                continue;
+            }
+
+            if ($shortcodes->is_tag_closer()) {
+                $matching_index = null;
+                for ($index = count($open_shortcodes) - 1; $index >= 0; $index--) {
+                    if ($open_shortcodes[$index]['tag'] !== $shortcode_tag) {
+                        continue;
+                    }
+
+                    $matching_index = $index;
+                    break;
+                }
+                if ($matching_index === null) {
+                    if ($open_shortcodes !== array()) {
+                        $open_shortcodes[count($open_shortcodes) - 1]['body_is_complete'] = false;
+                    }
+                    continue;
+                }
+
+                $closed_shortcode = $open_shortcodes[$matching_index];
+                array_splice($open_shortcodes, $matching_index);
+                if (
+                    $closed_shortcode['has_known_body_codec']
+                    && $closed_shortcode['body_is_complete']
+                    && $closed_shortcode['body_token_start'] !== null
+                ) {
+                    $known_body_tokens[$closed_shortcode['body_token_start']] = $shortcode_tag;
+                }
+                continue;
+            }
+
+            if ($open_shortcodes !== array()) {
+                $open_shortcodes[count($open_shortcodes) - 1]['body_is_complete'] = false;
+            }
+            if ($shortcodes->has_self_closing_flag()) {
+                continue;
+            }
+
+            $open_shortcodes[] = array(
+                'tag'                  => $shortcode_tag,
+                'has_known_body_codec' => $this->has_known_shortcode_body_codec($shortcode_tag),
+                'body_token_start'     => null,
+                'body_is_complete'     => true,
+            );
+        }
+
+        return $known_body_tokens;
+    }
+
+    private function has_known_shortcode_body_codec(string $shortcode_tag): bool
+    {
+        return isset($this->shortcode_body_rewriters[strtolower($shortcode_tag)]);
+    }
+
+    /**
+     * Rewrite a body only when its site builder defines the body's codec.
+     */
+    private function rewrite_known_shortcode_body(string $shortcode_tag, string $body): string
+    {
+        $shortcode_tag = strtolower($shortcode_tag);
+        if (!isset($this->shortcode_body_rewriters[$shortcode_tag])) {
+            return $body;
+        }
+
+        return ( $this->shortcode_body_rewriters[$shortcode_tag] )( $body );
+    }
+
+    /**
+     * Quick-reject check: returns false when the value certainly doesn't
+     * contain any rewritable URLs, avoiding expensive parsing.
+     *
+     * Attribute signals admit values without literal source-domain bytes.
+     * Selected-site imports also admit CSS. `style` is deliberately broad:
+     * `STYLE = "url(...)"` is valid HTML, and CSS escapes can hide the host.
+     * The parsers decide whether it is CSS.
+     * Literal domains and supported encoding markers also pass this gate.
+     */
+    private function maybe_contains_rewritable_urls(string $value): bool
+    {
+        if (stripos($value, 'href=') !== false || stripos($value, 'src=') !== false
+            || ( $this->is_multisite_to_single_site_migration && stripos($value, 'style') !== false )) {
+            return true;
+        }
+
+        return $this->value_might_contain_source_domain($value);
+    }
+
+    /**
+     * Return whether the value starts with a PHP serialization token that may
+     * expose string values to rewrite.
+     *
+     * This is a speed guard before constructing PhpSerializationProcessor. It
+     * deliberately omits scalar serialized types such as i:, d:, b:, N;, r:,
+     * and R: because they cannot contain string leaves. The processor remains
+     * responsible for full validation once this coarse first-byte check passes.
+     */
+    private function could_be_php_serialization_with_strings(string $value): bool
+    {
+        $first_byte = $value[0] ?? '';
+
+        return $first_byte === 'a'
+            || $first_byte === 's'
+            || $first_byte === 'O'
+            || $first_byte === 'C';
+    }
+
+    /**
+     * Return whether the value starts with a JSON token that may expose string
+     * leaves to rewrite.
+     *
+     * This is a speed guard before constructing JsonStringIterator, whose
+     * constructor calls json_decode(). Objects and arrays can contain nested
+     * string leaves, and JSON string scalars can themselves be rewritten. The
+     * iterator remains responsible for full JSON validation after this coarse
+     * first-byte check passes.
+     */
+    private function could_be_json_with_strings(string $value): bool
+    {
+        $length = strlen($value);
+        for ($i = 0; $i < $length; $i++) {
+            $byte = $value[$i];
+            if ($byte === ' ' || $byte === "\n" || $byte === "\r" || $byte === "\t") {
+                continue;
+            }
+
+            return $byte === '{' || $byte === '[' || $byte === '"';
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, true> $domains
+     */
+    private function add_source_domain_variants(array &$domains, string $host): void
+    {
+        if ($host === '') {
+            return;
+        }
+
+        $domains[$host] = true;
+
+        if (function_exists('idn_to_ascii')) {
+            $ascii = defined('INTL_IDNA_VARIANT_UTS46')
+                ? @idn_to_ascii($host, 0, INTL_IDNA_VARIANT_UTS46)
+                : @idn_to_ascii($host);
+            if (is_string($ascii) && $ascii !== '') {
+                $domains[$ascii] = true;
+            }
+        }
+
+        if (function_exists('idn_to_utf8')) {
+            $unicode = defined('INTL_IDNA_VARIANT_UTS46')
+                ? @idn_to_utf8($host, 0, INTL_IDNA_VARIANT_UTS46)
+                : @idn_to_utf8($host);
+            if (is_string($unicode) && $unicode !== '') {
+                $domains[$unicode] = true;
+            }
+        }
+    }
+
+    private function get_cached_value_rewrite(string $cache_key, string $content_type, string $value): ?string
+    {
+        $cached_entry = $this->value_rewrite_cache['data'][$cache_key] ?? null;
+        if ($cached_entry === null) {
+            return null;
+        }
+
+        $entry = unserialize($cached_entry);
+        if ($entry['content_type'] !== $content_type || $entry['input'] !== $value) {
+            return null;
+        }
+
+        return $entry['output'];
+    }
+
+    private function set_cached_value_rewrite(string $cache_key, string $content_type, string $input, string $output): void
+    {
+        $entry = serialize([
+            'content_type' => $content_type,
+            'input'        => $input,
+            'output'       => $output,
+        ]);
+
+        $this->store_in_bounded_cache(
+            $this->value_rewrite_cache,
+            $cache_key,
+            $entry,
+            self::VALUE_REWRITE_CACHE_MAX_TOTAL_BYTES
+        );
+    }
+
+    /**
+     * Rewrite a decoded value already known by the SQL layer to be block markup.
+     *
+     * HTML attributes, block-comment JSON, and CSS URL fields use their
+     * parsers. Block string leaves use format inference; other token content
+     * keeps the cautious source-base replacement from the plain-text path.
+     * That fallback leaves hosts with child-site exclusions unchanged.
+     */
+    public function rewrite_known_block_markup_value(string $value): string
+    {
+        return $this->rewrite($value, self::BLOCK_MARKUP);
+    }
+
+    /**
+     * Return whether a decoded value may expose a configured source domain.
+     *
+     * Check literal hosts first. A JSON Unicode escape or HTML character
+     * reference may hide a host byte, so their coarse markers also require
+     * parsing. The format parsers still decide whether either marker is valid.
+     */
+    public function value_might_contain_source_domain(string $value): bool
+    {
+        if ($this->source_domains === []) {
+            return true;
+        }
+
+        foreach ($this->source_domains as $domain) {
+            if (stripos($value, $domain) !== false) {
+                return true;
+            }
+        }
+
+        // `\u` may be a JSON Unicode escape, and `&` may start an HTML
+        // character reference. Either can hide bytes of the source domain.
+        return strpos($value, '\\u') !== false || strpos($value, '&') !== false;
+    }
+
+    private function get_cached_url_rewrite(string $cache_key)
+    {
+        $cached_entry = $this->url_rewrite_cache['data'][$cache_key] ?? null;
+        if ($cached_entry === null) {
+            return null;
+        }
+
+        return $cached_entry === '' ? false : unserialize($cached_entry);
+    }
+
+    /**
+     * @param array|false $value {
+     *     Cached rewrite result, or false for an uncacheable value.
+     *
+     *     @type string $raw_url    Raw URL value.
+     *     @type mixed  $parsed_url Parsed URL value.
+     * }
+     * @phpstan-param false|array{raw_url: string, parsed_url: mixed} $value
+     */
+    private function set_cached_url_rewrite(string $cache_key, $value): void
+    {
+        $entry = $value === false ? '' : serialize($value);
+
+        $this->store_in_bounded_cache(
+            $this->url_rewrite_cache,
+            $cache_key,
+            $entry,
+            self::URL_REWRITE_CACHE_MAX_TOTAL_BYTES
+        );
+    }
+
+    /**
+     * Rewrite parsed URLs while keeping child-site links at the source.
+     *
+     * The HTML, CSS and block parsers supply complete URLs for child-path
+     * checks. The text fallback cannot determine where a path ends, so it
+     * leaves all URLs on a source host with child-site exclusions unchanged.
+     *
+     * Extracting one site from a multisite network visits the decoded block
+     * attribute strings so child paths are checked after each enclosing format
+     * has been decoded, even when the selected site has no child-site paths.
+     * This costs a walk of one block's attribute tree, not the whole export.
+     * Changed attributes use the block encoder, including its whitespace and
+     * escaping rules. Ordinary single-site migrations keep the raw-comment fast
+     * path when no string needs format decoding or a serialized length update.
+     *
+     * Example:
+     *
+     * ```php
+     * php > wp_rewrite_urls([
+     *   'block_markup' => '<!-- wp:image {"src": "http://legacy-blog.com/image.jpg"} -->',
+     *   'url-mapping' => [
+     *     'http://legacy-blog.com' => 'https://modern-webstore.org'
+     *   ]
+     * ])
+     * <!-- wp:image {"src":"https:\/\/modern-webstore.org\/image.jpg"} -->
+     * ```
+     *
+     * @TODO Use a proper JSON parser and encoder to:
+     * * Support UTF-16 characters
+     * * Gracefully handle recoverable encoding issues
+     * * Avoid changing the whitespace in the same manner as
+     *   we do in WP_HTML_Tag_Processor. e.g. if we start with:
+     *
+     * ```html
+     * <!-- wp:block {"url":"https://w.org"}` -->
+     *                     ^ no space here
+     * ```
+     *
+     * then it would be nice to re-encode that block markup also without the space character. This is similar
+     * to how the tag processor avoids changing parts of the tag it doesn't need to change.
+     *
+     * TODO: Migrate these changes back into the php-toolkit repo
+     */
+    private function rewrite_urls( string $content, string $content_type, bool $resolve_relative_urls = true ): string {
+        $base_url = $resolve_relative_urls ? $this->base_url : null;
+
+        switch ( $content_type ) {
+            case self::BLOCK_MARKUP:
+                // Plain HTML needs no block-attribute tree. Parse its URL fields,
+                // then scan the final text once instead of copying, reparsing and
+                // scanning each tag. Block comments keep their separate path:
+                // scanning their raw JSON would also change attribute names.
+                if ($this->is_multisite_to_single_site_migration && !$this->source_bases_contain_html_syntax
+                    && strpos($content, '<!--') === false) {
+                    $p = new WP_HTML_Tag_Processor($content);
+                    $has_document_wrapper = false;
+                    while ($p->next_token()) {
+                        if ($p->get_token_type() !== '#tag') {
+                            continue;
+                        }
+                        $tag = $p->get_tag();
+                        if (in_array($tag, ['HTML', 'HEAD', 'BODY'], true)) {
+                            // The block processor does not expose these tokens.
+                            // Use it for documents so their attributes stay intact.
+                            $has_document_wrapper = true;
+                            break;
+                        }
+                        if ($p->is_tag_closer()) {
+                            continue;
+                        }
+                        foreach (StructuredBlockMarkupUrlProcessor::HTML_ATTRIBUTES_TO_ACCEPT_RELATIVE_URLS_FROM[$tag] ?? [] as $name) {
+                            $raw_url = $p->get_attribute($name);
+                            if (!is_string($raw_url)) {
+                                continue;
+                            }
+                            $rewritten = $this->rewrite_url_field($raw_url, $base_url);
+                            if ($rewritten !== false) {
+                                $p->set_attribute($name, $rewritten['raw_url']);
+                            }
+                        }
+                        $style = $p->get_attribute('style');
+                        if (is_string($style)) {
+                            $rewritten_style = $this->rewrite_css($style, $base_url);
+                            if ($rewritten_style !== $style) {
+                                $p->set_attribute('style', $rewritten_style);
+                            }
+                        }
+                        if ($tag === 'STYLE') {
+                            $style = $p->get_modifiable_text();
+                            $rewritten_style = $this->rewrite_css($style, $base_url);
+                            if ($rewritten_style !== $style) {
+                                $p->set_modifiable_text($rewritten_style);
+                            }
+                        }
+                        $this->rewrite_json_script_body($p);
+                    }
+                    if (!$has_document_wrapper && !$p->paused_at_incomplete_token()) {
+                        return $this->rewrite_urls($p->get_updated_html(), self::PLAIN_TEXT);
+                    }
+                    // The raw pass must not touch an unread, incomplete token.
+                    // Discard this attempt and use the token-by-token path below.
+                    // Its URL cache can reuse fields already checked above.
+                }
+                $p = new StructuredBlockMarkupUrlProcessor(
+                    $content,
+                    $base_url,
+                    $this->is_multisite_to_single_site_migration
+                );
+                while ( $p->next_token() ) {
+                    if ( $this->is_multisite_to_single_site_migration && '#block-comment' === $p->get_token_type() ) {
+                        // Read and write this block through one decoded attribute tree.
+                        // A top-level url can hold /about; module.content can hold HTML
+                        // such as <a href="https://source.test/about">Read</a>. Rewrite
+                        // nested strings with their own parsers, then pass the tree back.
+                        // The processor writes the JSON before advancing to another token.
+                        // Do not also queue raw edits against the old block-comment bytes:
+                        // mixing those edits with set_block_attributes() can duplicate it.
+                        $attributes = $p->get_block_attributes();
+                        if ( is_array( $attributes ) ) {
+                            $rewritten_attributes = $attributes;
+                            foreach ( $attributes as $name => $value ) {
+                                if ( is_array( $value ) ) {
+                                    $rewritten_attributes[ $name ] = $this->rewrite_inferred_block_attribute_values( $value );
+                                } elseif ( is_string( $value ) ) {
+                                    // Keep whole-URL detection for top-level strings. Only
+                                    // declared URL fields get a base for relative URLs.
+                                    $field_base_url = $p->block_attribute_accepts_relative_urls( $name ) ? $base_url : null;
+                                    $rewritten = $this->rewrite_url_field( $value, $field_base_url );
+                                    if ( $rewritten !== false ) {
+                                        $value = $rewritten['raw_url'];
+                                    }
+                                    // A query or fragment can contain another source URL,
+                                    // e.g. /login?next=https://source.test/account.
+                                    $rewritten_attributes[ $name ] = $this->rewrite_inferred_block_attribute_string( $value );
+                                }
+                            }
+                            if ( $rewritten_attributes !== $attributes ) {
+                                $p->set_block_attributes( $rewritten_attributes );
+                            }
+                        }
+                        continue;
+                    }
+
+                    $parsed_nested_block_attributes = false;
+                    $block_comment_may_hide_rewritable_url = false;
+                    $block_comment_text = '';
+                    if ( '#block-comment' === $p->get_token_type() ) {
+                        $block_comment_text = $p->get_modifiable_text();
+                        $block_comment_may_hide_rewritable_url =
+                            $this->value_might_contain_source_domain( $block_comment_text )
+                            || $this->value_might_contain_hidden_shortcode_url( $block_comment_text );
+                    }
+                    if ( $block_comment_may_hide_rewritable_url ) {
+                        // The fast check includes supported encoding markers
+                        // and registered shortcode signals. Parsed string
+                        // leaves still decide whether a URL exists.
+                        $block_attributes = $p->get_block_attributes();
+                        // A Unicode-escaped quote leaves an alphanumeric byte
+                        // immediately before a raw URL. The cautious scanner
+                        // rejects that boundary, so parse the decoded value.
+                        $block_comment_uses_unicode_escaped_quotes = false !== stripos( $block_comment_text, '\\u0022' )
+                            || false !== stripos( $block_comment_text, '\\u0027' );
+                        if (
+                            is_array( $block_attributes )
+                            && (
+                                $block_comment_uses_unicode_escaped_quotes
+                                || $this->block_attribute_values_need_format_inference( $block_attributes )
+                            )
+                        ) {
+                            $parsed_nested_block_attributes = true;
+                            $rewritten_block_attributes = $this->rewrite_inferred_block_attribute_values( $block_attributes );
+                            if ( $rewritten_block_attributes !== $block_attributes ) {
+                                $p->set_block_attributes( $rewritten_block_attributes );
+                            }
+                        }
+                    }
+
+                    $this->rewrite_json_script_body($p);
+
+                    while ( $p->next_raw_url_in_current_token() ) {
+                        $rewritten = $this->rewrite_url_field($p->get_raw_url(), $p->get_url_base());
+                        if ($rewritten !== false) {
+                            $p->set_url($rewritten['raw_url'], $rewritten['parsed_url']);
+                        }
+                    }
+                    if ( ! $parsed_nested_block_attributes ) {
+                        $p->replace_url_bases_in_current_token( $this->cautious_url_base_rewrite_mapping );
+                    }
+                }
+
+                return $p->get_updated_html();
+
+            case self::PLAIN_TEXT:
+                if ( ! $this->maybe_contains_rewritable_urls( $content ) ) {
+                    return $content;
+                }
+
+                $p = new CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules(
+                    $content,
+                    $this->cautious_url_base_rewrite_mapping
+                );
+                while ( $p->next_url() ) {
+                    $p->replace_url_base();
+                }
+
+                return $p->get_updated_text();
+
+            default:
+                trigger_error('rewrite_urls() requires either block_markup or plain_text to be provided', E_USER_WARNING);
+                return $content;
+        }
+    }
+    /**
+     * A declared JSON media type supplies the script body's format.
+     * Other script bodies keep the cautious raw-text pass. The HTML and block
+     * paths share this check so application/ld+json is decoded in either case.
+     */
+    private function rewrite_json_script_body(WP_HTML_Tag_Processor $processor): void
+    {
+        if ($processor->get_tag() !== 'SCRIPT' || $processor->is_tag_closer()) {
+            return;
+        }
+        $media_type = $processor->get_attribute('type');
+        if (!is_string($media_type)) {
+            return;
+        }
+        // Read the MIME type and subtype using the standard's HTTP whitespace
+        // and token bytes. PHP's default trim() also strips invalid bytes such
+        // as vertical tabs. Parameters cannot change the JSON classification:
+        // application/ld+json; profile="a;b" has the same body format as
+        // application/ld+json. Do not copy or parse the unused parameter tail.
+        // https://mimesniff.spec.whatwg.org/#parse-a-mime-type
+        $http_whitespace = " \t\r\n";
+        $http_token_bytes = "!#$%&'*+-.^_`|~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        $type_start = strspn($media_type, $http_whitespace);
+        $type_length = strspn($media_type, $http_token_bytes, $type_start);
+        $slash = $type_start + $type_length;
+        if ($type_length === 0 || ( $media_type[$slash] ?? '' ) !== '/') {
+            return;
+        }
+        $subtype_start = $slash + 1;
+        $subtype_length = strspn($media_type, $http_token_bytes, $subtype_start);
+        $end = $subtype_start + $subtype_length;
+        $end += strspn($media_type, $http_whitespace, $end);
+        if ($subtype_length === 0 || !in_array($media_type[$end] ?? '', ['', ';'], true)) {
+            return;
+        }
+        $type = strtolower(substr($media_type, $type_start, $type_length));
+        $subtype = strtolower(substr($media_type, $subtype_start, $subtype_length));
+        // JSON includes text/json and any valid subtype ending in +json,
+        // such as model/gltf+json, but not application/jsonp.
+        // https://mimesniff.spec.whatwg.org/#json-mime-type
+        if (!( ( $type === 'application' || $type === 'text' ) && $subtype === 'json' )
+            && substr($subtype, -5) !== '+json') {
+            return;
+        }
+        $body = $processor->get_modifiable_text();
+        $rewritten_body = $this->rewrite($body, self::BLOCK_MARKUP);
+        if ($rewritten_body !== $body) {
+            $processor->set_modifiable_text($rewritten_body);
+        }
+    }
+
+    /**
+     * Rewrite declared CSS URLs, including escaped url(), @import and image-set().
+     * STYLE bodies and style attributes share this parser and URL policy. The
+     * enclosing HTML serializer handles attribute escaping after CSS is complete.
+     */
+    private function rewrite_css(string $value, ?string $field_base_url): string {
+        $p = new CSSURLProcessor($value);
+        while ($p->next_url()) {
+            if ($p->is_data_uri()) {
+                continue;
+            }
+            $rewritten = $this->rewrite_url_field($p->get_raw_url(), $field_base_url);
+            if ($rewritten !== false) {
+                $p->set_raw_url($rewritten['raw_url']);
+            }
+        }
+        return $p->get_updated_css();
+    }
+
+    /**
+     * Rewrite one decoded HTML, CSS or block URL with its field's base.
+     *
+     * A known href may resolve /photo.jpg against the site. An unknown block
+     * string has no base and must contain an absolute URL. Both use the same
+     * child-path checks and bounded result cache.
+     *
+     * @return array|false {
+     *     A replacement, or false when the field must not change.
+     *     @type string $raw_url    Replacement in the original relative/absolute form.
+     *     @type mixed  $parsed_url Parsed absolute replacement for the URL reader.
+     * }
+     */
+    private function rewrite_url_field(string $raw_url, ?string $field_base_url)
+    {
+        $url_cache_key = null;
+        if (strlen($raw_url) <= self::URL_REWRITE_CACHE_MAX_INPUT_BYTES) {
+            // `/photo.jpg` in a known href can use the site base;
+            // the same string in an unknown block field cannot.
+            $url_cache_key = $this->mapping_cache_key . "\0" . self::BLOCK_MARKUP
+                . "\0" . $field_base_url . "\0" . $raw_url;
+
+            $cached = $this->get_cached_url_rewrite($url_cache_key);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        // A complete HTTP(S) prefix needs no base. Shorthand such as
+        // https:photo.jpg still resolves against the field's base directory.
+        $has_absolute_prefix = 0 === strncasecmp($raw_url, 'https://', 8) || 0 === strncasecmp($raw_url, 'http://', 7);
+        $parsed_url = WPURL::parse($raw_url, $has_absolute_prefix ? null : $field_base_url);
+        if ( $parsed_url === false ) {
+            if ( $url_cache_key !== null ) {
+                $this->set_cached_url_rewrite($url_cache_key, false);
+            }
+            return false;
+        }
+        $is_absolute = $has_absolute_prefix || WPURL::can_parse($raw_url);
+        // Mapping URLs were parsed once in the constructor. Reuse those
+        // objects for every field instead of parsing each source and target
+        // again for every leaf value.
+        $converted = false;
+        if (!$this->is_multisite_to_single_site_migration) {
+            foreach ($this->parsed_mapping as $mapping) {
+                if (is_child_url_of($parsed_url, $mapping['from_url'])) {
+                    $converted = WPURL::replace_base_url($parsed_url, [
+                        'old_base_url' => $this->base_url,
+                        'new_base_url' => $mapping['to_url'],
+                        'raw_url' => $raw_url,
+                        'is_relative' => !$is_absolute,
+                    ]);
+                    break;
+                }
+            }
+        } else {
+            $decoded_path = rawurldecode($parsed_url->pathname);
+            $excluded = $this->cautious_url_base_rewrite_mapping->excludes_path($parsed_url->host, $parsed_url->pathname);
+            // A canonical absolute child URL is already final. Do
+            // not clone it or rewrite its HTML/CSS/JSON container.
+            // Relative links and dot segments still use the normal
+            // conversion below to keep the child at the source.
+            if ($excluded && $raw_url === $parsed_url->toString()) {
+                if ($url_cache_key !== null) {
+                    $this->set_cached_url_rewrite($url_cache_key, false);
+                }
+                return false;
+            }
+            foreach ($this->parsed_mapping as $mapping) {
+                $from_url = $mapping['from_url'];
+                if (!$from_url || !$mapping['to_url']
+                    || $parsed_url->hostname !== $from_url->hostname
+                    || $parsed_url->protocol !== $from_url->protocol
+                    || $parsed_url->port !== $from_url->port) {
+                    continue;
+                }
+                // A base names a whole path segment: /sites/7 must
+                // not select /sites/70. URL paths keep literal + bytes;
+                // they do not use form-query decoding (+ becomes space).
+                $source_path = rtrim(rawurldecode($from_url->pathname), '/');
+                if ($decoded_path !== $source_path
+                    && strncmp($decoded_path, $source_path . '/', strlen($source_path) + 1) !== 0) {
+                    continue;
+                }
+                $converted = WPURL::replace_base_url(
+                    $parsed_url,
+                    array(
+                        'old_base_url' => $from_url,
+                        'new_base_url' => $excluded ? $from_url : $mapping['to_url'],
+                        'raw_url'      => $raw_url,
+                        // Identity rules retain the source origin. A relative
+                        // sibling link would otherwise point into the target.
+                        'is_relative'  => !$excluded && ! $is_absolute
+                            && $from_url->toString() !== $mapping['to_url']->toString(),
+                    )
+                );
+                break;
+            }
+        }
+
+        $cache_value = false;
+        if ($converted !== false) {
+            $cache_value = [
+                'raw_url'    => (string) $converted,
+                'parsed_url' => $converted->new_url,
+            ];
+        }
+        if ($url_cache_key !== null) {
+            $this->set_cached_url_rewrite($url_cache_key, $cache_value);
+        }
+        return $cache_value;
+    }
+
+    /**
+     * Rewrite every string in a block attribute array.
+     *
+     * BlockMarkupProcessor has already parsed and validated the block-comment
+     * JSON. Arrays can contain more arrays, so visit them recursively. Leave
+     * numbers, booleans, and null values unchanged.
+     *
+     * @param array<int|string, mixed> $values Block attribute values.
+     * @return array<int|string, mixed> Rewritten block attribute values.
+     */
+    private function rewrite_inferred_block_attribute_values( array $values ): array {
+        foreach ( $values as $key => $value ) {
+            if ( is_array( $value ) ) {
+                $values[ $key ] = $this->rewrite_inferred_block_attribute_values( $value );
+            } elseif ( is_string( $value ) ) {
+                $values[ $key ] = $this->rewrite_inferred_block_attribute_string( $value );
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * Return whether any nested string needs its enclosing format parsed.
+     *
+     * When one string needs parsing, all strings in that block are rewritten
+     * through the same attribute tree. This avoids mixing a re-encoded block
+     * comment with raw byte replacements queued against its old byte offsets.
+     * Most Divi blocks only contain literal ASCII URLs, so they stay on the
+     * existing raw-token path and avoid the expensive recursive rewrite.
+     *
+     * @param array<int|string, mixed> $values Block attribute values.
+     */
+    private function block_attribute_values_need_format_inference( array $values ): bool {
+        foreach ( $values as $value ) {
+            if ( is_array( $value ) ) {
+                if ( $this->block_attribute_values_need_format_inference( $value ) ) {
+                    return true;
+                }
+            } elseif ( is_string( $value ) && $this->nested_block_string_needs_format_inference( $value ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Return whether a nested block string needs its enclosing format parsed.
+     *
+     * The cautious raw-token pass already handles literal ASCII source hosts
+     * in HTML, CSS, JSON, shortcodes, and plain text. Parsing those values
+     * again only changes their encoding and makes Divi imports slower.
+     *
+     * Parsing is still needed when an escape, character reference, or registered
+     * shortcode codec may hide part or all of the URL, or when serialized PHP
+     * length fields must be updated. A JSON value may contain serialized PHP at
+     * a deeper level, so its raw text is also checked for a serialization token.
+     * Non-ASCII values keep the structured path because the cautious raw-token
+     * pass supports ASCII and punycode domains, but not literal Unicode domains.
+     *
+     * These are coarse signals, not proof of a content type. The format
+     * hierarchy below still validates PHP serialization and JSON before use.
+     */
+    private function nested_block_string_needs_format_inference( string $value ): bool {
+        if ( $this->value_might_contain_hidden_shortcode_url( $value ) ) {
+            return true;
+        }
+
+        if ( ! $this->maybe_contains_rewritable_urls( $value ) ) {
+            return false;
+        }
+
+        if ( $this->could_be_php_serialization_with_strings( $value ) ) {
+            return true;
+        }
+
+        if ( false !== strpos( $value, '\\u' ) || false !== strpos( $value, '&' ) ) {
+            return true;
+        }
+
+        $contains_serialized_value = 1 === preg_match( '/(?:a|s|O|C):\d+:/', $value );
+        if ( $this->could_be_json_with_strings( $value ) && $contains_serialized_value ) {
+            return true;
+        }
+
+        return 1 === preg_match( '/[^\x00-\x7F]/', $value );
+    }
+
+    /**
+     * Guess how to rewrite one string found inside block attribute JSON.
+     *
+     * This is deliberately naive. These checks do not establish what the
+     * string means. Their order only tries the stronger, more likely formats
+     * before the broad CSS substring check. The PHP and JSON parsers still
+     * validate those two guesses before changing nested values.
+     */
+    private function rewrite_inferred_block_attribute_string( string $value ): string {
+        // Divi settings include many labels, colors, and sizes. Apply the same
+        // quick reject as rewrite() before trying their possible formats.
+        if ( ! $this->maybe_contains_rewritable_urls( $value )
+            && ! $this->value_might_contain_hidden_shortcode_url( $value ) ) {
+            return $value;
+        }
+
+        // 1. Serialized PHP is a complete outer format. Check it before HTML,
+        // JSON, or CSS that may appear inside one of its string values. The
+        // coarse existing gate checks only the first `a`, `s`, `O`, or `C`
+        // byte. PhpSerializationProcessor then validates the complete value.
+        $could_be_php_serialization = $this->could_be_php_serialization_with_strings( $value );
+        if ( $could_be_php_serialization ) {
+            return $this->rewrite( $value, self::PLAIN_TEXT );
+        }
+
+        // 2. This only recognizes strings which begin with an opening tag. It
+        // misses HTML preceded by prose and may classify displayed code as HTML.
+        $trimmed_value = ltrim( $value );
+        $html_opening_tag_pattern      = '/^<[a-z][a-z0-9:-]*(?:\s|\/?>)/i';
+        $starts_with_html_opening_tag  = 1 === preg_match( $html_opening_tag_pattern, $trimmed_value );
+        if ( $starts_with_html_opening_tag ) {
+            // The format is inferred, so do not reinterpret `#`, `/about`, or
+            // other relative values against the configured source URL.
+            $value = $this->rewrite_shortcode_markup( $value );
+            return $this->rewrite_urls( $value, self::BLOCK_MARKUP, false );
+        }
+
+        // 3. A shortcode and a JSON array can both begin with `[`. Keep a
+        // valid JSON array for the JSON parser unless shortcode rewriting
+        // actually changes it.
+        $rewritten_shortcode_markup = $this->rewrite_shortcode_markup( $value );
+        if ( $rewritten_shortcode_markup !== $value ) {
+            return $this->rewrite( $rewritten_shortcode_markup, self::PLAIN_TEXT );
+        }
+
+        // 4. The coarse existing JSON gate checks only whether the first
+        // non-whitespace byte is `{`, `[`, or `"`. JsonStringIterator then
+        // validates the complete value before rewriting nested strings.
+        $could_be_json_with_strings = $this->could_be_json_with_strings( $value );
+        if ( $could_be_json_with_strings ) {
+            return $this->rewrite( $value, self::PLAIN_TEXT );
+        }
+
+        // 5. `url(` can occur in prose or code which is not CSS. Keep this
+        // broad, naive hint after the complete PHP, HTML, and JSON shapes.
+        $contains_css_url_function = false !== stripos( $value, 'url(' );
+        if ( $contains_css_url_function ) {
+            return $this->rewrite_urls( $value, self::BLOCK_MARKUP, false );
+        }
+
+        // 6. Unknown strings receive the cautious plain-text scan.
+        return $this->rewrite( $value, self::PLAIN_TEXT );
+    }
+
+    /**
+     * Store one entry, then evict oldest until the cache is within budget.
+     */
+    private function store_in_bounded_cache(array &$cache, string $key, string $value, int $max_bytes): void
+    {
+        if (isset($cache['data'][$key])) {
+            $cache['bytes'] -= $this->measure_cache_entry($key, $cache['data'][$key]);
+            unset($cache['data'][$key]);
+        }
+
+        $cache['data'][$key] = $value;
+        $cache['bytes'] += $this->measure_cache_entry($key, $value);
+
+        while ($cache['bytes'] > $max_bytes) {
+            $oldest_key = array_key_first($cache['data']);
+            if ($oldest_key === null) {
+                $cache['bytes'] = 0;
+                break;
+            }
+
+            $cache['bytes'] -= $this->measure_cache_entry($oldest_key, $cache['data'][$oldest_key]);
+            unset($cache['data'][$oldest_key]);
+        }
+    }
+
+    /**
+     * Total bytes one entry retains: The key, its value, and the average PHP storage overhead.
+     */
+    private function measure_cache_entry(string $key, string $value): int
+    {
+        $cache_storage_overhead_bytes = 512;
+        return strlen($key) + strlen($value) + $cache_storage_overhead_bytes;
+    }
+}

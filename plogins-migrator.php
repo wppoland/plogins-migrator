@@ -3,7 +3,7 @@
  * Plugin Name:       Migrator - Site Migration and Backup
  * Plugin URI:        https://plogins.com/plogins-migrator/
  * Description:        Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup.
- * Version:           1.4.0
+ * Version:           1.5.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            WPPoland.com
@@ -22,7 +22,7 @@ namespace Migrator;
 
 defined('ABSPATH') || exit;
 
-const VERSION     = '1.4.0';
+const VERSION     = '1.5.0';
 const PLUGIN_FILE     = __FILE__;
 const PLUGIN_DIR      = __DIR__;
 const MIN_PHP_VERSION = '8.1.0';
@@ -47,6 +47,10 @@ if (version_compare(PHP_VERSION, MIN_PHP_VERSION, '<')) {
 }
 
 require_once __DIR__ . '/autoload.php';
+
+// Pull and push endpoint for other sites (?reprint-api). Off unless switched on
+// under Migrator > Pull and Push; it has to load now, before plugins_loaded.
+Reprint\Source::load();
 
 // Declare WooCommerce HPOS compatibility, only fires when WooCommerce is
 // present. Migrator backs up custom order tables, so it is HPOS-safe.

@@ -1,0 +1,25 @@
+From d06bc4eefd480abc3f46bf58d718981590d4b9c7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Adam=20Zieli=C5=84ski?= <adam@adamziel.com>
+Date: Wed, 1 Jul 2026 16:11:55 +0200
+Subject: [PATCH] PR #295: Use configured PHP binary in CLI parsing tests
+
+---
+ tests/Import/OnlyCliParseTest.php | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/Import/OnlyCliParseTest.php b/tests/Import/OnlyCliParseTest.php
+index a7263eab..90236edd 100644
+--- a/tests/Import/OnlyCliParseTest.php
++++ b/tests/Import/OnlyCliParseTest.php
+@@ -64,7 +64,7 @@ class OnlyCliParseTest extends TestCase
+     private function runCli(array $args): string
+     {
+         $entry = __DIR__ . '/../../packages/reprint-client/bin/reprint-client';
+-        $cmd = 'php ' . escapeshellarg($entry);
++        $cmd = escapeshellarg(PHP_BINARY) . ' -d display_startup_errors=0 ' . escapeshellarg($entry);
+         foreach ($args as $a) {
+             $cmd .= ' ' . escapeshellarg($a);
+         }
+-- 
+2.50.0
+

@@ -1,0 +1,426 @@
+<?php
+
+/**
+ * Replaces a known URL base without interpreting the surrounding text.
+ *
+ * For example, given this shortcode:
+ *
+ * ```
+ * [vc_video link="https:\/\/source.example\/wp-content\/uploads\/video.mp4"]
+ * ```
+ *
+ * and this mapping:
+ *
+ * ```
+ * https://source.example => https://destination.example
+ * ```
+ *
+ * the result is:
+ *
+ * ```
+ * [vc_video link="https:\/\/destination.example\/wp-content\/uploads\/video.mp4"]
+ * ```
+ *
+ * The configured base is source.example, so that is the complete byte range
+ * replaced. When the configured target uses a different protocol, the protocol
+ * is replaced too. Escaped slashes, path, and shortcode syntax remain unchanged.
+ *
+ * This processor is for text whose escaping rules are unknown. The backslashes
+ * above might come from JSON, CSS, a shortcode serializer, or another format.
+ * Parsing the URL and writing it back would force this processor to choose one
+ * of those formats and could corrupt the value.
+ *
+ * Instead, the processor performs one narrow operation: find the configured
+ * source base as bytes and replace that entire slice with a target domain and
+ * optional path. It replaces the literal protocol separately when the mapping
+ * changes it. A source host with child-site exclusions stays unchanged in this
+ * fallback, including selected-site links. Only callers with parsed URL fields
+ * can decide which site a complete path selects; this scanner does not guess
+ * path boundaries or copy the remaining text into a temporary URL.
+ * changes it. Candidate Unicode path segments are normalized only for the
+ * comparison. The bytes outside the replaced slice remain unchanged.
+ *
+ * Supported sources:
+ *
+ * - ASCII or Unicode IDN source domains and IPv4 or IPv6 addresses, with
+ *   an optional port. Unicode and Punycode spellings of the same IDN match.
+ * - An optional initial path containing valid UTF-8 without whitespace or
+ *   control characters. Composed and decomposed characters may be mixed in
+ *   one path and still match the same source base. That path is part of the
+ *   source base and is removed with it. A root slash is the URL separator
+ *   rather than a removable path,
+ *   so it remains after replacement. Mapping
+ *   https://source.example/media to
+ *   https://destination.example changes
+ *   https://source.example/media/logo.png to
+ *   https://destination.example/logo.png.
+ * - Literal, protocol-relative, scheme-less, and slash-escaped URL spellings.
+ *   A separator may have up to eight preceding backslashes. The two slashes
+ *   before an authority must use the same spelling.
+ * - Other parts of the URL may surround the configured base. For example,
+ *   https://user:password@source.example/logo.png?download=1#preview becomes
+ *   https://user:password@destination.example/logo.png?download=1#preview.
+ *   Only source.example is replaced. The username, password, path, query, and
+ *   fragment remain byte-for-byte unchanged.
+ *
+ * Unsupported mappings are discarded as a whole. There is no partial
+ * replacement:
+ *
+ * - A target path may contain non-empty slash-separated components composed
+ *   only of ASCII letters, digits, hyphens, underscores, and colons. One final
+ *   slash is ignored; the original suffix keeps its own separator. Each inserted
+ *   slash copies the first available spelling from the URL prefix, configured
+ *   source path, or following candidate path. A scheme-less authority with no
+ *   slash stays unchanged when the target has a path.
+ * - Target port and path colons copy the colon spelling after the matched
+ *   scheme. A protocol-relative or scheme-less candidate has no scheme colon
+ *   to copy, so they use a literal `:`. This may not match the escaping rules
+ *   of the surrounding text.
+ * - A same-URL mapping is an exclusion: it wins over shorter source bases and
+ *   retains the matched bytes, including IP hosts and original slash escaping.
+ * - Target user information, queries, fragments, IPv6 addresses, and
+ *   Unicode domains are not supported. Punycode domains, IPv4 addresses, and
+ *   hosts with a trailing dot are supported. These limits apply only to this
+ *   fallback; they do not restrict the migration destination.
+ *
+ * CSS hexadecimal escapes such as https\3a \2f \2f ... and percent-encoded
+ * separators are not recognized. They need a parser for the enclosing format.
+ * Complete PHP serializations, JSON documents, and block markup must likewise
+ * be parsed first; pass only the resulting text leaves to this processor.
+ *
+ * Ordinary ASCII authorities use a literal pattern and never run IDNA. A
+ * mapping with a Unicode or `xn--` source hostname also checks literal Unicode
+ * candidates through IDNA. The HTTP(S) scheme and authority are matched
+ * case-insensitively. A configured
+ * source path remains case-sensitive because URL paths may name different
+ * resources when their case differs. Canonically equivalent composed and
+ * decomposed Unicode spellings match. A scheme may begin at the start of the
+ * value or after a byte other than an ASCII letter, plus sign, or hyphen.
+ * Scheme-less authorities use a stricter boundary so the scanner does
+ * not mistake part of another URL or identifier for a match. A dot or colon
+ * immediately after the configured base is rejected: it may continue the host
+ * name or introduce a port which the mapping did not include.
+ *
+ * Example usage:
+ *
+ * ```php
+ * $mapping = new CautiousURLBaseRewriteMapping([
+ *     'https://source.example' => 'https://destination.example',
+ * ]);
+ * $processor = new CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules(
+ *     '[vc_video link="https:\\/\\/source.example\\/media\\/video.mp4"]',
+ *     $mapping
+ * );
+ *
+ * while ($processor->next_url()) {
+ *     $processor->replace_url_base();
+ * }
+ *
+ * $rewritten = $processor->get_updated_text();
+ * ```
+ */
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound
+class CautiousURLBaseProcessorInTextWithMixedUnknownEscapeRules {
+    /**
+     * @var array<int, array{
+     *     source_authority: string,
+     *     source_ascii_host: string,
+     *     source_host_uses_idn: bool,
+     *     unicode_source_path_segments_in_nfd: array<int, string>,
+     *     source_path: string,
+     *     source_base: string,
+     *     target_domain: string,
+     *     target_scheme: string,
+     *     target_path: string,
+     *     target_port: int|null,
+     *     pattern: string
+     * }>
+     */
+    private array $url_mappings = [];
+
+    /** Prepared rules and the shared child-site path set; never copied per value. */
+    private CautiousURLBaseRewriteMapping $url_mapping;
+
+    /**
+     * One lookahead match per mapping, not a list of all URLs in the value.
+     * A missing entry has not been searched; null means no match remains.
+     * Input text does not change while scanning: replacements are queued.
+     * Keep each match until the cursor passes it, and do not repeat a search
+     * which already reached the end of the value.
+     *
+     * @var array<int, array<int|string, array{string, int}>|null>
+     */
+    private array $next_matches = [];
+
+    private string $text;
+
+    private int $bytes_already_scanned = 0;
+
+    /**
+     * @var array{
+     *     source_authority: string,
+     *     source_ascii_host: string,
+     *     source_host_uses_idn: bool,
+     *     unicode_source_path_segments_in_nfd: array<int, string>,
+     *     source_path: string,
+     *     source_base: string,
+     *     target_domain: string,
+     *     target_scheme: string,
+     *     target_path: string,
+     *     target_port: int|null,
+     *     pattern: string,
+     *     start: int,
+     *     base_length: int,
+     *     replacement: string,
+     *     scheme_start: int|null,
+     *     scheme_length: int,
+     *     candidate_scheme: string
+     * }|null
+     */
+    private ?array $matched_url = null;
+
+    /** @var array<int, array{start: int, length: int, replacement: string}> */
+    private array $lexical_updates = [];
+
+    /**
+     * Creates a processor for one opaque text value.
+     *
+     * @param CautiousURLBaseRewriteMapping $url_mapping Prepared URL mapping.
+     */
+    public function __construct(
+        string $text,
+        CautiousURLBaseRewriteMapping $url_mapping
+    )
+    {
+        $this->text = $text;
+        $this->url_mapping = $url_mapping;
+        $this->url_mappings = $url_mapping->get_entries();
+    }
+
+    /**
+     * Finds the next configured source URL base.
+     *
+     * The match remains current until the next call. Call replace_url_base()
+     * first to queue its replacement. Calling next_url() again without doing
+     * so skips the current match.
+     */
+    public function next_url(): bool
+    {
+        $this->matched_url = $this->find_next_url_base();
+        if ($this->matched_url === null) {
+            return false;
+        }
+
+        $this->bytes_already_scanned = $this->matched_url['start'] + $this->matched_url['base_length'];
+        return true;
+    }
+
+    /**
+     * Queues replacement of the complete current source base.
+     *
+     * Mapping source.example/media to destination.example/assets changes
+     * https://source.example/media/logo.png to
+     * https://destination.example/assets/logo.png. The original /logo.png
+     * suffix is outside the matched base and remains unchanged. A configured
+     * protocol change replaces only the literal scheme.
+     */
+    public function replace_url_base(): bool
+    {
+        if ($this->matched_url === null) {
+            return false;
+        }
+
+        // A host shared with child sites needs a parsed path to select a site.
+        // This scanner knows only the source base, not where the URL ends or
+        // which escapes its surrounding format uses. Keep such URLs remote;
+        // the HTML, CSS and block URL parsers make path decisions elsewhere.
+        if ($this->url_mapping->has_excluded_paths_for_host($this->matched_url['source_authority'])) {
+            return false;
+        }
+
+        $this->lexical_updates[$this->matched_url['start']] = [
+            'start'       => $this->matched_url['start'],
+            'length'      => $this->matched_url['base_length'],
+            'replacement' => $this->matched_url['replacement'],
+        ];
+
+        if (
+            $this->matched_url['scheme_start'] !== null
+            && ( $this->matched_url['candidate_scheme'] === 'http' || $this->matched_url['candidate_scheme'] === 'https' )
+            && ( $this->matched_url['target_scheme'] === 'http' || $this->matched_url['target_scheme'] === 'https' )
+            && $this->matched_url['candidate_scheme'] !== $this->matched_url['target_scheme']
+        ) {
+            $this->lexical_updates[$this->matched_url['scheme_start']] = [
+                'start'       => $this->matched_url['scheme_start'],
+                'length'      => $this->matched_url['scheme_length'],
+                'replacement' => $this->matched_url['target_scheme'],
+            ];
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the input with all queued base replacements applied.
+     *
+     * Bytes outside the queued ranges are copied unchanged.
+     */
+    public function get_updated_text(): string
+    {
+        if ($this->lexical_updates === []) {
+            return $this->text;
+        }
+
+        ksort($this->lexical_updates);
+        $bytes_already_copied = 0;
+        $updated_text = '';
+        foreach ($this->lexical_updates as $update) {
+            $updated_text .= substr(
+                $this->text,
+                $bytes_already_copied,
+                $update['start'] - $bytes_already_copied
+            );
+            $updated_text .= $update['replacement'];
+            $bytes_already_copied = $update['start'] + $update['length'];
+        }
+
+        return $updated_text . substr($this->text, $bytes_already_copied);
+    }
+
+    /**
+     * @return array{
+     *     source_authority: string,
+     *     source_ascii_host: string,
+     *     source_host_uses_idn: bool,
+     *     unicode_source_path_segments_in_nfd: array<int, string>,
+     *     source_path: string,
+     *     source_base: string,
+     *     target_domain: string,
+     *     target_scheme: string,
+     *     target_path: string,
+     *     target_port: int|null,
+     *     pattern: string,
+     *     start: int,
+     *     base_length: int,
+     *     replacement: string,
+     *     scheme_start: int|null,
+     *     scheme_length: int,
+     *     candidate_scheme: string
+     * }|null
+     */
+    private function find_next_url_base(): ?array
+    {
+        $next_match = null;
+        foreach ($this->url_mappings as $mapping_index => $mapping) {
+            if (!array_key_exists($mapping_index, $this->next_matches)
+                || ( $this->next_matches[$mapping_index] !== null
+                    && $this->next_matches[$mapping_index]['authority'][1] < $this->bytes_already_scanned )) {
+                $search_from = $this->bytes_already_scanned;
+                while (true) {
+                    $found = preg_match(
+                        $mapping['pattern'],
+                        $this->text,
+                        $matches,
+                        PREG_OFFSET_CAPTURE,
+                        $search_from
+                    );
+                    if (
+                        $found !== 1
+                        || (
+                            !$mapping['source_host_uses_idn']
+                            && $mapping['unicode_source_path_segments_in_nfd'] === []
+                        )
+                    ) {
+                        break;
+                    }
+
+                    $candidate_matches_mapping = true;
+                    if (
+                        isset($matches['unicode_host'])
+                        && $matches['unicode_host'][1] !== -1
+                    ) {
+                        $candidate_matches_mapping =
+                            CautiousURLBaseRewriteMapping::to_ascii_idn_hostname(
+                                $matches['unicode_host'][0]
+                            ) === $mapping['source_ascii_host'];
+                    }
+
+                    foreach (
+                        $mapping['unicode_source_path_segments_in_nfd']
+                        as $unicode_path_segment_index => $source_path_segment_in_nfd
+                    ) {
+                        $candidate_path_segment_in_nfd = Normalizer::normalize(
+                            $matches[
+                                'unicode_path_segment_' . $unicode_path_segment_index
+                            ][0],
+                            Normalizer::FORM_D
+                        );
+                        if ($candidate_path_segment_in_nfd !== $source_path_segment_in_nfd) {
+                            $candidate_matches_mapping = false;
+                            break;
+                        }
+                    }
+
+                    if ($candidate_matches_mapping) {
+                        break;
+                    }
+
+                    $search_from =
+                        $matches['authority'][1]
+                        + strlen($matches['authority'][0]);
+                }
+                $this->next_matches[$mapping_index] = $found === 1 ? $matches : null;
+            }
+            $matches = $this->next_matches[$mapping_index];
+            if ($matches === null) {
+                continue;
+            }
+
+            $authority_start = $matches['authority'][1];
+            if ($next_match !== null && $authority_start >= $next_match['start']) {
+                continue;
+            }
+
+            $target_path_slash = '';
+            if ($mapping['target_path'] !== '') {
+                $target_path_slash = $matches['url_slash'][1] === -1
+                    ? $matches['path_slash'][0]
+                    : $matches['url_slash'][0];
+            }
+            // Target ports and paths such as /scope:123 need the same colon
+            // spelling. Without a scheme colon, use an unescaped colon.
+            // This risks breaking an unknown format, but ':' is not a
+            // common string terminator in popular formats.
+            $target_colon = $matches['scheme_colon'][1] === -1
+                ? ':'
+                : $matches['scheme_colon'][0];
+            $target_port = $mapping['target_port'] === null
+                ? ''
+                : $target_colon . $mapping['target_port'];
+
+            // An exclusion must preserve the actual matched bytes, including
+            // mixed slash escaping. Rebuilding an equal URL base can change them.
+            $unchanged_base = $mapping['source_authority'] === $mapping['target_domain']
+                    . ( $mapping['target_port'] === null ? '' : ':' . $mapping['target_port'] )
+                && $mapping['source_path'] === $mapping['target_path'];
+            $next_match = array_merge(
+                $mapping,
+                [
+                    'start'         => $authority_start,
+                    'base_length'   => strlen($matches['base'][0]),
+                    'replacement'   => $unchanged_base ? $matches['base'][0] : $mapping['target_domain'] . $target_port . strtr(
+                        $mapping['target_path'],
+                        ['/' => $target_path_slash, ':' => $target_colon]
+                    ),
+                    'scheme_start'  => $matches['scheme'][1] === -1
+                        ? null
+                        : $matches['scheme'][1],
+                    'scheme_length'    => strlen($matches['scheme'][0]),
+                    'candidate_scheme' => strtolower($matches['scheme'][0]),
+                ]
+            );
+        }
+
+        return $next_match;
+    }
+}
