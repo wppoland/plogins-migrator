@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Migrator - Site Migration and Backup 1.4.0\n"
+"Project-Id-Version: Migrator - Site Migration and Backup 1.5.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-02T07:10:57+00:00\n"
+"POT-Creation-Date: 2026-10-04T20:35:50+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: plogins-migrator\n"
@@ -26,7 +26,9 @@ msgstr ""
 
 #. Description of the plugin
 #: plogins-migrator.php
-msgid "Back up, clone and migrate your WordPress site to a new host. One file, drag and drop, no technical setup."
+msgid ""
+"Back up, clone and migrate your WordPress site to a new host. One file, drag "
+"and drop, no technical setup."
 msgstr ""
 
 #. Author of the plugin
@@ -45,67 +47,65 @@ msgstr ""
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr ""
 
-#: src/Admin/Ajax.php:176
+#: src/Admin/Ajax.php:183
 msgid "Backup not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:190
-#: src/Admin/Ajax.php:206
-#: src/Admin/Ajax.php:245
-#: src/Admin/Ajax.php:292
-#: src/Admin/Ajax.php:452
-#: src/Admin/Ajax.php:595
+#: src/Admin/Ajax.php:197 src/Admin/Ajax.php:213 src/Admin/Ajax.php:252
+#: src/Admin/Ajax.php:299 src/Admin/Ajax.php:459 src/Admin/Ajax.php:602
 msgid "Not allowed."
 msgstr ""
 
-#: src/Admin/Ajax.php:213
+#: src/Admin/Ajax.php:220
 msgid "Bad upload request."
 msgstr ""
 
-#: src/Admin/Ajax.php:218
+#: src/Admin/Ajax.php:225
 msgid "Invalid upload."
 msgstr ""
 
-#: src/Admin/Ajax.php:229
+#: src/Admin/Ajax.php:236
 msgid "Could not store upload."
 msgstr ""
 
-#: src/Admin/Ajax.php:255
+#: src/Admin/Ajax.php:262
 msgid "Uploaded archive not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:283
+#: src/Admin/Ajax.php:290
 msgid "Invalid upload id."
 msgstr ""
 
-#: src/Admin/Ajax.php:304
-msgid "Another backup is being made right now, in another tab or by another administrator. Wait for it to finish, or about ten minutes if that tab was closed."
+#: src/Admin/Ajax.php:311
+msgid ""
+"Another backup is being made right now, in another tab or by another "
+"administrator. Wait for it to finish, or about ten minutes if that tab was "
+"closed."
 msgstr ""
 
-#: src/Admin/Ajax.php:462
+#: src/Admin/Ajax.php:469
 msgid "File not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:547
+#: src/Admin/Ajax.php:554
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:551
-#: src/Admin/Page.php:116
+#: src/Admin/Ajax.php:558 src/Admin/Page.php:116
 msgid "Enter the text to search for."
 msgstr ""
 
-#: src/Admin/Ajax.php:554
+#: src/Admin/Ajax.php:561
 msgid "Search and replace values are identical."
 msgstr ""
 
 #. translators: 1: number of rows, 2: database error
-#: src/Admin/Ajax.php:582
+#: src/Admin/Ajax.php:589
 #, php-format
 msgid "%1$d rows could not be written (%2$s)."
 msgstr ""
 
-#: src/Admin/Ajax.php:592
+#: src/Admin/Ajax.php:599
 msgid "Security check failed."
 msgstr ""
 
@@ -113,8 +113,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/Page.php:61
-#: templates/admin-page.php:13
+#: src/Admin/Page.php:61 templates/admin-page.php:13
 msgid "Migrator"
 msgstr ""
 
@@ -151,7 +150,9 @@ msgid "Restore failed."
 msgstr ""
 
 #: src/Admin/Page.php:105
-msgid "This overwrites the current site with the backup. A safety copy of the database is taken first. Continue?"
+msgid ""
+"This overwrites the current site with the backup. A safety copy of the "
+"database is taken first. Continue?"
 msgstr ""
 
 #: src/Admin/Page.php:106
@@ -234,8 +235,7 @@ msgstr ""
 msgid "Do more with %s"
 msgstr ""
 
-#: src/Admin/ProUpsell.php:149
-#: src/Admin/ProUpsell.php:183
+#: src/Admin/ProUpsell.php:149 src/Admin/ProUpsell.php:183
 msgid "Upgrade to PRO"
 msgstr ""
 
@@ -258,7 +258,9 @@ msgid "What %s adds"
 msgstr ""
 
 #: src/Backup/BackupRunner.php:71
-msgid "This backup started but has not finished. If it stays like this, the run was stopped part way (execution time, memory or a server restart)."
+msgid ""
+"This backup started but has not finished. If it stays like this, the run was "
+"stopped part way (execution time, memory or a server restart)."
 msgstr ""
 
 #: src/Backup/Schedule.php:147
@@ -269,79 +271,65 @@ msgstr ""
 msgid "Once a week (Migrator)"
 msgstr ""
 
-#: src/Backup/Scheduler.php:58
-#: src/Backup/Scheduler.php:59
+#: src/Backup/Scheduler.php:58 src/Backup/Scheduler.php:59
 #: templates/schedule-page.php:37
 msgid "Scheduled Backups"
 msgstr ""
 
-#: src/Backup/Scheduler.php:114
-#: src/Backup/Scheduler.php:217
+#: src/Backup/Scheduler.php:114 src/Backup/Scheduler.php:217
+#: src/Reprint/Source.php:148
 msgid "You are not allowed to do this."
 msgstr ""
 
-#: src/Backup/Scheduler.php:261
-#: templates/admin-page.php:53
+#: src/Backup/Scheduler.php:261 templates/admin-page.php:53
 msgid "Media library (uploads)"
 msgstr ""
 
-#: src/Backup/Scheduler.php:262
-#: templates/admin-page.php:54
+#: src/Backup/Scheduler.php:262 templates/admin-page.php:54
 msgid "All themes"
 msgstr ""
 
-#: src/Backup/Scheduler.php:263
-#: templates/admin-page.php:55
+#: src/Backup/Scheduler.php:263 templates/admin-page.php:55
 msgid "Inactive themes (keep active only)"
 msgstr ""
 
-#: src/Backup/Scheduler.php:264
-#: templates/admin-page.php:56
+#: src/Backup/Scheduler.php:264 templates/admin-page.php:56
 msgid "All plugins"
 msgstr ""
 
-#: src/Backup/Scheduler.php:265
-#: templates/admin-page.php:57
+#: src/Backup/Scheduler.php:265 templates/admin-page.php:57
 msgid "Inactive plugins (keep active only)"
 msgstr ""
 
-#: src/Backup/Scheduler.php:266
-#: templates/admin-page.php:58
+#: src/Backup/Scheduler.php:266 templates/admin-page.php:58
 msgid "Must-use plugins"
 msgstr ""
 
-#: src/Backup/Scheduler.php:267
-#: templates/admin-page.php:59
+#: src/Backup/Scheduler.php:267 templates/admin-page.php:59
 msgid "Cache files"
 msgstr ""
 
-#: src/Backup/Scheduler.php:268
-#: templates/admin-page.php:45
+#: src/Backup/Scheduler.php:268 templates/admin-page.php:45
 msgid "Spam comments"
 msgstr ""
 
-#: src/Backup/Scheduler.php:269
-#: templates/admin-page.php:46
+#: src/Backup/Scheduler.php:269 templates/admin-page.php:46
 msgid "Post revisions"
 msgstr ""
 
-#: src/Backup/Scheduler.php:270
-#: templates/admin-page.php:47
+#: src/Backup/Scheduler.php:270 templates/admin-page.php:47
 msgid "Transients"
 msgstr ""
 
-#: src/Backup/Scheduler.php:271
-#: templates/admin-page.php:48
+#: src/Backup/Scheduler.php:271 templates/admin-page.php:48
 msgid "WooCommerce sessions"
 msgstr ""
 
-#: src/Backup/Scheduler.php:272
-#: templates/admin-page.php:49
+#: src/Backup/Scheduler.php:272 templates/admin-page.php:49
 msgid "Action Scheduler tables"
 msgstr ""
 
-#: src/Backup/Scheduler.php:273
-#: templates/admin-page.php:50
+#: src/Backup/Scheduler.php:273 templates/admin-page.php:50
 msgid "Database (files-only backup)"
 msgstr ""
 
@@ -361,8 +349,7 @@ msgstr ""
 msgid "PHP"
 msgstr ""
 
-#: src/Engine/Archive/Inspector.php:56
-#: src/Engine/Import/Preflight.php:38
+#: src/Engine/Archive/Inspector.php:56 src/Engine/Import/Preflight.php:38
 #: src/Engine/Import/Preflight.php:49
 msgid "Table prefix"
 msgstr ""
@@ -371,13 +358,11 @@ msgstr ""
 msgid "Tables"
 msgstr ""
 
-#: src/Engine/Archive/Inspector.php:58
-#: src/Engine/Import/Preflight.php:61
+#: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:61
 msgid "Multisite"
 msgstr ""
 
-#: src/Engine/Archive/Inspector.php:58
-#: src/Engine/Archive/Inspector.php:61
+#: src/Engine/Archive/Inspector.php:58 src/Engine/Archive/Inspector.php:61
 msgid "Yes"
 msgstr ""
 
@@ -394,7 +379,11 @@ msgid "Yes (HPOS)"
 msgstr ""
 
 #: src/Engine/Import/Importer.php:129
-msgid "Migrator: this archive was never finished, so it is not a complete backup. The run that wrote it was cut short (execution time, memory, or a full disk). Nothing has been imported, this site is untouched. Restore from a backup that finished."
+msgid ""
+"Migrator: this archive was never finished, so it is not a complete backup. "
+"The run that wrote it was cut short (execution time, memory, or a full "
+"disk). Nothing has been imported, this site is untouched. Restore from a "
+"backup that finished."
 msgstr ""
 
 #: src/Engine/Import/Importer.php:145
@@ -402,63 +391,93 @@ msgid "Migrator: archive has no manifest (is this a Migrator archive?)."
 msgstr ""
 
 #: src/Engine/Import/Importer.php:149
-msgid "Migrator: this archive was made by a newer version of Migrator. Update the plugin on this site and try again."
+msgid ""
+"Migrator: this archive was made by a newer version of Migrator. Update the "
+"plugin on this site and try again."
 msgstr ""
 
 #. translators: 1: the archive's table prefix, 2: this site's table prefix
 #: src/Engine/Import/Importer.php:161
 #, php-format
-msgid "Migrator: table prefix mismatch. This archive uses \"%1$s\" but this site uses \"%2$s\". Set this site's $table_prefix to \"%1$s\" in wp-config.php and try again."
+msgid ""
+"Migrator: table prefix mismatch. This archive uses \"%1$s\" but this site "
+"uses \"%2$s\". Set this site's $table_prefix to \"%1$s\" in wp-config.php "
+"and try again."
 msgstr ""
 
 #: src/Engine/Import/Importer.php:186
-msgid "Migrator: this restore crosses a multisite boundary. Restoring a network backup rewrites the network tables to the destination domain, which this plugin does not do, so the import was stopped rather than left half applied."
+msgid ""
+"Migrator: this restore crosses a multisite boundary. Restoring a network "
+"backup rewrites the network tables to the destination domain, which this "
+"plugin does not do, so the import was stopped rather than left half applied."
 msgstr ""
 
 #. translators: 1: number of rows, 2: database error
 #: src/Engine/Import/Importer.php:239
 #, php-format
-msgid "%1$d rows could not be rewritten and may still point at the old address (%2$s)."
+msgid ""
+"%1$d rows could not be rewritten and may still point at the old address "
+"(%2$s)."
 msgstr ""
 
 #. translators: 1: path to the SQL dump of the previous database, 2: the original error
 #: src/Engine/Import/Importer.php:280
 #, php-format
-msgid "Migrator: the import failed AND the rollback failed, so the database is in a partly imported state. The dump of the previous database is kept at %1$s and must be restored by hand. %2$s"
+msgid ""
+"Migrator: the import failed AND the rollback failed, so the database is in a "
+"partly imported state. The dump of the previous database is kept at %1$s and "
+"must be restored by hand. %2$s"
 msgstr ""
 
 #. translators: %s: the original error
 #: src/Engine/Import/Importer.php:288
 #, php-format
-msgid "Migrator: import failed and the database was rolled back to its previous state. %s"
+msgid ""
+"Migrator: import failed and the database was rolled back to its previous "
+"state. %s"
 msgstr ""
 
 #. translators: 1: number of files restored, 2: path to the SQL dump of the previous database, 3: the original error
 #: src/Engine/Import/Importer.php:323
 #, php-format
-msgid "Migrator: the restore stopped after the database had already been replaced, so this site is now part restored: the database is the one from the archive, %1$d files came across in full, the file it stopped on may be part written, and the rest of the archive was not read. The database as it was before is dumped at %2$s: import that file to put the database back, or restore again from a backup that finished. Do one of the two before letting visitors in. %3$s"
+msgid ""
+"Migrator: the restore stopped after the database had already been replaced, "
+"so this site is now part restored: the database is the one from the archive, "
+"%1$d files came across in full, the file it stopped on may be part written, "
+"and the rest of the archive was not read. The database as it was before is "
+"dumped at %2$s: import that file to put the database back, or restore again "
+"from a backup that finished. Do one of the two before letting visitors in. "
+"%3$s"
 msgstr ""
 
 #. translators: %s: what was wrong with the archive
 #: src/Engine/Import/Importer.php:362
 #, php-format
-msgid "Migrator: this archive is damaged, so nothing has been imported and this site is untouched. %s"
+msgid ""
+"Migrator: this archive is damaged, so nothing has been imported and this "
+"site is untouched. %s"
 msgstr ""
 
 #: src/Engine/Import/Importer.php:381
-msgid "Migrator: cannot create the pre-import safety backup, so nothing has been imported. Check that the backups folder is writable."
+msgid ""
+"Migrator: cannot create the pre-import safety backup, so nothing has been "
+"imported. Check that the backups folder is writable."
 msgstr ""
 
 #. translators: %s: path of the temporary SQL file
 #: src/Engine/Import/Importer.php:456
 #, php-format
-msgid "Migrator: could not write the whole SQL dump to %s. The disk is most likely full. Nothing has been imported."
+msgid ""
+"Migrator: could not write the whole SQL dump to %s. The disk is most likely "
+"full. Nothing has been imported."
 msgstr ""
 
 #. translators: 1: source prefix, 2: this site's prefix
 #: src/Engine/Import/Preflight.php:41
 #, php-format
-msgid "Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be refused until this site's $table_prefix in wp-config.php matches."
+msgid ""
+"Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be "
+"refused until this site's $table_prefix in wp-config.php matches."
 msgstr ""
 
 #. translators: %s: table prefix
@@ -468,7 +487,10 @@ msgid "Matches (%s)."
 msgstr ""
 
 #: src/Engine/Import/Preflight.php:62
-msgid "This archive or this site is a network. Restoring across a multisite boundary means rewriting the network tables to this domain, which this plugin does not do, so the restore will be refused."
+msgid ""
+"This archive or this site is a network. Restoring across a multisite "
+"boundary means rewriting the network tables to this domain, which this "
+"plugin does not do, so the restore will be refused."
 msgstr ""
 
 #: src/Engine/Import/Preflight.php:74
@@ -478,18 +500,20 @@ msgstr ""
 #. translators: %s: uploads folder on the source site
 #: src/Engine/Import/Preflight.php:77
 #, php-format
-msgid "On the source site the media library was outside wp-content (%s), so this backup does not contain it. Copy that folder across separately."
+msgid ""
+"On the source site the media library was outside wp-content (%s), so this "
+"backup does not contain it. Copy that folder across separately."
 msgstr ""
 
-#: src/Engine/Import/Preflight.php:95
-#: src/Engine/Import/Preflight.php:106
+#: src/Engine/Import/Preflight.php:95 src/Engine/Import/Preflight.php:106
 msgid "Disk space"
 msgstr ""
 
 #. translators: 1: free space, 2: estimated needed
 #: src/Engine/Import/Preflight.php:98
 #, php-format
-msgid "About %1$s free, restore may need ~%2$s. Free up space before restoring."
+msgid ""
+"About %1$s free, restore may need ~%2$s. Free up space before restoring."
 msgstr ""
 
 #. translators: %s: free space
@@ -513,7 +537,14 @@ msgstr ""
 #. translators: 1: source PHP, 2: this PHP
 #: src/Engine/Import/Preflight.php:130
 #, php-format
-msgid "Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer PHP may not run here."
+msgid ""
+"Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer "
+"PHP may not run here."
+msgstr ""
+
+#: src/Reprint/Source.php:116 src/Reprint/Source.php:117
+#: templates/pull-push-page.php:20
+msgid "Pull and Push"
 msgstr ""
 
 #: src/Storage/DestinationRegistry.php:36
@@ -585,15 +616,20 @@ msgid "The folder must be an absolute path."
 msgstr ""
 
 #: src/Storage/LocalFolderDestination.php:64
-msgid "The folder must be outside the website and outside Migrator's own backups folder."
+msgid ""
+"The folder must be outside the website and outside Migrator's own backups "
+"folder."
 msgstr ""
 
 #: src/Storage/LocalFolderDestination.php:69
-msgid "The folder does not exist and cannot be created, or the web server cannot write to it."
+msgid ""
+"The folder does not exist and cannot be created, or the web server cannot "
+"write to it."
 msgstr ""
 
 #: templates/admin-page.php:19
-msgid "Back up your site or move it to a new host, one file, no technical setup."
+msgid ""
+"Back up your site or move it to a new host, one file, no technical setup."
 msgstr ""
 
 #: templates/admin-page.php:27
@@ -601,7 +637,9 @@ msgid "Create a backup"
 msgstr ""
 
 #: templates/admin-page.php:30
-msgid "Package your database and files into a single archive you can download and restore anywhere."
+msgid ""
+"Package your database and files into a single archive you can download and "
+"restore anywhere."
 msgstr ""
 
 #: templates/admin-page.php:33
@@ -624,8 +662,7 @@ msgstr ""
 msgid "Media only"
 msgstr ""
 
-#: templates/admin-page.php:41
-#: templates/schedule-page.php:76
+#: templates/admin-page.php:41 templates/schedule-page.php:76
 msgid "What to leave out (optional)"
 msgstr ""
 
@@ -650,11 +687,12 @@ msgid "Scan files by size"
 msgstr ""
 
 #: templates/admin-page.php:101
-msgid "Browse your wp-content folder by size and tick anything you do not need in the backup, for example a large cache, logs, or another plugin's stored data."
+msgid ""
+"Browse your wp-content folder by size and tick anything you do not need in "
+"the backup, for example a large cache, logs, or another plugin's stored data."
 msgstr ""
 
-#: templates/admin-page.php:106
-#: templates/schedule-page.php:87
+#: templates/admin-page.php:106 templates/schedule-page.php:87
 msgid "Compression"
 msgstr ""
 
@@ -683,7 +721,9 @@ msgid "Moving a complex store?"
 msgstr ""
 
 #: templates/admin-page.php:150
-msgid "If the backup is ready but the migration needs staging, checkout checks or an integration plan, send the scope in writing."
+msgid ""
+"If the backup is ready but the migration needs staging, checkout checks or "
+"an integration plan, send the scope in writing."
 msgstr ""
 
 #: templates/admin-page.php:155
@@ -695,7 +735,10 @@ msgid "Restore a backup"
 msgstr ""
 
 #: templates/admin-page.php:165
-msgid "Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive, keep a backup of anything you want to keep."
+msgid ""
+"Drop a Migrator archive here to restore it. This overwrites the current "
+"database (and files) with the archive, keep a backup of anything you want to "
+"keep."
 msgstr ""
 
 #: templates/admin-page.php:169
@@ -735,7 +778,10 @@ msgid "Search & replace"
 msgstr ""
 
 #: templates/admin-page.php:210
-msgid "Change a domain, URL or path across this site's database, safely for serialized data. Run a dry run first to see how many rows would change. Back up before a live run."
+msgid ""
+"Change a domain, URL or path across this site's database, safely for "
+"serialized data. Run a dry run first to see how many rows would change. Back "
+"up before a live run."
 msgstr ""
 
 #: templates/admin-page.php:213
@@ -758,6 +804,83 @@ msgstr ""
 msgid "From the command line:"
 msgstr ""
 
+#: templates/pull-push-page.php:23
+msgid ""
+"Copy a whole site to another server over HTTP, with no archive to download "
+"or upload, no SSH and no FTP. Files and the database travel in small pieces, "
+"an interrupted copy carries on where it stopped, and the next pull fetches "
+"only what changed."
+msgstr ""
+
+#: templates/pull-push-page.php:27
+msgid "Saved."
+msgstr ""
+
+#: templates/pull-push-page.php:35
+msgid "This site as the source"
+msgstr ""
+
+#: templates/pull-push-page.php:38
+msgid ""
+"The Reprint Server plugin is active on this site and already answers pull "
+"requests, so Migrator leaves the endpoint to it. Manage access under Tools > "
+"Reprint Server."
+msgstr ""
+
+#: templates/pull-push-page.php:42
+msgid "Let another site pull this one"
+msgstr ""
+
+#: templates/pull-push-page.php:45
+msgid ""
+"Switching this on opens an address other sites can request, and nothing is "
+"answered until you also set a connection token or enrol a key. Anyone "
+"holding that credential can read every file and the whole database, user "
+"password hashes included. Switch it off when the move is done."
+msgstr ""
+
+#: templates/pull-push-page.php:47
+msgid "Save"
+msgstr ""
+
+#: templates/pull-push-page.php:52
+msgid "Set the token or enrol a key"
+msgstr ""
+
+#: templates/pull-push-page.php:58
+msgid "On the destination"
+msgstr ""
+
+#: templates/pull-push-page.php:59
+msgid ""
+"Install Migrator on the destination site and run these from its WordPress "
+"folder with WP-CLI. A pull replaces the destination database and copies wp-"
+"content over it; Migrator keeps its own folder and a dump of the database it "
+"replaced."
+msgstr ""
+
+#: templates/pull-push-page.php:60
+msgid "Copy this site to the destination"
+msgstr ""
+
+#: templates/pull-push-page.php:62
+msgid "Fetch only what changed since the last pull"
+msgstr ""
+
+#: templates/pull-push-page.php:63
+msgid "Run the same command again."
+msgstr ""
+
+#: templates/pull-push-page.php:64
+msgid "Send the destination's changes back here"
+msgstr ""
+
+#: templates/pull-push-page.php:66
+msgid ""
+"Pushing needs PHP 7.2 or newer here, display_errors switched off, and push "
+"access granted on the Reprint Server screen."
+msgstr ""
+
 #: templates/schedule-page.php:23
 msgid "Schedule saved."
 msgstr ""
@@ -771,11 +894,17 @@ msgid "Backup failed. See the status below."
 msgstr ""
 
 #: templates/schedule-page.php:26
-msgid "Schedule saved, but no copies will go to the folder: it must be an absolute path outside the website and outside Migrator's own backups folder, and the web server must be able to write to it."
+msgid ""
+"Schedule saved, but no copies will go to the folder: it must be an absolute "
+"path outside the website and outside Migrator's own backups folder, and the "
+"web server must be able to write to it."
 msgstr ""
 
 #: templates/schedule-page.php:40
-msgid "Back up this site automatically on a schedule and keep the most recent copies. Backups run unattended through WordPress cron, using the same engine as a manual backup."
+msgid ""
+"Back up this site automatically on a schedule and keep the most recent "
+"copies. Backups run unattended through WordPress cron, using the same engine "
+"as a manual backup."
 msgstr ""
 
 #: templates/schedule-page.php:54
@@ -810,13 +939,14 @@ msgstr ""
 msgid "Compress backups with gzip (smaller files)"
 msgstr ""
 
-#: templates/schedule-page.php:102
-#: templates/schedule-page.php:216
+#: templates/schedule-page.php:102 templates/schedule-page.php:216
 msgid "Off-site copy"
 msgstr ""
 
 #: templates/schedule-page.php:104
-msgid "Copy every backup somewhere other than this server. A backup that lives only on the machine it protects is not a backup."
+msgid ""
+"Copy every backup somewhere other than this server. A backup that lives only "
+"on the machine it protects is not a backup."
 msgstr ""
 
 #: templates/schedule-page.php:109
@@ -827,8 +957,7 @@ msgstr ""
 msgid "Where to"
 msgstr ""
 
-#: templates/schedule-page.php:146
-#: templates/schedule-page.php:151
+#: templates/schedule-page.php:146 templates/schedule-page.php:151
 msgid "Stored. Leave blank to keep it."
 msgstr ""
 
@@ -848,8 +977,7 @@ msgstr ""
 msgid "On"
 msgstr ""
 
-#: templates/schedule-page.php:177
-#: templates/schedule-page.php:221
+#: templates/schedule-page.php:177 templates/schedule-page.php:221
 msgid "Off"
 msgstr ""
 
@@ -921,4 +1049,316 @@ msgstr ""
 
 #: templates/schedule-page.php:264
 msgid "Size"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:43
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:44
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:55
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:56
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:69
+msgid "Reprint Server"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:70
+msgid ""
+"This network token can pull any site in this network. Use the selected "
+"site’s home URL followed by ?reprint-api. Each pull creates a separate one-"
+"site network. Push is not supported."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:82
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:302
+msgid "Public keys"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:90
+msgid "You are not allowed to manage this network."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:98
+msgid "The network connection token could not be saved."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:108
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:114
+msgid "Connection token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:158
+msgid ""
+"Paste the connection token supplied by your tool, or generate a random token "
+"and use it in your tool. Save Changes to apply the token."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:178
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:179
+msgid "Show connection token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:180
+msgid "Hide connection token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:186
+msgid "Random connection token generated. Save Changes to apply it."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:187
+msgid "Generate new token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:195
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:253
+msgid "You are not allowed to manage Reprint Server."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:284
+msgid "Allow an external tool to download your site's database and files."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:308
+msgid "Push access"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:311
+msgid "You do not need push access when moving this site to another host."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:321
+msgid "Remote Reprint API URL"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:324
+msgid "Use this URL when another tool asks for the remote Reprint API URL."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:337
+msgid "Remote Reprint API URL copied."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:338
+msgid "Copy"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:354
+msgid ""
+"This page updates only the network option. Remove secret.php to use the "
+"stored option value."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:359
+msgid ""
+"This page and the REST API update only the site option. Remove secret.php to "
+"use the stored option value."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:365
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:413
+msgid "override is active."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:373
+msgid "Not configured yet."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:376
+msgid "Enter a connection token or enroll a public key to get started."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:377
+msgid "Enter a connection token to get started."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:384
+msgid "Connected for downloads and push."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:386
+msgid "The connection token or an enrolled key can change files on this site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:387
+msgid "The current connection token can change files on this site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:390
+msgid "Connected for downloads."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:392
+msgid ""
+"Neither the connection token nor an enrolled key can change files on this "
+"site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:393
+msgid "The connection token cannot change files on this site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:406
+msgid "Public keys need OpenSSL, which this host does not have."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:414
+msgid "Keys come from that file; this page cannot change them."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:421
+msgid "Public key"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:426
+msgid ""
+"Paste the public key printed by \"reprint keygen\" or by \"reprint pull\". A "
+"PEM block or the single line are both accepted."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:432
+msgid "Enroll key"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:439
+msgid "Key id"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:440
+msgid "Added"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:441
+msgid "May push"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:465
+msgid "Allow push"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:474
+msgid "Remove"
+msgstr ""
+
+#. translators: %s: Current PHP version.
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:494
+#, php-format
+msgid ""
+"Push access requires PHP 7.2 or newer. This site runs PHP %s. Downloads "
+"remain available."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:509
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:539
+msgid "Allow push to change files on this site"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:513
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:543
+msgid ""
+"While enabled, anyone with the connection token can upload, replace, and "
+"delete files in this site's document root, except excluded paths."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:521
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:574
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:593
+msgid "Push access is managed by your hosting provider."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:550
+msgid "Save push access"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:571
+msgid "Push access updated."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:572
+msgid "Push access was already up to date."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:573
+msgid "Push access requires PHP 7.2 or newer. Downloads remain available."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:575
+msgid "Configure a connection token before enabling push access."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:576
+msgid "Failed to save push access."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:577
+msgid "Public key enrolled."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:578
+msgid ""
+"That is not a usable public key. Paste an RSA public key of at least 3072 "
+"bits, as a PEM block or one line."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:579
+msgid "That public key is already enrolled."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:580
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:585
+msgid "public-keys.php is active. Edit that file to change enrolled keys."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:581
+msgid "Failed to save the public key."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:582
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:587
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:596
+msgid ""
+"The Reprint Server runtime is missing. Run composer install in the plugin "
+"directory or reinstall the release package."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:583
+msgid "Public key removed."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:584
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:590
+msgid "That key is not enrolled."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:586
+msgid "Failed to remove the public key."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:588
+msgid "Push access for the key updated."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:589
+msgid "Push access for the key was already up to date."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:591
+msgid "Push is not supported on multisite networks."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:592
+msgid "Push access requires PHP 7.2 or newer."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:594
+msgid ""
+"public-keys.php is active. Push grants cannot be stored for file-provided "
+"keys."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:595
+msgid "Failed to save push access for the key."
+msgstr ""
+
+#. translators: %s: Key id of the public key that was just enrolled.
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:607
+#, php-format
+msgid "Key id: %s"
 msgstr ""
