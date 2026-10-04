@@ -54,7 +54,7 @@ if (is_multisite()) {
 // options are shared with the standalone Reprint Server plugin, so they stay
 // when that plugin is installed and still needs them.
 delete_site_option('migrator_reprint_source');
-if ([] === (array) glob(rtrim((string) WP_PLUGIN_DIR, '/') . '/reprint-*', GLOB_ONLYDIR)) {
+if ([] === (glob(rtrim((string) WP_PLUGIN_DIR, '/') . '/reprint-*', GLOB_ONLYDIR) ?: [])) {
     $migrator_reprint = static function (): void {
         foreach (['reprint_server_connection_token', 'reprint_server_push_authorized_token_fingerprint', 'reprint_server_public_keys'] as $migrator_option) {
             delete_option($migrator_option);
