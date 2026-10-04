@@ -1,0 +1,133 @@
+From 7524523b4505a8e592c5e8b5430edd03b2304782 Mon Sep 17 00:00:00 2001
+From: x <x@x>
+Date: Sun, 4 Oct 2026 22:36:18 +0200
+Subject: [PATCH] PR #284: Add support for --env-mysql-* flags for secure
+ credential passing
+
+---
+ packages/reprint-client/src/import.php | 61 ++++++++++++++++++++++++--
+ 1 file changed, 57 insertions(+), 4 deletions(-)
+
+diff --git a/packages/reprint-client/src/import.php b/packages/reprint-client/src/import.php
+index df8eecbc..23446205 100755
+--- a/packages/reprint-client/src/import.php
++++ b/packages/reprint-client/src/import.php
+@@ -1371,7 +1371,13 @@ class ImportClient
+         }
+ 
+         // MySQL connection parameters for --sql-output=mysql.
+-        if (isset($options["mysql_host"])) {
++        if (isset($options["env_mysql_host"])) {
++            $env_var_name = $options["env_mysql_host"];
++            $this->mysql_host = getenv($env_var_name) ?: '';
++            if (!empty($this->mysql_host)) {
++                $this->get_state()->mysql_host = $this->mysql_host;
++            }
++        } elseif (isset($options["mysql_host"])) {
+             $this->mysql_host = $options["mysql_host"];
+             $this->get_state()->mysql_host = $this->mysql_host;
+         } elseif (isset($this->get_state()->mysql_host)) {
+@@ -1385,14 +1391,26 @@ class ImportClient
+             $this->mysql_port = (int) $this->get_state()->mysql_port;
+         }
+ 
+-        if (isset($options["mysql_user"])) {
++        if (isset($options["env_mysql_user"])) {
++            $env_var_name = $options["env_mysql_user"];
++            $this->mysql_user = getenv($env_var_name) ?: '';
++            if (!empty($this->mysql_user)) {
++                $this->get_state()->mysql_user = $this->mysql_user;
++            }
++        } elseif (isset($options["mysql_user"])) {
+             $this->mysql_user = $options["mysql_user"];
+             $this->get_state()->mysql_user = $this->mysql_user;
+         } elseif (isset($this->get_state()->mysql_user)) {
+             $this->mysql_user = $this->get_state()->mysql_user;
+         }
+ 
+-        if (isset($options["mysql_database"])) {
++        if (isset($options["env_mysql_database"])) {
++            $env_var_name = $options["env_mysql_database"];
++            $this->mysql_database = getenv($env_var_name) ?: '';
++            if (!empty($this->mysql_database)) {
++                $this->get_state()->mysql_database = $this->mysql_database;
++            }
++        } elseif (isset($options["mysql_database"])) {
+             $this->mysql_database = $options["mysql_database"];
+             $this->get_state()->mysql_database = $this->mysql_database;
+         } elseif (isset($this->get_state()->mysql_database)) {
+@@ -1402,7 +1420,10 @@ class ImportClient
+         $this->save_state();
+ 
+         // Password is never persisted — must be supplied each run or via env.
+-        if (isset($options["mysql_password"])) {
++        if (isset($options["env_mysql_password"])) {
++            $env_var_name = $options["env_mysql_password"];
++            $this->mysql_password = getenv($env_var_name) ?: '';
++        } elseif (isset($options["mysql_password"])) {
+             $this->mysql_password = $options["mysql_password"];
+         } elseif (getenv("MYSQL_PASSWORD") !== false) {
+             $this->mysql_password = getenv("MYSQL_PASSWORD");
+@@ -15205,6 +15226,14 @@ if (
+             'help' => 'MySQL host (default: 127.0.0.1, for --sql-output=mysql)',
+             'commands' => ['db-pull'],
+         ],
++        [
++            'name' => 'env-mysql-host',
++            'type' => 'value',
++            'target' => 'env_mysql_host',
++            'placeholder' => 'VAR_NAME',
++            'help' => 'Read MySQL host from environment variable (secure alternative to --mysql-host)',
++            'commands' => ['db-pull'],
++        ],
+         [
+             'name' => 'mysql-port',
+             'type' => 'value',
+@@ -15221,6 +15250,14 @@ if (
+             'help' => 'MySQL user (default: root, for --sql-output=mysql)',
+             'commands' => ['db-pull'],
+         ],
++        [
++            'name' => 'env-mysql-user',
++            'type' => 'value',
++            'target' => 'env_mysql_user',
++            'placeholder' => 'VAR_NAME',
++            'help' => 'Read MySQL user from environment variable (secure alternative to --mysql-user)',
++            'commands' => ['db-pull'],
++        ],
+         [
+             'name' => 'mysql-password',
+             'type' => 'value',
+@@ -15229,6 +15266,14 @@ if (
+             'help' => 'MySQL password (or set MYSQL_PASSWORD env)',
+             'commands' => ['db-pull'],
+         ],
++        [
++            'name' => 'env-mysql-password',
++            'type' => 'value',
++            'target' => 'env_mysql_password',
++            'placeholder' => 'VAR_NAME',
++            'help' => 'Read MySQL password from environment variable (secure alternative to --mysql-password)',
++            'commands' => ['db-pull'],
++        ],
+         [
+             'name' => 'mysql-database',
+             'type' => 'value',
+@@ -15237,6 +15282,14 @@ if (
+             'help' => 'MySQL database (required for --sql-output=mysql)',
+             'commands' => ['db-pull'],
+         ],
++        [
++            'name' => 'env-mysql-database',
++            'type' => 'value',
++            'target' => 'env_mysql_database',
++            'placeholder' => 'VAR_NAME',
++            'help' => 'Read MySQL database from environment variable (secure alternative to --mysql-database)',
++            'commands' => ['db-pull'],
++        ],
+ 
+         // ── db-apply options ─────────────────────────────────────
+         [
+-- 
+2.50.0
+

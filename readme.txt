@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ WordPress backup and migration in one file. Free scheduled backups, FTP off-site
 
 Migrator packs your database and everything in `wp-content` into a single file you can download, keep as a backup, and restore, on the same site or on a brand-new install somewhere else. When you restore onto a different address, Migrator rewrites the old URLs and file paths to the new ones for you, so the site just works.
 
-Everything happens on your own server. There is no account to create and no file size sold back to you, and nothing leaves your server unless you add an off-site destination you own. The source lives at [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator), which is also where to file a bug or request a feature.
+Everything happens on your own server. There is no account to create and no file size sold back to you, and nothing leaves your server unless you add an off-site destination you own or switch on Pull and Push. The source lives at [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator), which is also where to file a bug or request a feature.
 
 **How it works**
 
@@ -27,6 +27,10 @@ The address rewrite is **safe for serialized data**: Migrator walks the actual d
 **Scheduled backups and off-site copies**
 
 Back up daily or weekly and keep as many copies as you choose. Each scheduled backup can also be copied off the server, to an FTP or FTPS server or to a local or mounted folder outside the web root. Older scheduled copies are deleted automatically, on the server and at the destination, once they fall outside your retention setting.
+
+**Pull and push between live sites**
+
+Copy a whole site to another server over HTTP, with no archive to download or upload and no SSH or FTP. On the site you are copying, switch on Migrator > Pull and Push. On the destination, run `wp migrator pull https://your-old-site.example`: the first run prints a key, which you paste on the source's Pull and Push screen, then you run the same command again (a source without the OpenSSL extension takes a connection token instead). The files and the database travel in small pieces, an interrupted pull carries on where it stopped when you run it again, and the next run fetches only what changed. Addresses are rewritten while the database streams in, the database keeps its exact bytes so accented text survives, and the old host's own platform plugins and server-bound drop-ins are left behind. `wp migrator push` sends the destination's file changes back.
 
 **A few things worth knowing**
 
@@ -46,6 +50,8 @@ For large sites where a browser request would time out, every job also runs from
 * Choose what to leave out: media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables
 * In-browser export in short resumable steps with a progress bar and a direct download, plus drag-and-drop restore that uploads in 4 MB pieces
 * Scheduled backups, daily or weekly, with a retention rule
+* Pull a live site to another server over HTTP with `wp migrator pull`: resumable, and the next run fetches only the changes
+* Push file changes back with `wp migrator push`, and run the low-level transfer commands through `wp migrator remote`
 * Off-site copies to an FTP or FTPS server, or to a local or mounted folder
 * WP-CLI `export`, `import` and `replace` commands for sites too large for the browser
 * A snapshot of your database before every restore. If the database import or the URL rewrite fails, the previous database is put back automatically. If a later step fails, such as extracting files, the site is left partly restored and the message gives the path of the previous database dump to restore by hand
@@ -77,14 +83,14 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
     Cloud or FTP destination        yes  paid   paid      yes      yes      no
     Incremental backups            paid  paid     no     paid     paid      no
     Encrypted archives             paid   yes   paid     part     part       ?
-    Server to server transfer      paid  paid   paid      yes     paid    paid
+    Server to server transfer       yes  paid   paid      yes     paid    paid
     Multisite net. restore         paid  paid   paid     part     paid    paid
     Imports chosen tables          paid     ?     no     paid     paid    paid
     Paid plan, from               EUR49   $69    $99      $49      $70     $49
 
 **Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and put back automatically if the database import fails. No other free tier here documents that rollback. Automation is not the paid tier here: a site that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
 
-**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, server-to-server transfer, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
+**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
 
 = All-in-One WP Migration =
 
@@ -116,7 +122,6 @@ The free edition backs up on a schedule and copies each backup off the server. *
 * **Incremental backups**: store only the files that changed between fulls, with retention that keeps whole chains so a base is never orphaned
 * **Recovery points**: one-click rollback to a known-good backup
 * **Encrypted backups**: password-protected archives, decrypted on restore
-* **Server-to-server transfer**: move a site between servers with no manual download
 * **Table sync**: import chosen database tables from a backup into a live site and leave the rest alone
 * **Email notifications and activity log**: a silent failure never slips by
 * **Multisite, network to network**: back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
@@ -175,6 +180,16 @@ It is Migrator's own streaming format, not a ZIP. Restore it with Migrator, or c
 
 Only where you tell it to. Migrator creates no account and calls no service of ours. Backups stay in `wp-content/migrator-backups` unless you add an off-site destination (an FTP or FTPS server, or a folder outside the web root), and then a copy goes there. Scheduled backups older than your retention setting are deleted automatically.
 
+If you switch on Pull and Push, a site holding your connection token or an enrolled key can download this site's files and database, user password hashes included. It is off by default, nothing is answered without that credential, and you can switch it off again when the move is done.
+
+= How do I copy a live site to another server without downloading a backup? =
+
+Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push. On the new one, run `wp migrator pull https://old-site.example` with WP-CLI. The first run prints a key: paste it on the old site's Pull and Push screen and run the command again. A server without the OpenSSL extension cannot check keys, so there you set a connection token and add `--secret=<token>`. The new site keeps its own WordPress core, wp-config.php and table prefix (the prefixes must match), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
+
+= Can I send changes back to the original site? =
+
+Files, yes: `wp migrator push https://old-site.example` sends what changed since the pull. The old site must grant push access to your key on its Pull and Push screen, and its server needs a writable folder beside the web root on the same disk, where the upload is staged before it is swapped in. The database is pushed only to hosts that serve the transfer API on a standalone route; `wp migrator remote db-push --help` explains it. While a push applies its changes the old site shows a maintenance page; if the push stops part way, run it again to finish.
+
 = Where are my backups stored? =
 
 In `wp-content/migrator-backups`. On Apache and IIS the folder denies direct web access; on nginx, which ignores those rules, each file name carries a random token so it cannot be guessed. Removing the plugin deletes that folder and its contents. Copies on an off-site destination stay there.
@@ -209,6 +224,13 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.5.0 =
+* Added: Pull and Push. Copy a live site to another server over HTTP with `wp migrator pull`, resume an interrupted pull, fetch only the changes on the next run, and send file changes back with `wp migrator push`. Off until you switch it on.
+* Added: `wp migrator remote` runs the low-level transfer commands, such as keygen, files-stats or db-push.
+* Added: a pull checks the disk space it needs before it starts, leaves the old host's platform plugins and server-bound drop-ins (object cache, page cache, database driver) behind, and keeps the database password out of the process list.
+* Changed: server-to-server transfer is now part of the free edition.
+
 
 = 1.4.0 =
 * Fixed: backups no longer alter `%` characters in the database. In 1.3.8, permalink structures, text such as "50%" and serialized values containing `%` were damaged on restore.
@@ -374,6 +396,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.5.0 =
+Adds Pull and Push: copy a live site to another server over HTTP, with resume and changes-only updates. Off until you switch it on.
 
 = 1.4.0 =
 Recommended for everyone. Backups made with 1.3.x may contain damaged percent signs and non-ASCII text. After updating, make a fresh backup.

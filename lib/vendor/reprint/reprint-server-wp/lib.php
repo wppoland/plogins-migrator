@@ -1,0 +1,884 @@
+<?php
+
+namespace WordPress\Reprint\Server\Plugin;
+
+/**
+ * Pull and Push access library – constants and function declarations, no request handling.
+ *
+ * Require this file to get access to the Pull and Push access API functions without
+ * triggering any HTTP dispatch.
+ */
+
+use Exception;
+use InvalidArgumentException;
+use WordPress\Reprint\Server\HTTPServer;
+use WordPress\Reprint\Server\PushConfigurationException;
+use WordPress\Reprint\Server\RequestAuthenticator;
+use WordPress\Reprint\Server\Utils;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+require_once __DIR__ . '/compat.php';
+\reprint_server_compat_adopt_legacy_constants();
+
+if (!defined(__NAMESPACE__ . '\\VERSION')) {
+    define(__NAMESPACE__ . '\\VERSION', '0.10.13-dev');
+}
+if (!defined(__NAMESPACE__ . '\\PLUGIN_DIR')) {
+    define(__NAMESPACE__ . '\\PLUGIN_DIR', plugin_dir_path(__FILE__));
+}
+if (!defined(__NAMESPACE__ . '\\CONNECTION_TOKEN_FILE')) {
+    define(__NAMESPACE__ . '\\CONNECTION_TOKEN_FILE', PLUGIN_DIR . 'secret.php');
+}
+if (!defined(__NAMESPACE__ . '\\CONNECTION_TOKEN_OPTION')) {
+    define(__NAMESPACE__ . '\\CONNECTION_TOKEN_OPTION', 'reprint_server_connection_token');
+}
+if (!defined(__NAMESPACE__ . '\\PUSH_AUTHORIZATION_OPTION')) {
+    define(__NAMESPACE__ . '\\PUSH_AUTHORIZATION_OPTION', 'reprint_server_push_authorized_token_fingerprint');
+}
+if (!defined(__NAMESPACE__ . '\\PUBLIC_KEYS_OPTION')) {
+    define(__NAMESPACE__ . '\\PUBLIC_KEYS_OPTION', 'reprint_server_public_keys');
+}
+if (!defined(__NAMESPACE__ . '\\PUBLIC_KEYS_FILE')) {
+    define(__NAMESPACE__ . '\\PUBLIC_KEYS_FILE', PLUGIN_DIR . 'public-keys.php');
+}
+
+/**
+ * Maximum age of a request timestamp in seconds.
+ * Requests older than this are rejected to prevent replay attacks.
+ */
+if (!defined(__NAMESPACE__ . '\\TIMESTAMP_TOLERANCE')) {
+    define(__NAMESPACE__ . '\\TIMESTAMP_TOLERANCE', 300);
+}
+
+/**
+ * Sends a JSON error response and terminates.
+ *
+ * @param int         $code    HTTP status.
+ * @param string      $message Human-readable detail.
+ * @param string|null $reason  Stable machine-readable code the client maps to a message.
+ */
+function error(int $code, string $message, ?string $reason = null): void {
+    http_response_code($code);
+    // Hosts such as Hostinger rewrite domains so links and assets stay on a
+    // preview domain while the stored site URL still uses the real domain.
+    // This lets users preview a site before changing DNS, but also rewrites
+    // application/json bodies. Octet-stream bypasses Hostinger's filter.
+    header('Content-Type: application/octet-stream');
+    $body = ['error' => $message, 'code' => $code];
+    if ($reason !== null) {
+        $body['reason'] = $reason;
+    }
+    echo json_encode($body);
+    exit;
+}
+
+/**
+ * Sends one classified push-protocol failure and terminates the request.
+ *
+ * Failures raised before an endpoint method can format its own response use
+ * the push response discriminator here instead of the legacy export error
+ * object.
+ *
+ * The response contains `status` (`rejected`), `reason`, and `detail`.
+ *
+ * @param int $http_code HTTP status code.
+ * @param string $reason Machine-readable push failure reason.
+ * @param string $detail Human-readable violated condition.
+ */
+function push_error(int $http_code, string $reason, string $detail): void {
+    http_response_code($http_code);
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    // Hosts such as Hostinger rewrite domains so links and assets stay on a
+    // preview domain while the stored site URL still uses the real domain.
+    // This lets users preview a site before changing DNS, but also rewrites
+    // application/json bodies. Octet-stream bypasses Hostinger's filter.
+    header('Content-Type: application/octet-stream');
+    echo json_encode([
+        'status' => 'rejected',
+        'reason' => $reason,
+        'detail' => $detail,
+    ]);
+    exit;
+}
+
+/**
+ * Returns whether an endpoint uses the push authentication, authorization,
+ * and error contract.
+ *
+ * @param string $endpoint Exact endpoint query value.
+ * @return bool Whether this is in the push endpoint namespace.
+ */
+function is_push_endpoint(string $endpoint): bool {
+    return strpos($endpoint, 'push_') === 0;
+}
+
+/** Returns whether this PHP runtime can serve push endpoints. */
+function push_is_supported(): bool {
+    return PHP_VERSION_ID >= 70200;
+}
+
+/** Resolves dot segments in a slash-delimited path without touching the filesystem. */
+function normalize_path(string $path): string {
+    $parts = explode('/', $path);
+    $resolved = [];
+    foreach ($parts as $part) {
+        if ($part === '' || $part === '.') {
+            continue;
+        }
+        if ($part === '..') {
+            array_pop($resolved);
+        } else {
+            $resolved[] = $part;
+        }
+    }
+    return '/' . implode('/', $resolved);
+}
+
+/**
+ * Resolve and load the server package runtime.
+ *
+ * Supports both plugin release bundles (with reprint-server-wp/vendor/) and
+ * the monorepo checkout (root vendor/ + vendor/wp-php-toolkit/reprint-server).
+ *
+ * @return string|null Absolute path to export.php, or null when the runtime is missing.
+ */
+function load_server_runtime(): ?string {
+    static $loaded_export_path = null;
+
+    if ($loaded_export_path !== null) {
+        return $loaded_export_path;
+    }
+
+    $repo_root = dirname(PLUGIN_DIR);
+    $candidates = [
+        [
+            'autoload' => PLUGIN_DIR . 'vendor/autoload.php',
+            'compat' => PLUGIN_DIR . 'vendor/wp-php-toolkit/reprint-server/src/compat.php',
+            'export' => PLUGIN_DIR . 'vendor/wp-php-toolkit/reprint-server/src/export.php',
+        ],
+        [
+            'autoload' => $repo_root . '/vendor/autoload.php',
+            'compat' => $repo_root . '/vendor/wp-php-toolkit/reprint-server/src/compat.php',
+            'export' => $repo_root . '/vendor/wp-php-toolkit/reprint-server/src/export.php',
+        ],
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (
+            !file_exists($candidate['autoload'])
+            || !file_exists($candidate['compat'])
+            || !file_exists($candidate['export'])
+        ) {
+            continue;
+        }
+
+        $autoload_path = realpath($candidate['autoload']);
+        $compat_path = realpath($candidate['compat']);
+        $export_path = realpath($candidate['export']);
+        if ($autoload_path === false || $compat_path === false || $export_path === false) {
+            continue;
+        }
+
+        require_once $autoload_path;
+        require_once $compat_path;
+        $loaded_export_path = $export_path;
+        return $export_path;
+    }
+
+    return null;
+}
+
+/**
+ * Loads the server runtime when a caller outside the API path needs its
+ * classes (the settings page reads the host rule and enrolled keys).
+ *
+ * @return bool Whether the Utils class is available afterwards.
+ */
+function require_server_runtime(): bool {
+    if (!class_exists(Utils::class, false)) {
+        load_server_runtime();
+    }
+    return class_exists(Utils::class);
+}
+
+/** Returns whether the legacy secret.php connection-token override exists. */
+function has_connection_token_file(): bool {
+    return file_exists(CONNECTION_TOKEN_FILE);
+}
+
+/**
+ * Reads the connection token from the legacy secret.php override when present.
+ *
+ * @return string|null Connection token when the file is valid, otherwise null.
+ */
+function get_file_connection_token(): ?string {
+    if (!has_connection_token_file()) {
+        return null;
+    }
+
+    $connection_token = require CONNECTION_TOKEN_FILE;
+    return is_string($connection_token) ? $connection_token : null;
+}
+
+/** Reads the option-backed connection token. */
+function get_option_connection_token(): string {
+    if (!function_exists('get_option')) {
+        return '';
+    }
+
+    if (function_exists('is_multisite') && is_multisite() && !function_exists('get_site_option')) {
+        return '';
+    }
+    $connection_token = function_exists('is_multisite') && is_multisite() && function_exists('get_site_option')
+        ? get_site_option(CONNECTION_TOKEN_OPTION, '')
+        : get_option(CONNECTION_TOKEN_OPTION, '');
+    return is_string($connection_token) ? $connection_token : '';
+}
+
+/**
+ * Returns the effective connection token.
+ *
+ * The legacy secret.php file takes precedence when present; otherwise the
+ * site option is used on ordinary sites and the network option on multisite.
+ */
+function get_connection_token(): ?string {
+    if (has_connection_token_file()) {
+        return get_file_connection_token();
+    }
+
+    $connection_token = get_option_connection_token();
+    return $connection_token === '' ? null : $connection_token;
+}
+
+/** Updates only the option-backed connection token used by the settings UI and REST API. */
+function update_connection_token(string $connection_token): bool {
+    if (!function_exists('update_option')) {
+        return false;
+    }
+
+    if (function_exists('is_multisite') && is_multisite() && function_exists('update_site_option')) {
+        return (bool) update_site_option(CONNECTION_TOKEN_OPTION, $connection_token);
+    }
+    return (bool) update_option(CONNECTION_TOKEN_OPTION, $connection_token, false);
+}
+
+/** Returns whether the public-keys.php override exists beside the plugin. */
+function has_public_keys_file(): bool {
+    return file_exists(PUBLIC_KEYS_FILE);
+}
+
+/**
+ * Normalizes one stored entry, or returns null when it cannot be used.
+ *
+ * @param mixed $entry Stored value.
+ * @return array|null {
+ *     Normalized entry, or null when the stored value has no usable public key
+ *     or the server runtime is missing.
+ *
+ *     @type string $key_id     Key id computed from the public key.
+ *     @type string $public_key One-line public key.
+ *     @type int    $added_at   Unix timestamp of enrollment, 0 when absent.
+ *     @type bool   $push       Whether this key may push.
+ * }
+ */
+function normalize_public_key_entry($entry): ?array {
+    if (!require_server_runtime()) {
+        // No key can be normalized or identified without the runtime.
+        return null;
+    }
+    if (!is_array($entry) || !isset($entry['public_key']) || !is_string($entry['public_key'])) {
+        return null;
+    }
+    try {
+        $public_key = Utils::normalize_public_key($entry['public_key']);
+    } catch (InvalidArgumentException $exception) {
+        return null;
+    }
+    return [
+        'key_id' => Utils::public_key_fingerprint($public_key),
+        'public_key' => $public_key,
+        'added_at' => isset($entry['added_at']) ? (int) $entry['added_at'] : 0,
+        'push' => !empty($entry['push']),
+    ];
+}
+
+/**
+ * Reads keys from the public-keys.php override. The file returns a list of
+ * PEM or one-line public keys. A public key on disk needs integrity, not
+ * secrecy, so this is the stronger storage for hand-provisioned sites.
+ *
+ * @return array[] Entries in the shape normalize_public_key_entry() returns.
+ */
+function get_file_public_keys(): array {
+    if (!has_public_keys_file()) {
+        return [];
+    }
+    $file_keys = require PUBLIC_KEYS_FILE;
+    if (!is_array($file_keys)) {
+        return [];
+    }
+    $entries = [];
+    foreach ($file_keys as $file_key) {
+        $entry = normalize_public_key_entry(['public_key' => $file_key]);
+        if ($entry !== null) {
+            $entries[] = $entry;
+        }
+    }
+    return $entries;
+}
+
+/**
+ * Reads keys from the site option, or the network option on multisite.
+ *
+ * @return array[] Entries in the shape normalize_public_key_entry() returns.
+ */
+function get_option_public_keys(): array {
+    if (!function_exists('get_option')) {
+        return [];
+    }
+    $stored = function_exists('is_multisite') && is_multisite() && function_exists('get_site_option')
+        ? get_site_option(PUBLIC_KEYS_OPTION, [])
+        : get_option(PUBLIC_KEYS_OPTION, []);
+    if (!is_array($stored)) {
+        return [];
+    }
+    $entries = [];
+    foreach ($stored as $stored_entry) {
+        $entry = normalize_public_key_entry($stored_entry);
+        if ($entry !== null) {
+            $entries[] = $entry;
+        }
+    }
+    return $entries;
+}
+
+/**
+ * Returns the effective enrolled keys: the file override when present,
+ * otherwise the option. Same precedence secret.php has for the token.
+ *
+ * @return array[] Entries in the shape normalize_public_key_entry() returns.
+ */
+function get_enrolled_public_keys(): array {
+    return has_public_keys_file() ? get_file_public_keys() : get_option_public_keys();
+}
+
+/** @return array<string,string> key id => one-line public key, for RequestAuthenticator. */
+function get_enrolled_public_keys_by_id(): array {
+    $by_id = [];
+    foreach (get_enrolled_public_keys() as $entry) {
+        $by_id[$entry['key_id']] = $entry['public_key'];
+    }
+    return $by_id;
+}
+
+/**
+ * Writes the option-backed key list. Never touches public-keys.php.
+ *
+ * @param array[] $entries Entries in the shape normalize_public_key_entry() returns.
+ */
+function update_option_public_keys(array $entries): bool {
+    if (!function_exists('update_option')) {
+        return false;
+    }
+    if (function_exists('is_multisite') && is_multisite() && function_exists('update_site_option')) {
+        return (bool) update_site_option(PUBLIC_KEYS_OPTION, array_values($entries));
+    }
+    return (bool) update_option(PUBLIC_KEYS_OPTION, array_values($entries), false);
+}
+
+/**
+ * Returns the hosting provider's push policy, or null when the site controls it.
+ *
+ * A canonical constant takes precedence over global configuration. Any
+ * unrecognized environment value fails closed.
+ */
+function get_managed_push_enabled(): ?bool {
+    if (defined(__NAMESPACE__ . '\\PUSH_ENABLED')) {
+        return constant(__NAMESPACE__ . '\\PUSH_ENABLED') === true;
+    }
+    if (defined('REPRINT_SERVER_PUSH_ENABLED')) {
+        return constant('REPRINT_SERVER_PUSH_ENABLED') === true;
+    }
+    $environment_value = getenv('REPRINT_SERVER_PUSH_ENABLED');
+    if ($environment_value !== false) {
+        $enabled = filter_var($environment_value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        return $enabled === true;
+    }
+
+    if (function_exists('apply_filters')) {
+        /**
+         * Filters the managed push policy when canonical configuration is absent.
+         *
+         * @param bool|null $enabled Whether push is managed and enabled, or null when site-controlled.
+         */
+        $enabled = apply_filters('reprint_server_managed_push_enabled', null);
+        return $enabled === true ? true : ( $enabled === null ? null : false );
+    }
+    return null;
+}
+
+/** Returns whether the current connection token is authorized for push. */
+function is_push_authorized(): bool {
+    return get_push_authorization_error() === null;
+}
+
+/**
+ * Returns the exact push authorization failure, or null when push may start new work.
+ *
+ * @param string|null $authenticated_key_id Key id the request authenticated with, or null for
+ *                                          a connection-token request. With a key id the entry's
+ *                                          push flag decides instead of the token fingerprint.
+ */
+function get_push_authorization_error(?string $authenticated_key_id = null): ?string {
+    if (function_exists('is_multisite') && is_multisite()) {
+        return 'Push into a multisite network is not supported. Pull the selected site into a fresh target instead.';
+    }
+    $managed_enabled = get_managed_push_enabled();
+    if ($managed_enabled !== null) {
+        return $managed_enabled
+            ? null
+            : 'Push access is disabled by the hosting provider through REPRINT_SERVER_PUSH_ENABLED.';
+    }
+
+    if ($authenticated_key_id !== null) {
+        foreach (get_enrolled_public_keys() as $entry) {
+            if ($entry['key_id'] === $authenticated_key_id) {
+                return $entry['push'] ? null : 'Push access is disabled for the current key.';
+            }
+        }
+        return 'Push access is disabled for the current key.';
+    }
+
+    $connection_token = get_connection_token();
+    if ($connection_token === null || !function_exists('get_option')) {
+        return 'Push access is disabled for the current connection token.';
+    }
+
+    $authorized_fingerprint = get_option(PUSH_AUTHORIZATION_OPTION, '');
+    $authorized = is_string($authorized_fingerprint)
+        && $authorized_fingerprint !== ''
+        && hash_equals(hash('sha256', $connection_token), $authorized_fingerprint);
+    return $authorized ? null : 'Push access is disabled for the current connection token.';
+}
+
+/**
+ * Grants or revokes personal push authorization for the current token.
+ *
+ * The stored fingerprint is the only local authorization state. A different
+ * current token therefore cannot inherit the prior token's write authority.
+ */
+function update_push_authorization(bool $enabled): bool {
+    if (!function_exists('update_option')) {
+        return false;
+    }
+
+    $connection_token = get_connection_token();
+    if ($enabled && $connection_token === null) {
+        return false;
+    }
+
+    $fingerprint = '';
+    if ($enabled) {
+        $fingerprint = hash('sha256', $connection_token);
+    }
+    if (function_exists('get_option') && get_option(PUSH_AUTHORIZATION_OPTION, null) === $fingerprint) {
+        return true;
+    }
+
+    return (bool) update_option(PUSH_AUTHORIZATION_OPTION, $fingerprint, false);
+}
+
+/**
+ * Handle an export API request.
+ *
+ * The WordPress route supplies DB credentials, $table_prefix, and its database
+ * layer (including the SQLite db.php drop-in when present). The standalone
+ * route instead supplies credentials and $table_prefix from private host config.
+ *
+ * The bundled plugin passes the `reprint_server_api_options` filter result here.
+ * A direct library embedder supplies the same trusted options array itself.
+ *
+ * @param array $options {
+ *     Optional endpoint configuration overrides.
+ *
+ *     @type bool $database_push Optional. Enable full database overwrite only
+ *                              on a host-configured standalone route whose
+ *                              authentication survives replacement of wp_options.
+ *     @type callable $authenticate Optional. Authenticates the request and
+ *                                  owns the whole decision. Defaults to
+ *                                  RequestAuthenticator with the stored
+ *                                  connection token and enrolled keys.
+ *     @type string $docroot Optional. Document root for push. Defaults
+ *                           to the server's DOCUMENT_ROOT. The configured path
+ *                           must resolve to an existing directory.
+ *     @type string $reprint_directory Optional. Private push storage path
+ *                                     outside the document root.
+ *                                     Defaults to a document-root-specific sibling.
+ *     @type string[] $excluded_paths Optional. Document-root-relative paths
+ *                                    push must preserve. The Pull and Push access
+ *                                    plugin directory is always included when
+ *                                    it is below the document root.
+ *     @type int $maximum_part_bytes Optional. Maximum Content-Length for one
+ *                                   push upload part. Defaults to 4 MiB.
+ *     @type int $maximum_commit_entries Optional. Maximum bounded entries one
+ *                                       push_commit request processes. Defaults
+ *                                       to 256.
+ * }
+ * @phpstan-param array{
+ *     database_push?:bool,
+ *     authenticate?:callable,
+ *     docroot?:string,
+ *     reprint_directory?:string,
+ *     excluded_paths?:string[],
+ *     maximum_part_bytes?:int,
+ *     maximum_commit_entries?:int
+ * } $options
+ */
+function handle_api_request(array $options = []): void {
+    // Revert WordPress error display settings (wp_debug_mode may
+    // have enabled display_errors based on WP_DEBUG_DISPLAY).
+    if (function_exists('ini_set')) {
+        @ini_set('display_errors', '0');
+        @ini_set('html_errors', '0');
+    }
+
+    // Clear any output buffering WordPress started.
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    // Emit CORS headers and short-circuit OPTIONS preflight before
+    // authentication runs — browsers send preflight OPTIONS without
+    // credentials, so we must not require auth before CORS passes.
+    // The class is loaded by the Composer autoloader on demand, but
+    // load it eagerly in case the autoloader hasn't been required yet.
+    if (!class_exists(HTTPServer::class, false)) {
+        load_server_runtime();
+    }
+    HTTPServer::handle_cors_headers_and_terminate_on_options('*');
+
+    // Buffer output so stray warnings don't corrupt the JSON response.
+    ob_start();
+
+    // Clear PHP's stat and realpath caches to ensure fresh filesystem state.
+    // PHP-FPM workers cache realpath() results for 120 seconds across requests.
+    // If the same worker handles both an initial file_index scan and a delta scan
+    // within that window, stale cached paths can cause wrong type information
+    // (e.g., a symlink that was replaced by a directory still resolves as the
+    // old symlink target). This is cheap and prevents non-deterministic failures.
+    clearstatcache(true);
+
+    set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+        $error = [
+            'error' => "PHP Error: $errstr",
+            'file' => $errfile,
+            'line' => $errline,
+            'type' => $errno,
+        ];
+        error_log('Pull and Push API error: ' . json_encode($error));
+        http_response_code(500);
+        // Hosts such as Hostinger rewrite domains so links and assets stay on a
+        // preview domain while the stored site URL still uses the real domain.
+        // This lets users preview a site before changing DNS, but also rewrites
+        // application/json bodies. Octet-stream bypasses Hostinger's filter.
+        @header('Content-Type: application/octet-stream');
+        echo json_encode($error);
+        exit(1);
+    });
+
+    set_exception_handler(function ($e) {
+        $error = [
+            'error' => get_class($e) . ': ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ];
+        error_log('Pull and Push API exception: ' . json_encode($error));
+        http_response_code(500);
+        // Hosts such as Hostinger rewrite domains so links and assets stay on a
+        // preview domain while the stored site URL still uses the real domain.
+        // This lets users preview a site before changing DNS, but also rewrites
+        // application/json bodies. Octet-stream bypasses Hostinger's filter.
+        @header('Content-Type: application/octet-stream');
+        echo json_encode($error);
+        exit(1);
+    });
+
+    // -- Authenticate --
+    // One call. Core reads the host rule and verifies only the scheme this
+    // host accepts; the plugin passes what it has stored and decides nothing.
+    // A custom authenticate callable still runs for every endpoint and owns
+    // the whole decision. filter_input, not WP sanitizers: lib.php also runs
+    // without WordPress bootstrapped.
+    $endpoint = (string) filter_input(INPUT_GET, 'endpoint');
+    $authenticate = $options['authenticate'] ?? null;
+    $authenticated_key_id = null;
+    if ($authenticate !== null) {
+        $authenticate();
+    } else {
+        if (!class_exists(RequestAuthenticator::class, false)) {
+            load_server_runtime();
+        }
+        if (!class_exists(RequestAuthenticator::class)) {
+            $runtime_message = 'Pull and Push runtime is incomplete. Reinstall Migrator.';
+            if (is_push_endpoint($endpoint)) {
+                push_error(500, 'filesystem_error', $runtime_message);
+            }
+            error(500, $runtime_message);
+        }
+        // A broken secret.php only matters where the token is the scheme; a
+        // key host never accepts it, so enrolled keys must still authenticate.
+        if (!Utils::key_auth_required() && has_connection_token_file() && empty(get_file_connection_token())) {
+            $secret_file_message = 'Invalid secret.php configuration. Remove it or replace it with a valid connection token.';
+            if (is_push_endpoint($endpoint)) {
+                push_error(503, 'not_configured', $secret_file_message);
+            }
+            error(503, $secret_file_message, 'not_configured');
+        }
+        $authenticator = new RequestAuthenticator(
+            get_connection_token(),
+            get_enrolled_public_keys_by_id(),
+            TIMESTAMP_TOLERANCE
+        );
+        $auth_error = $authenticator->verify_globals();
+        if ($auth_error !== null) {
+            $reason = $authenticator->last_error_reason() ?? RequestAuthenticator::REASON_AUTH_FAILED;
+            $is_unconfigured = in_array(
+                $reason,
+                [RequestAuthenticator::REASON_NOT_CONFIGURED, RequestAuthenticator::REASON_NO_KEYS_ENROLLED],
+                true
+            );
+            $status = $is_unconfigured ? 503 : 403;
+            // Released clients print these messages as they receive them.
+            if (in_array($reason, [RequestAuthenticator::REASON_REQUIRES_KEY_AUTH, RequestAuthenticator::REASON_NO_KEYS_ENROLLED], true)) {
+                // A client that signs with a key prints its own remedy. A
+                // released client sends a token and cannot sign with a key,
+                // so enrolling one is not enough.
+                $auth_error .= '. Update Migrator on the pulling site, run `wp migrator remote keygen`, and enroll the printed key under Migrator > Pull and Push.';
+            } elseif ($is_unconfigured) {
+                $auth_error .= '. Set up the connection in WordPress admin under Migrator > Pull and Push.';
+            }
+            if (is_push_endpoint($endpoint)) {
+                push_error($status, $reason, $auth_error);
+            }
+            error($status, $auth_error, $reason);
+        }
+        $authenticated_key_id = $authenticator->authenticated_key_id();
+    }
+
+    if (!push_is_supported() && is_push_endpoint($endpoint)) {
+        push_error(
+            503,
+            'push_disabled',
+            'Push endpoints require PHP 7.2 or newer; observed PHP ' . PHP_VERSION . '.'
+        );
+    }
+
+    // Authentication completes first. Every push operation requires current
+    // authorization except resuming commit from its durable checkpoint, which
+    // must remain available so revocation cannot strand document-root changes.
+    // Push endpoint parameters travel in the query string, so the dispatcher
+    // does not need to read php://input after this gate.
+    $push_authorization_error = null;
+    if (is_push_endpoint($endpoint)) {
+        $push_authorization_error = get_push_authorization_error($authenticated_key_id);
+    }
+    if (
+        $push_authorization_error !== null
+        && $endpoint !== 'push_commit'
+    ) {
+        push_error(
+            403,
+            'push_disabled',
+            $push_authorization_error
+        );
+    }
+
+    // Ensure the Composer autoloader is loaded so HTTPServer
+    // is resolvable. The class itself will require export.php on demand
+    // via serve() below.
+    if (load_server_runtime() === null) {
+        error(
+            500,
+            'Pull and Push runtime is incomplete. Reinstall Migrator.'
+        );
+    }
+
+    // -- Dispatch --
+    try {
+        $server_options = ['default_directory' => ABSPATH];
+        if (function_exists('is_multisite') && is_multisite()) {
+            require_once __DIR__ . '/wordpress/multisite.php';
+            $server_options['multisite'] = get_multisite_export_context();
+        }
+        if (HTTPServer::is_push_endpoint($endpoint)) {
+            // Push changes the web server's document root. ABSPATH remains the
+            // pull default because it may point at a separate shared core tree.
+            if (array_key_exists('docroot', $options)) {
+                $configured_docroot = $options['docroot'];
+            } else {
+                // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- DOCUMENT_ROOT is trusted server configuration and must retain exact filesystem bytes.
+                $configured_docroot = $_SERVER['DOCUMENT_ROOT'] ?? null;
+            }
+            if (!is_string($configured_docroot) || $configured_docroot === '') {
+                throw new PushConfigurationException(
+                    'Push endpoints require docroot or DOCUMENT_ROOT to name an existing directory; observed '
+                    . json_encode($configured_docroot) . '.'
+                );
+            }
+            $canonical_docroot = realpath($configured_docroot);
+            if ($canonical_docroot === false || !is_dir($canonical_docroot)) {
+                throw new PushConfigurationException(
+                    'Push endpoints require docroot or DOCUMENT_ROOT to name an existing directory; observed '
+                    . json_encode($configured_docroot) . '.'
+                );
+            }
+            $docroot = $canonical_docroot === '/' ? '/' : rtrim($canonical_docroot, '/\\');
+            $lexical_docroot = normalize_path(str_replace('\\', '/', $configured_docroot));
+            $reprint_directory = $options['reprint_directory'] ?? (
+                dirname($docroot) . '/.reprint-' . substr(hash('sha256', $docroot), 0, 12)
+            );
+            $excluded_paths = $options['excluded_paths'] ?? [];
+            if (!is_array($excluded_paths)) {
+                throw new PushConfigurationException('excluded_paths must be an array.');
+            }
+            $canonical_plugin_directory = realpath(PLUGIN_DIR);
+            $plugin_directory = rtrim($canonical_plugin_directory === false ? PLUGIN_DIR : $canonical_plugin_directory, '/\\');
+            $logical_plugin_path_added = false;
+            if (defined('WP_PLUGIN_DIR') && function_exists('plugin_basename')) {
+                // Keep the registered installation path lexical until its
+                // document-root-relative name is known. realpath() would turn a
+                // symlinked plugin into its outside target and omit protection.
+                $registered_plugin_file = str_replace('\\', '/', plugin_basename(PLUGIN_DIR . 'index.php'));
+                $registered_plugin_directory = dirname($registered_plugin_file);
+                $logical_plugin_directory = normalize_path(
+                    str_replace('\\', '/', (string) WP_PLUGIN_DIR)
+                    . ( $registered_plugin_directory === '.' ? '' : '/' . $registered_plugin_directory )
+                );
+                $logical_plugin_directory_to_verify = $logical_plugin_directory;
+                $logical_plugin_relative_path = Utils::relative_path_under(
+                    $logical_plugin_directory,
+                    $lexical_docroot
+                );
+                if ($logical_plugin_relative_path === null) {
+                    $logical_plugin_relative_path = Utils::relative_path_under(
+                        $logical_plugin_directory,
+                        $docroot
+                    );
+                }
+                if ($logical_plugin_relative_path === null) {
+                    // WP_PLUGIN_DIR may itself be a symlink alias into the
+                    // document root. Resolve that parent, but keep the
+                    // registered plugin subdirectory lexical so its installed
+                    // path survives a final symlink to the outside target.
+                    $canonical_wordpress_plugin_directory = realpath( (string) WP_PLUGIN_DIR );
+                    if ($canonical_wordpress_plugin_directory !== false) {
+                        $logical_plugin_directory_from_canonical_parent = normalize_path(
+                            str_replace('\\', '/', $canonical_wordpress_plugin_directory)
+                            . ( $registered_plugin_directory === '.' ? '' : '/' . $registered_plugin_directory )
+                        );
+                        $logical_plugin_relative_path = Utils::relative_path_under(
+                            $logical_plugin_directory_from_canonical_parent,
+                            $docroot
+                        );
+                        if ($logical_plugin_relative_path !== null) {
+                            $logical_plugin_directory_to_verify = $logical_plugin_directory_from_canonical_parent;
+                        }
+                    }
+                }
+                if ($logical_plugin_relative_path !== null) {
+                    $resolved_logical_plugin_directory = realpath($logical_plugin_directory_to_verify);
+                    if (
+                        $logical_plugin_relative_path === ''
+                        || $resolved_logical_plugin_directory === false
+                        || $canonical_plugin_directory === false
+                        || rtrim($resolved_logical_plugin_directory, '/\\') !== $plugin_directory
+                    ) {
+                        throw new PushConfigurationException(
+                            'WordPress reports the Pull and Push access plugin inside the document root at '
+                            . json_encode($logical_plugin_directory_to_verify)
+                            . ', but that path does not resolve to PLUGIN_DIR '
+                            . json_encode(PLUGIN_DIR) . '.'
+                        );
+                    }
+                    $excluded_paths[] = $logical_plugin_relative_path;
+                    $logical_plugin_path_added = true;
+                }
+            }
+            $plugin_relative_path = Utils::relative_path_under(
+                $plugin_directory,
+                $docroot
+            );
+            if (
+                !$logical_plugin_path_added
+                && $plugin_relative_path !== null
+                && $plugin_relative_path !== ''
+            ) {
+                $excluded_paths[] = str_replace('\\', '/', $plugin_relative_path);
+            }
+            $push_options = [
+                'reprint_directory' => $reprint_directory,
+                'docroot' => $docroot,
+                'excluded_paths' => $excluded_paths,
+            ];
+            if (array_key_exists('maximum_part_bytes', $options)) {
+                $push_options['maximum_part_bytes'] = $options['maximum_part_bytes'];
+            }
+            if (array_key_exists('maximum_commit_entries', $options)) {
+                $push_options['maximum_commit_entries'] = $options['maximum_commit_entries'];
+            }
+            if ($push_authorization_error !== null) {
+                $push_options['commit_start_denial_detail'] = $push_authorization_error;
+            }
+            $server_options['push'] = $push_options;
+            if (strpos($endpoint, 'push_db_') === 0) {
+                // Hosts must provide a route and authentication which survive
+                // replacement of wp_options and deactivation of this plugin.
+                if (( $options['database_push'] ?? false ) !== true || isset($server_options['multisite'])) {
+                    push_error(403, 'push_disabled', 'Database push requires a host-configured standalone API route; multisite is not supported.');
+                }
+                $server_options['database_push'] = $push_options;
+            }
+        }
+        HTTPServer::serve($server_options);
+    } catch (Exception $e) {
+        if (is_push_endpoint($endpoint)) {
+            if ($e instanceof PushConfigurationException) {
+                push_error(503, 'not_configured', $e->getMessage());
+            }
+            if ($e instanceof InvalidArgumentException) {
+                push_error(400, 'invalid_request', $e->getMessage());
+            }
+            push_error(
+                500,
+                'filesystem_error',
+                'The push endpoint failed while processing the request.'
+            );
+        }
+        if (!headers_sent()) {
+            http_response_code(400);
+            // Hosts such as Hostinger rewrite domains so links and assets stay on a
+            // preview domain while the stored site URL still uses the real domain.
+            // This lets users preview a site before changing DNS, but also rewrites
+            // application/json bodies. Octet-stream bypasses Hostinger's filter.
+            header('Content-Type: application/octet-stream');
+        }
+        echo json_encode([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+    }
+}
+
+\reprint_server_compat_expose_legacy_names();
+// TODO: This call should be deleted after September 2026, as it should no longer be relevant by then.
+\reprint_server_compat_migrate_legacy_options();
+
+if (function_exists('do_action')) {
+    /** Fires after the canonical Pull and Push access library has loaded. */
+    do_action('reprint_server_library_loaded');
+}

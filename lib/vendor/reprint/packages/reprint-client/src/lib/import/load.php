@@ -1,0 +1,14 @@
+<?php
+
+require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/class-streaming-context.php';
+require_once __DIR__ . '/class-preserve-local-skip-exception.php';
+require_once __DIR__ . '/class-interrupted-response-exception.php';
+require_once __DIR__ . '/class-transient-interruption-exception.php';
+require_once __DIR__ . '/class-curl-timeout-exception.php';
+require_once __DIR__ . '/class-retry-later-exception.php';
+require_once __DIR__ . '/class-myisam-auto-increment-statement-rewriter.php';
+require_once __DIR__ . '/class-nullable-spatial-column-statement-rewriter.php';
+require_once __DIR__ . '/class-spatial-srid-guard.php';
+require_once __DIR__ . '/class-progress-reporter.php';
+require_once __DIR__ . '/class-sqlite-set-value-statement-rewriter.php';

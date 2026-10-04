@@ -10,6 +10,10 @@ use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\Exporter;
 use Migrator\Engine\Import\Importer;
 use Migrator\Engine\Transform\SerializedReplacer;
+use Migrator\Reprint\Client;
+use Migrator\Reprint\EnrolKey;
+use Migrator\Reprint\Pull;
+use Migrator\Reprint\Push;
 use Migrator\Support\Access;
 use Migrator\Support\Workspace;
 
@@ -236,6 +240,230 @@ final class Command
             $result['tables'],
             $result['rows']
         ));
+    }
+
+    /**
+     * Copy a remote site into this one over HTTP: its database and wp-content.
+     *
+     * The source runs Migrator with Pull and Push switched on. This site's WordPress core, wp-config.php and Migrator
+     * itself stay as they are. Run it again to resume an interrupted pull or,
+     * after a finished one, to fetch only what changed.
+     *
+     * ## OPTIONS
+     *
+     * <url>
+     * : The source site's address.
+     *
+     * [--secret=<token>]
+     * : Only for a source server without the OpenSSL extension: the connection
+     * token set there. Otherwise leave it out; the first run makes a key and
+     * prints it for enrolment on the source.
+     *
+     * [--private-key-path=<file>]
+     * : A private key enrolled on the source, instead of the stored one.
+     *
+     * [--insecure]
+     * : Allow a plain http:// source. Anyone on the network path can read the copy.
+     *
+     * [--include-host-plugins]
+     * : Also copy the old host's own platform plugins. By default they are left
+     * behind and deactivated, because they rarely work on another host.
+     *
+     * [--skip-files]
+     * : Pull the database only.
+     *
+     * [--skip-database]
+     * : Pull wp-content only.
+     *
+     * [--yes]
+     * : Do not ask for confirmation.
+     *
+     * ## EXAMPLES
+     *
+     *     wp migrator pull https://example.com
+     *     wp migrator pull https://example.com --skip-database
+     *
+     * @param array<int, string>    $args       Positional args: the source URL.
+     * @param array<string, string> $assoc_args Flags.
+     */
+    public function pull(array $args, array $assoc_args): void
+    {
+        global $wpdb;
+
+        $this->guardNetwork();
+        $url = $this->remoteUrl($args);
+
+        $withFiles    = ! isset($assoc_args['skip-files']);
+        $withDatabase = ! isset($assoc_args['skip-database']);
+        if ($withDatabase) {
+            \WP_CLI::confirm('This replaces the database of this site with the one from ' . $url . '. Continue?', $assoc_args);
+        }
+
+        $workspace = new Workspace();
+        $pull      = new Pull(new Client($workspace), $workspace, $wpdb, static function (string $message): void {
+            \WP_CLI::log($message);
+        });
+
+        try {
+            $result = $pull->run($url, $this->authFlags($assoc_args), $withFiles, $withDatabase, isset($assoc_args['include-host-plugins']));
+        } catch (EnrolKey $key) {
+            \WP_CLI::log('');
+            \WP_CLI::log('This site made a key to sign its requests to ' . $url . '. On that site open');
+            \WP_CLI::log('Migrator > Pull and Push, choose "Set the token or enrol a key", paste this line and save:');
+            \WP_CLI::log('');
+            \WP_CLI::log($key->publicKey);
+            \WP_CLI::log('');
+            \WP_CLI::warning('Then run the same command again. Nothing has been changed here.');
+            \WP_CLI::halt(4);
+        } catch (\Throwable $e) {
+            \WP_CLI::error($e->getMessage());
+        }
+
+        \WP_CLI::success(sprintf(
+            'Pulled %s%s.',
+            $result['database'] ? 'the database and ' : '',
+            sprintf('%d changed files', $result['files']),
+        ));
+    }
+
+    /**
+     * Send this site's wp-content changes back to the site it was pulled from.
+     *
+     * Only files that differ from the last pull travel. The source must grant
+     * push access on its Pull and Push screen and needs a writable folder
+     * beside its web root on the same disk. The database is not pushed here;
+     * see `wp migrator remote db-push --help` for hosts that support it.
+     *
+     * ## OPTIONS
+     *
+     * <url>
+     * : The source site's address, as used for the pull.
+     *
+     * [--secret=<token>]
+     * : Only for a source server without the OpenSSL extension: the connection
+     * token set there. Otherwise the key made by the pull is used.
+     *
+     * [--private-key-path=<file>]
+     * : A private key enrolled on the source, instead of the stored one.
+     *
+     * [--insecure]
+     * : Allow a plain http:// source.
+     *
+     * [--yes]
+     * : Do not ask for confirmation.
+     *
+     * ## EXAMPLES
+     *
+     *     wp migrator push https://example.com
+     *
+     * @param array<int, string>    $args       Positional args: the source URL.
+     * @param array<string, string> $assoc_args Flags.
+     */
+    public function push(array $args, array $assoc_args): void
+    {
+        $this->guardNetwork();
+        $url = $this->remoteUrl($args);
+        \WP_CLI::confirm('This overwrites files on ' . $url . ' with the ones changed here. Continue?', $assoc_args);
+
+        $push = new Push(new Client(new Workspace()), static function (string $message): void {
+            \WP_CLI::log($message);
+        });
+
+        try {
+            $copied = $push->run($url, $this->authFlags($assoc_args));
+        } catch (\Throwable $e) {
+            \WP_CLI::error($e->getMessage());
+        }
+
+        \WP_CLI::success(sprintf('Pushed the files changed here (%d) to %s.', $copied, $url));
+    }
+
+    /**
+     * Run any low-level transfer command against a remote site.
+     *
+     * For everything the pull and push shortcuts do not cover: keygen,
+     * files-stats, db-push with --commit, mirror mode, and the rest. Migrator
+     * supplies --state-dir and --fs-root (the same ones `pull` uses) unless you
+     * pass your own. Run `wp migrator remote help` for the full list.
+     *
+     * ## OPTIONS
+     *
+     * <command>
+     * : The command, e.g. keygen, files-stats, db-push.
+     *
+     * [<args>...]
+     * : The remote URL and any further arguments, passed through unchanged.
+     *
+     * [--<field>=<value>]
+     * : Any option, passed through unchanged.
+     *
+     * ## EXAMPLES
+     *
+     *     wp migrator remote keygen https://example.com
+     *     wp migrator remote files-stats https://example.com
+     *
+     * @param array<int, string>    $args       Positional args.
+     * @param array<string, string> $assoc_args Flags.
+     */
+    public function remote(array $args, array $assoc_args): void
+    {
+        $this->guardNetwork();
+        $workspace = new Workspace();
+        $workspace->ensure();
+        $client = new Client($workspace);
+
+        $argv = $args;
+        foreach ($assoc_args as $key => $value) {
+            $argv[] = true === $value || '' === $value ? '--' . $key : '--' . $key . '=' . $value;
+        }
+
+        $remote = $args[1] ?? '';
+        if (str_contains($remote, '://')) {
+            $argv[1] = Client::apiUrl($remote);
+            $dirs    = $client->dirs($remote);
+            if (! isset($assoc_args['state-dir'])) {
+                wp_mkdir_p($dirs['state']);
+                $argv[] = '--state-dir=' . $dirs['state'];
+            }
+            if (! isset($assoc_args['fs-root'])) {
+                wp_mkdir_p($dirs['files']);
+                $argv[] = '--fs-root=' . $dirs['files'];
+            }
+        }
+
+        \WP_CLI::halt($client->run($argv));
+    }
+
+    /**
+     * @param array<int, string> $args
+     */
+    private function remoteUrl(array $args): string
+    {
+        $url = trim((string) ($args[0] ?? ''));
+        if (! preg_match('#^https?://#i', $url)) {
+            \WP_CLI::error('Give the source site address, starting with https://');
+        }
+
+        return $url;
+    }
+
+    /**
+     * @param array<string, string> $assoc_args
+     * @return list<string>
+     */
+    private function authFlags(array $assoc_args): array
+    {
+        $flags = [];
+        foreach (['secret', 'private-key-path'] as $key) {
+            if (isset($assoc_args[$key]) && '' !== $assoc_args[$key]) {
+                $flags[] = '--' . $key . '=' . $assoc_args[$key];
+            }
+        }
+        if (isset($assoc_args['insecure'])) {
+            $flags[] = '--insecure';
+        }
+
+        return $flags;
     }
 
     /**

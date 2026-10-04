@@ -1,0 +1,42 @@
+{
+    "packages": [
+        {
+            "name": "wp-php-toolkit/reprint-server",
+            "version": "dev-feature/lazy-reprint-server-utils",
+            "version_normalized": "dev-feature/lazy-reprint-server-utils",
+            "dist": {
+                "type": "path",
+                "url": "../packages/reprint-server",
+                "reference": "57cc3844bfe2644c9a6b500ed0044f4f8ecacdfa"
+            },
+            "require": {
+                "php": ">=7.2"
+            },
+            "replace": {
+                "wp-php-toolkit/reprint-exporter": "self.version"
+            },
+            "suggest": {
+                "ext-pdo": "Needed for the SQLite export path; recommended for MySQL exports (the wpdb fallback handles MySQL when absent).",
+                "ext-pdo_mysql": "Recommended for MySQL exports; falls back to wpdb when absent."
+            },
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "classmap": [
+                    "src/"
+                ]
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Streaming export engine used by the Reprint Server WordPress plugin",
+            "transport-options": {
+                "symlink": false,
+                "relative": true
+            },
+            "install-path": "../wp-php-toolkit/reprint-server"
+        }
+    ],
+    "dev": false,
+    "dev-package-names": []
+}

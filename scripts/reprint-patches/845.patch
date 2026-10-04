@@ -1,0 +1,781 @@
+From 2caf591945cadfa33f318a658d86945c9077c1c6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Adam=20Zieli=C5=84ski?= <adam@adamziel.com>
+Date: Mon, 28 Sep 2026 12:18:13 +0200
+Subject: [PATCH] PR #845: Convert numeric SET dumps to SQLite labels
+
+---
+ docs/DATABASE-PUSH.md                         |  16 +-
+ packages/reprint-client/src/import.php        |  23 +-
+ ...ss-sqlite-set-value-statement-rewriter.php | 241 ++++++++++++++++++
+ .../reprint-client/src/lib/import/load.php    |   1 +
+ .../class-sql-statement-rewriter.php          |  42 +--
+ tests/Import/RequestUrlPathEncodingTest.php   |   8 +-
+ tests/Import/SqliteSetImportTest.php          | 145 +++++++++++
+ .../fixtures/sqlite-set-import-worker.php     |  52 ++++
+ .../DatabaseValueRoundTripTest.php            |   2 +-
+ .../SetValueFormatHttpTest.php                |   3 +-
+ .../SqlStatementRewriterLexerWalkerTest.php   |  13 +
+ 11 files changed, 500 insertions(+), 46 deletions(-)
+ create mode 100644 packages/reprint-client/src/lib/import/class-sqlite-set-value-statement-rewriter.php
+ create mode 100644 tests/Import/SqliteSetImportTest.php
+ create mode 100644 tests/Import/fixtures/sqlite-set-import-worker.php
+
+diff --git a/docs/DATABASE-PUSH.md b/docs/DATABASE-PUSH.md
+index 42836f57..c247d616 100644
+--- a/docs/DATABASE-PUSH.md
++++ b/docs/DATABASE-PUSH.md
+@@ -198,15 +198,13 @@ rows are never updated. Pull and push share numeric reads: native floating-point
+ values become 17-digit scientific-notation strings before PHP string conversion
+ or cursor storage. The formatter always uses a decimal dot, regardless of locale.
+ Push reads MySQL SET values as unsigned masks, preserving empty members and all
+-64 bits. Direct MySQL output (`db-pull --sql-output=mysql`) requests the same
+-format with `set_value_format=unsigned`. Older servers ignore the parameter and
+-still send labels.
+-
+-Portable SQL downloads (`file` and `stdout`), including `pull` and `pull-db`,
+-keep SET labels so they remain usable by the unchanged SQLite importer. Even
+-when applied to MySQL, those dumps cannot preserve the distinction between an
+-empty SET member and no member. Numeric portable dumps and SQLite mask-to-label
+-conversion are a separate follow-up. SQLite sources still use their stored text.
++64 bits. New pull clients request the same format with `set_value_format=unsigned`.
++Without that request, the server keeps the label format used by older clients.
++Older servers ignore the parameter and still send labels.
++When pulling into SQLite, the client converts masks back to
++labels using the column definition. SQLite stores labels rather than masks; it
++cannot retain the distinction between an empty member and no member. Exact SET
++mask round-trips require MySQL or MariaDB.
+ 
+ MySQL and MariaDB can store `SET('🙂','ok')` while exporting its definition as
+ `SET('?','ok')`. Applying the numeric mask would silently change `🙂` to `?`.
+diff --git a/packages/reprint-client/src/import.php b/packages/reprint-client/src/import.php
+index abd410e5..314c3078 100755
+--- a/packages/reprint-client/src/import.php
++++ b/packages/reprint-client/src/import.php
+@@ -25,6 +25,7 @@ use Reprint\Importer\ProgressReporter;
+ use Reprint\Importer\Pull\PullFailureReportedException;
+ use Reprint\Importer\RetryLaterException;
+ use Reprint\Importer\SpatialSridGuard;
++use Reprint\Importer\SqliteSetValueStatementRewriter;
+ use Reprint\Importer\MultisiteTarget;
+ use Reprint\Importer\State\DatabaseApplyCommandState;
+ use Reprint\Importer\State\DatabaseUrlRewriteCommandState;
+@@ -8212,6 +8213,7 @@ class ImportClient
+             return $statement_count;
+         }
+ 
++        $set_value_rewriter = new SqliteSetValueStatementRewriter($connection);
+         $connection->beginTransaction();
+         try {
+             // The fast parser falls back to the lexer-based parser if one
+@@ -8225,12 +8227,14 @@ class ImportClient
+                 $query = $nullable_spatial_column_rewriter->rewrite($query) ?? $query;
+                 $executed_query = $query;
+                 try {
+-                    $this->execute_db_apply_query(
+-                        $connection,
+-                        $query,
+-                        $stmt_rewriter,
+-                        $executed_query,
+-                    );
++                    foreach ($set_value_rewriter->rewrite_statements($query) as $row_query) {
++                        $this->execute_db_apply_query(
++                            $connection,
++                            $row_query,
++                            $stmt_rewriter,
++                            $executed_query,
++                        );
++                    }
+                 } catch (PDOException $error) {
+                     throw new RuntimeException(
+                         "SQL execution error at statement " . ( $statement_count + 1 ) . ": " .
+@@ -12591,10 +12595,9 @@ class ImportClient
+         // Keep the source export protocol value accepted by existing servers.
+         // It selects one source site; the target boots as single-site WordPress.
+         $params["multisite_mode"] = "one-site-network-v1";
+-        if ($endpoint === "sql_chunk" && $this->sql_output_mode === "mysql") {
+-            // Portable dumps may later go into SQLite, which stores SET labels.
+-            // Only direct MySQL output can import masks without a label converter.
+-            // Older servers ignore this parameter and continue sending labels.
++        if ($endpoint === "sql_chunk") {
++            // The SQLite importer can decode masks; older servers ignore this
++            // parameter and return labels, which the importer also accepts.
+             $params["set_value_format"] = "unsigned";
+         }
+         if ($cursor !== null) {
+diff --git a/packages/reprint-client/src/lib/import/class-sqlite-set-value-statement-rewriter.php b/packages/reprint-client/src/lib/import/class-sqlite-set-value-statement-rewriter.php
+new file mode 100644
+index 00000000..21bdc9a9
+--- /dev/null
++++ b/packages/reprint-client/src/lib/import/class-sqlite-set-value-statement-rewriter.php
+@@ -0,0 +1,241 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Reprint\Importer;
++
++use Generator;
++use PDO;
++use Reprint\Importer\Database\DatabaseConnection;
++use RuntimeException;
++use WP_MySQL_Lexer;
++
++/**
++ * Converts exported SET masks to the labels stored by the SQLite integration.
++ *
++ * For SET('a','b'), MySQL uses one bit per declared member: 1 selects 'a',
++ * 2 selects 'b', and 3 selects both. The dump exports that number so a MySQL
++ * target can restore the exact selection. SQLite stores SET columns as text;
++ * importing 3 directly would store '3', not the source label 'a,b'.
++ *
++ * With `flags` declared as SET('a','b'), this turns:
++ *
++ *     INSERT INTO `wp_sets` (`flags`) VALUES (3);
++ *
++ * into:
++ *
++ *     INSERT INTO `wp_sets` (`flags`) VALUES (FROM_BASE64('YSxi'));
++ *
++ * FROM_BASE64('YSxi') yields 'a,b'. Using the dump's existing string encoding
++ * also handles quotes and backslashes in member names without SQL escaping.
++ * SET primary keys in chunk UPDATEs need the same conversion after INSERT.
++ *
++ * This preserves the displayed label, not hidden SET bits. With SET('','a'),
++ * masks 0 and 1 both become '', and masks 2 and 3 both become 'a'. SQLite's
++ * text storage cannot keep those selections distinct.
++ */
++class SqliteSetValueStatementRewriter {
++    private DatabaseConnection $database;
++    private ?string $table = null;
++    /** @var array<string,list<string>> SET members for the current table only. */
++    private array $members = [];
++
++    public function __construct(DatabaseConnection $database) {
++        $this->database = $database;
++    }
++
++    /**
++     * Yields rewritten statements for the INSERT and UPDATE forms in a dump.
++     *
++     * The caller executes each rewritten statement before passing the next one,
++     * so SHOW FULL COLUMNS sees the preceding CREATE/ALTER. Keep one instance
++     * per import group to reuse the current table's members. A resumed group
++     * can load them from the target schema without separate saved metadata.
++     *
++     * SET inserts yield one row at a time. A 20-digit mask can expand to 64
++     * labels of 255 bytes each; expanding a whole 250-row batch can exhaust
++     * memory even though its source SQL is small. The caller must execute each
++     * yielded row before requesting the next, within the same group transaction.
++     * Statements for ordinary tables stay intact. Chunk UPDATEs still use the
++     * existing value and primary-key conversion.
++     *
++     * @return Generator<int,string>
++     */
++    public function rewrite_statements(string $sql): Generator {
++        $lexer = new WP_MySQL_Lexer($sql);
++        if (!$lexer->next_token()) {
++            yield $sql;
++            return;
++        }
++        $tokens = [$lexer->get_token()];
++        $insert = $tokens[0]->id === WP_MySQL_Lexer::INSERT_SYMBOL;
++        if (!$insert && $tokens[0]->id !== WP_MySQL_Lexer::UPDATE_SYMBOL) {
++            // A DROP/CREATE or ALTER between statements may change SET members.
++            $this->table = null;
++            yield $sql;
++            return;
++        }
++        // Read only the statement head until we know the table has SET columns.
++        // Ordinary WordPress tables need no full-statement lexer pass here.
++        $table_index = $insert ? 2 : 1;
++        for ($index = 1; $index <= $table_index; ++$index) {
++            $lexer->next_token();
++            $tokens[] = $lexer->get_token();
++        }
++        if (!isset($tokens[$table_index]) || $tokens[$table_index]->id !== WP_MySQL_Lexer::BACK_TICK_QUOTED_ID) {
++            yield $sql;
++            return;
++        }
++        $table = $tokens[$table_index]->get_value();
++        if ($this->table !== $table) {
++            $this->table = $table;
++            $this->members = [];
++            $result = $this->database->query('SHOW FULL COLUMNS FROM `' . str_replace('`', '``', $table) . '`');
++            try {
++                foreach ($result->fetchAll(PDO::FETCH_ASSOC) as $column) {
++                    // SQLite metadata has already decoded MySQL escapes: a
++                    // member written as 'back\\slash' in CREATE is 'back\slash'
++                    // here. Decode doubled quotes, but not backslashes again.
++                    $type_lexer = new WP_MySQL_Lexer($column['Type'], 80038, ['NO_BACKSLASH_ESCAPES']);
++                    if (!$type_lexer->next_token() || $type_lexer->get_token()->id !== WP_MySQL_Lexer::SET_SYMBOL) {
++                        continue;
++                    }
++                    $members = [];
++                    foreach ($type_lexer->remaining_tokens() as $token) {
++                        if ($token->id === WP_MySQL_Lexer::SINGLE_QUOTED_TEXT) {
++                            $members[] = $token->get_value();
++                        }
++                    }
++                    $this->members[$column['Field']] = $members;
++                }
++            } finally {
++                $result->closeCursor();
++            }
++        }
++        if ($this->members === []) {
++            yield $sql;
++            return;
++        }
++        $tokens = array_merge($tokens, $lexer->remaining_tokens());
++        if (end($tokens)->id === WP_MySQL_Lexer::EOF) {
++            array_pop($tokens);
++        }
++        $map = \SqlStatementRewriter::map_values_to_columns_from_tokens($tokens);
++        if ($map === null) {
++            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- CLI import error, not HTML.
++            throw new RuntimeException('Cannot map exported SET values to SQLite columns in table ' . $table . '.');
++        }
++        if ($insert) {
++            $rows = $map['row_ranges'];
++            $head = substr($sql, 0, $rows[0][0]);
++            // Keep the producer's ON DUPLICATE KEY UPDATE no-op on every row.
++            // It lets a replay leave previously imported rows alone.
++            $tail = substr($sql, $rows[count($rows) - 1][1]);
++            $value_index = 0;
++            foreach ($rows as [$row_start, $row_end]) {
++                $row_sql = $head;
++                $copied_until = $row_start;
++                while (isset($map['column_map'][$value_index]) && $map['column_map'][$value_index][0] < $row_end) {
++                    [$start, $end, $column] = $map['column_map'][$value_index++];
++                    if (!isset($this->members[$column])) {
++                        continue;
++                    }
++                    $value = substr($sql, $start, $end - $start);
++                    if (!ctype_digit($value)) {
++                        // Old dumps already contain label literals. NULL and
++                        // expressions also pass through without mask decoding.
++                        continue;
++                    }
++                    $row_sql .= substr($sql, $copied_until, $start - $copied_until)
++                        . $this->label_literal($value, $this->members[$column]);
++                    $copied_until = $end;
++                }
++                yield $row_sql . substr($sql, $copied_until, $row_end - $copied_until) . $tail;
++            }
++            return;
++        }
++        $replacements = [];
++        foreach ($map['column_map'] as [$start, $end, $column]) {
++            $value = trim(substr($sql, $start, $end - $start));
++            if (isset($this->members[$column]) && ctype_digit($value)) {
++                $replacements[$start] = [$end - $start, $this->label_literal($value, $this->members[$column])];
++            }
++        }
++        // Chunk UPDATEs compare an exported SET primary key by unsigned
++        // mask. SQLite stores its label, so both sides must change together.
++        // For SET('a','b'), CAST(`wp_sets`.`flags` AS UNSIGNED) = 3
++        // becomes `wp_sets`.`flags` = FROM_BASE64('YSxi'). Keeping the CAST
++        // would compare the numeric conversion of 'a,b' with 3 and miss
++        // the row whose large value the UPDATE is meant to finish.
++        $token_count = count($tokens);
++        for ($index = 0; $index + 9 < $token_count; ++$index) {
++            if ($tokens[$index]->id !== WP_MySQL_Lexer::CAST_SYMBOL ||
++                $tokens[$index + 1]->id !== WP_MySQL_Lexer::OPEN_PAR_SYMBOL ||
++                $tokens[$index + 2]->id !== WP_MySQL_Lexer::BACK_TICK_QUOTED_ID ||
++                $tokens[$index + 2]->get_value() !== $table ||
++                $tokens[$index + 3]->id !== WP_MySQL_Lexer::DOT_SYMBOL ||
++                $tokens[$index + 4]->id !== WP_MySQL_Lexer::BACK_TICK_QUOTED_ID ||
++                $tokens[$index + 5]->id !== WP_MySQL_Lexer::AS_SYMBOL ||
++                $tokens[$index + 6]->id !== WP_MySQL_Lexer::UNSIGNED_SYMBOL ||
++                $tokens[$index + 7]->id !== WP_MySQL_Lexer::CLOSE_PAR_SYMBOL ||
++                $tokens[$index + 8]->id !== WP_MySQL_Lexer::EQUAL_OPERATOR) {
++                continue;
++            }
++            $column = $tokens[$index + 4]->get_value();
++            $value = $tokens[$index + 9]->get_value();
++            if (!isset($this->members[$column]) || !ctype_digit($value)) {
++                continue;
++            }
++            $start = $tokens[$index]->start;
++            $end = $tokens[$index + 9]->start + $tokens[$index + 9]->length;
++            $identifier = substr($sql, $tokens[$index + 2]->start, $tokens[$index + 4]->start + $tokens[$index + 4]->length - $tokens[$index + 2]->start);
++            $replacements[$start] = [$end - $start, $identifier . ' = ' . $this->label_literal($value, $this->members[$column])];
++        }
++        krsort($replacements);
++        foreach ($replacements as $start => [$length, $replacement]) {
++            $sql = substr_replace($sql, $replacement, $start, $length);
++        }
++        yield $sql;
++    }
++
++    /**
++     * Returns the dump's string literal for the selected members in schema order.
++     *
++     * Divide the decimal string by two once per member. Each remainder tells
++     * whether that member is selected: mask 5 gives remainders 1, 0, 1 and
++     * selects the first and third members. Casting the whole mask to PHP int
++     * would lose values above PHP_INT_MAX, such as 18446744073709551615.
++     *
++     * @param string       $mask    Unsigned decimal mask, not a SET label.
++     * @param list<string> $members Declared SET members in bit order.
++     */
++    private function label_literal(string $mask, array $members): string {
++        $original_mask = $mask;
++        $label = '';
++        // Decimal division keeps all 64 bits without depending on PHP's integer
++        // width or routing the upper half of the range through a float.
++        foreach ($members as $member) {
++            $quotient = '';
++            $remainder = 0;
++            foreach (str_split($mask) as $digit) {
++                $value = $remainder * 10 + (int) $digit;
++                $quotient .= (string) intdiv($value, 2);
++                $remainder = $value % 2;
++            }
++            if ($remainder !== 0) {
++                // MySQL inserts a separator only after non-empty output. An
++                // empty first member is indistinguishable from no member here.
++                $label .= ( $label === '' ? '' : ',' ) . $member;
++            }
++            $mask = ltrim($quotient, '0');
++            if ($mask === '') {
++                break;
++            }
++        }
++        if ($mask !== '') {
++            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- CLI import error, not HTML.
++            throw new RuntimeException('Exported SET mask ' . $original_mask . ' exceeds the ' . count($members) . ' declared SQLite column members.');
++        }
++        return "FROM_BASE64('" . base64_encode($label) . "')";
++    }
++}
+diff --git a/packages/reprint-client/src/lib/import/load.php b/packages/reprint-client/src/lib/import/load.php
+index e7505e54..d9b52d00 100644
+--- a/packages/reprint-client/src/lib/import/load.php
++++ b/packages/reprint-client/src/lib/import/load.php
+@@ -11,3 +11,4 @@ require_once __DIR__ . '/class-myisam-auto-increment-statement-rewriter.php';
+ require_once __DIR__ . '/class-nullable-spatial-column-statement-rewriter.php';
+ require_once __DIR__ . '/class-spatial-srid-guard.php';
+ require_once __DIR__ . '/class-progress-reporter.php';
++require_once __DIR__ . '/class-sqlite-set-value-statement-rewriter.php';
+diff --git a/packages/reprint-client/src/lib/url-rewrite/class-sql-statement-rewriter.php b/packages/reprint-client/src/lib/url-rewrite/class-sql-statement-rewriter.php
+index 418835a9..5fdeb2c6 100644
+--- a/packages/reprint-client/src/lib/url-rewrite/class-sql-statement-rewriter.php
++++ b/packages/reprint-client/src/lib/url-rewrite/class-sql-statement-rewriter.php
+@@ -177,7 +177,7 @@ class SqlStatementRewriter
+         // Slow path: lex once, share the token array between the column
+         // map walker and Base64ValueScanner.
+         $tokens = self::significant_tokens($sql);
+-        $value_to_column_map = $this->map_values_to_columns_from_tokens($tokens);
++        $value_to_column_map = self::map_values_to_columns_from_tokens($tokens);
+         $scanner = new Base64ValueScanner($sql, $tokens);
+         return $this->rewrite_with_scanner($scanner, $value_to_column_map);
+     }
+@@ -304,9 +304,12 @@ class SqlStatementRewriter
+     }
+ 
+     /**
+-     * Walk the lexer output to recover, for an INSERT or UPDATE statement,
+-     * the byte-offset→column map needed to give each FROM_BASE64() value
+-     * the right content-type hint.
++     * Maps INSERT/REPLACE values and UPDATE assignments to their columns.
++     *
++     * For INSERT INTO `t` (`flags`,`count`) VALUES (3,3), the ranges distinguish
++     * the SET mask in flags from the ordinary number in count. Both SQLite SET
++     * import and URL content-type hints use this column map.
++     * UPDATE WHERE expressions are not assignments and are not in the map.
+      *
+      * Recognised shapes:
+      *
+@@ -325,10 +328,13 @@ class SqlStatementRewriter
+      *
+      * Anything else — INSERT … SELECT, INSERT … SET col=v, INSERT without a
+      * column list, qualified names like `db`.`t`, multi-table UPDATE — returns
+-     * null. The caller treats null the same as an empty column_map: every
++     * null. The URL rewriter treats null the same as an empty column_map: every
+      * FROM_BASE64() value falls through to plain-text URL rewriting, which
+      * is the safe default. URL rewriting still happens; only the
+      * block_markup hint (relevant for ~5 WordPress core columns) is lost.
++     * SQLite SET import requires a map for the INSERT/UPDATE it passes here.
++     * It treats null as an error because guessing which numbers are SET masks
++     * could change values in other columns.
+      *
+      * The lexer already handles strings, comments, escaped backticks, hex /
+      * binary / null literals and so on, so the walker only needs to track
+@@ -336,28 +342,20 @@ class SqlStatementRewriter
+      * contain `(`, `)`, `,` etc. arrive as a single token and never affect
+      * depth.
+      *
+-     * @return array|null {
+-     *     Table and column ranges, or null when the statement shape is unknown.
+-     *
+-     *     @type string $table      Table name.
+-     *     @type array  $column_map Value ranges mapped to column names.
+-     * }
+-     * @phpstan-return array{table: string, column_map: list<array{int, int, string}>}|null
+-     */
+-    /**
+      * Consumes a pre-lexed token array. Lets callers that already lexed the
+      * statement avoid a second WP_MySQL_Lexer pass.
+      *
+-     * @param WP_MySQL_Token[] $tokens
++     * @param WP_MySQL_Token[] $tokens Significant tokens with EOF removed.
+      * @return array|null {
+      *     Table and column ranges, or null when the statement shape is unknown.
+      *
+      *     @type string $table      Table name.
+-     *     @type array  $column_map Value ranges mapped to column names.
++     *     @type array  $column_map Tuples of start byte, exclusive end byte, and column name.
++     *     @type array  $row_ranges INSERT tuple byte ranges, including parentheses; absent for UPDATE.
+      * }
+-     * @phpstan-return array{table: string, column_map: list<array{int, int, string}>}|null
++     * @phpstan-return array{table: string, column_map: list<array{int, int, string}>, row_ranges?: list<array{int, int}>}|null
+      */
+-    private function map_values_to_columns_from_tokens(array $tokens): ?array
++    public static function map_values_to_columns_from_tokens(array $tokens): ?array
+     {
+         $token_count = count($tokens);
+         if ($token_count < 4) {
+@@ -391,8 +389,9 @@ class SqlStatementRewriter
+      *
+      *     @type string $table      Table name.
+      *     @type array  $column_map Value ranges mapped to column names.
++     *     @type array  $row_ranges INSERT tuple byte ranges, including parentheses.
+      * }
+-     * @phpstan-return array{table: string, column_map: list<array{int, int, string}>}|null
++     * @phpstan-return array{table: string, column_map: list<array{int, int, string}>, row_ranges: list<array{int, int}>}|null
+      */
+     private static function walk_insert(array $tokens, int $token_count, int $cursor): ?array
+     {
+@@ -482,6 +481,7 @@ class SqlStatementRewriter
+ 
+         $column_count = count($column_names);
+         $column_map = [];
++        $row_ranges = [];
+         while ($cursor < $token_count) {
+             // Optional ROW prefix (MySQL 8.0+ explicit row constructor).
+             if ($tokens[$cursor]->id === WP_MySQL_Lexer::ROW_SYMBOL) {
+@@ -494,6 +494,7 @@ class SqlStatementRewriter
+             if ($tokens[$cursor]->id !== WP_MySQL_Lexer::OPEN_PAR_SYMBOL) {
+                 return null;
+             }
++            $row_start = $tokens[$cursor]->start;
+             $cursor++; // step past `(`
+ 
+             $column_index_in_row = 0;
+@@ -537,6 +538,7 @@ class SqlStatementRewriter
+             if (!$tuple_was_closed) {
+                 return null;
+             }
++            $row_ranges[] = [$row_start, $tokens[$cursor]->start + $tokens[$cursor]->length];
+             $cursor++; // step past `)`
+ 
+             // Another tuple, statement terminator, or trailer keyword.
+@@ -559,7 +561,7 @@ class SqlStatementRewriter
+             break;
+         }
+ 
+-        return ['table' => $table_name, 'column_map' => $column_map];
++        return ['table' => $table_name, 'column_map' => $column_map, 'row_ranges' => $row_ranges];
+     }
+ 
+     /**
+diff --git a/tests/Import/RequestUrlPathEncodingTest.php b/tests/Import/RequestUrlPathEncodingTest.php
+index ce63fe6e..85eb3585 100644
+--- a/tests/Import/RequestUrlPathEncodingTest.php
++++ b/tests/Import/RequestUrlPathEncodingTest.php
+@@ -239,20 +239,20 @@ final class RequestUrlPathEncodingTest extends TestCase
+         $this->assertSame('https://example.com/?site-export-api&route=export', $request['url']);
+         $this->assertSame(['endpoint' => 'sql_chunk'] + $params + [
+             'multisite_mode' => 'one-site-network-v1',
++            'set_value_format' => 'unsigned',
+             'cursor' => $cursor,
+         ], $request['params']);
+     }
+ 
+     /** @dataProvider sql_output_modes */
+-    public function testSetFormatMatchesSqlOutputMode(string $mode, ?string $cursor): void
++    public function testAllSqlOutputModesRequestUnsignedSetValues(string $mode, ?string $cursor): void
+     {
+         $client = new \ImportClient('https://example.com/', $this->root . '/state', $this->root . '/files');
+         (new \ReflectionProperty($client, 'sql_output_mode'))->setValue($client, $mode);
+         $build_request = new \ReflectionMethod($client, 'build_request');
+         $request = $build_request->invoke($client, 'sql_chunk', $cursor);
+-        // Files and stdout can later be imported into SQLite. Only direct
+-        // MySQL output can request masks without a SQLite label converter.
+-        $this->assertSame($mode === 'mysql' ? 'unsigned' : null, $request['params']['set_value_format'] ?? null);
++        // The SQLite converter makes masks safe for portable dumps too.
++        $this->assertSame('unsigned', $request['params']['set_value_format'] ?? null);
+         $request = $build_request->invoke($client, 'preflight', null);
+         $this->assertArrayNotHasKey('set_value_format', $request['params']);
+     }
+diff --git a/tests/Import/SqliteSetImportTest.php b/tests/Import/SqliteSetImportTest.php
+new file mode 100644
+index 00000000..5119087e
+--- /dev/null
++++ b/tests/Import/SqliteSetImportTest.php
+@@ -0,0 +1,145 @@
++<?php
++
++namespace ImportTests;
++
++use PDO;
++use PHPUnit\Framework\TestCase;
++use Reprint\Importer\Database\PdoDatabaseConnection;
++
++require_once __DIR__ . '/../../packages/reprint-client/bin/reprint-client';
++
++class SqliteSetImportTest extends TestCase {
++    private string $root;
++    private $database;
++    private $connection;
++    private $client;
++
++    protected function setUp(): void {
++        $this->root = sys_get_temp_dir() . '/reprint-set-import-' . bin2hex(random_bytes(5));
++        mkdir($this->root);
++        $this->database = new \WP_PDO_MySQL_On_SQLite('mysql-on-sqlite:path=:memory:;dbname=wordpress');
++        $this->connection = new PdoDatabaseConnection($this->database, $this->database->get_connection()->get_pdo());
++        $this->client = new \ImportClient('https://source.example/', $this->root, $this->root . '/files');
++        (new \ReflectionMethod(\ImportClient::class, 'create_database_import_position_table'))->invoke($this->client, $this->connection);
++    }
++
++    protected function tearDown(): void {
++        $this->connection->close();
++        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->root, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST) as $entry) {
++            $entry->isDir() ? rmdir($entry->getPathname()) : unlink($entry->getPathname());
++        }
++        rmdir($this->root);
++    }
++
++    public function testMasksBecomeLabelsWithoutChangingOrdinaryNumbers(): void {
++        $members = "'', 'a'";
++        for ($index = 2; $index < 64; ++$index) {
++            $members .= ", 'member" . $index . "'";
++        }
++        $this->import("CREATE TABLE `wp_sets` (`id` INT PRIMARY KEY, `flags` SET($members), `amount` INT);"
++            . "INSERT INTO `wp_sets` (`id`,`flags`,`amount`) VALUES (1,0,3),(2,1,3),(3,2,3),(4,3,3),(5,9223372036854775808,3),(6,18446744073709551615,3),(7,NULL,3);");
++        $this->assertSame(['', '', 'a', 'a', 'member63', 'a,' . implode(',', array_map(static fn($index) => 'member' . $index, range(2, 63))), null], $this->database->query('SELECT flags FROM wp_sets ORDER BY id')->fetchAll(PDO::FETCH_COLUMN));
++        $this->assertSame([3,3,3,3,3,3,3], $this->database->query('SELECT amount FROM wp_sets ORDER BY id')->fetchAll(PDO::FETCH_COLUMN));
++    }
++
++    public function testChunkUpdatesFindTheSetPrimaryKeyAfterGroupResume(): void {
++        $this->import("CREATE TABLE `wp_sets` (`flags` SET('alpha','beta') PRIMARY KEY, `payload` LONGTEXT); INSERT INTO `wp_sets` (`flags`,`payload`) VALUES (3,'');");
++        $this->import("UPDATE `wp_sets` SET `payload` = CONCAT(`payload`,FROM_BASE64('Ynl0ZXM=')) WHERE CAST(`wp_sets`.`flags` AS UNSIGNED) = 3;");
++        $this->assertSame([['flags' => 'alpha,beta', 'payload' => 'bytes']], $this->database->query('SELECT * FROM wp_sets')->fetchAll(PDO::FETCH_ASSOC));
++    }
++
++    public function testLexerHandlesQuotedMembersAndDoesNotRewriteSqlInsideText(): void {
++        $this->import("CREATE TABLE `wp_sets` (`id` INT PRIMARY KEY, `flags` SET('O''Reilly','雪','2'), `payload` LONGTEXT);"
++            . "INSERT INTO `wp_sets` (`id`,`flags`,`payload`) VALUES (1,3,CONCAT('CAST(`wp_sets`.`flags` AS UNSIGNED) = 3',';')), (2,4,'');");
++        $this->assertSame([['id' => 1, 'flags' => "O'Reilly,雪", 'payload' => 'CAST(`wp_sets`.`flags` AS UNSIGNED) = 3;'], ['id' => 2, 'flags' => '2', 'payload' => '']], $this->database->query('SELECT * FROM wp_sets ORDER BY id')->fetchAll(PDO::FETCH_ASSOC));
++    }
++
++    public function testBackslashesInMembersSurviveInsertAndResumedChunkUpdate(): void {
++        $this->import(<<<'SQL'
++CREATE TABLE `wp_sets` (`flags` SET('back\\slash','literal\\n','O''Reilly') PRIMARY KEY, `payload` LONGTEXT);
++INSERT INTO `wp_sets` (`flags`,`payload`) VALUES (7,'');
++SQL
++        );
++        $this->assertSame("back\\slash,literal\\n,O'Reilly", $this->database->query('SELECT flags FROM wp_sets')->fetchColumn());
++        $this->import("UPDATE `wp_sets` SET `payload` = CONCAT(`payload`,FROM_BASE64('Ynl0ZXM=')) WHERE CAST(`wp_sets`.`flags` AS UNSIGNED) = 7;");
++        $this->assertSame('bytes', $this->database->query('SELECT payload FROM wp_sets')->fetchColumn());
++    }
++
++    public function testTrailingBackslashDoesNotHideTheMemberClosingQuote(): void {
++        $this->import(<<<'SQL'
++CREATE TABLE `wp_sets` (`id` INT PRIMARY KEY, `flags` SET('trailing\\'));
++INSERT INTO `wp_sets` (`id`,`flags`) VALUES (1,1);
++SQL
++        );
++        $this->assertSame('trailing\\', $this->database->query('SELECT flags FROM wp_sets')->fetchColumn());
++    }
++
++    public function testExpandedSetBatchFitsIn128MiB(): void {
++        $process = proc_open(
++            [PHP_BINARY, '-d', 'memory_limit=128M', __DIR__ . '/fixtures/sqlite-set-import-worker.php', $this->root],
++            [['pipe', 'r'], ['file', $this->root . '/worker.log', 'w'], ['file', $this->root . '/worker.log', 'a']],
++            $pipes
++        );
++        fclose($pipes[0]);
++        $exit_code = proc_close($process);
++        $output = file_get_contents($this->root . '/worker.log');
++        $this->assertSame(0, $exit_code, $output);
++        $result = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
++        $this->assertSame(250, $result['rows']);
++        $this->assertLessThan(128 * 1024 * 1024, $result['peak_bytes']);
++    }
++
++    public function testLaterSqliteRowErrorRollsBackTheGroupAndCursorBeforeRetry(): void {
++        $this->import("CREATE TABLE `wp_sets` (`id` INT PRIMARY KEY, `flags` SET('alpha','beta')); INSERT INTO `wp_sets` (`id`,`flags`) VALUES (0,1);", 'before');
++        $native = $this->database->get_connection()->get_pdo();
++        $attempted_rows = [];
++        $native->sqliteCreateFunction('observe_set_insert', static function ($id) use (&$attempted_rows) {
++            $attempted_rows[] = $id;
++            return 1;
++        });
++        // Inject a real SQLite statement failure after earlier rows executed.
++        // This tests rollback, not support for transferring source triggers.
++        $native->exec("CREATE TRIGGER fail_set_insert BEFORE INSERT ON wp_sets BEGIN SELECT observe_set_insert(NEW.id); SELECT CASE WHEN NEW.id = 100 THEN RAISE(FAIL, 'injected SQLite insert failure') END; END");
++        $rows = [];
++        for ($id = 1; $id <= 250; ++$id) {
++            $rows[] = '(' . $id . ',3)';
++        }
++        $sql = 'INSERT INTO `wp_sets` (`id`,`flags`) VALUES ' . implode(',', $rows) . ' ON DUPLICATE KEY UPDATE `id` = `id`;';
++        try {
++            $this->import($sql, 'after');
++            $this->fail('The injected SQLite insert failure must end the group.');
++        } catch (\RuntimeException $error) {
++            $this->assertStringContainsString('injected SQLite insert failure', $error->getMessage());
++        }
++        $this->assertSame(range(1, 100), $attempted_rows);
++        $this->assertSame([['id' => 0, 'flags' => 'alpha']], $this->database->query('SELECT * FROM wp_sets')->fetchAll(PDO::FETCH_ASSOC));
++        $position = new \ReflectionMethod($this->client, 'read_database_import_position');
++        $this->assertSame('before', $position->invoke($this->client, $this->connection, hash('sha256', 'sets'), 'db-apply')['source_cursor']);
++        $native->exec('DROP TRIGGER fail_set_insert');
++        $this->import($sql, 'after');
++        $this->assertSame(250, (int) $this->database->query("SELECT COUNT(*) FROM wp_sets WHERE flags='alpha,beta'")->fetchColumn());
++        $this->assertSame('after', $position->invoke($this->client, $this->connection, hash('sha256', 'sets'), 'db-apply')['source_cursor']);
++    }
++
++    public function testSetRowsKeepUrlRewritingNullsNumbersAndDuplicateNoOp(): void {
++        $rewriter = new \SqlStatementRewriter(new \StructuredDataUrlRewriter(['https://source.example' => 'https://target.example']), 'wp_');
++        $sql = "CREATE TABLE `wp_sets` (`id` INT PRIMARY KEY, `flags` SET('https://source.example','plain','3'), `amount` DOUBLE, `payload` LONGTEXT);"
++            . "INSERT INTO `wp_sets` (`id`,`flags`,`amount`,`payload`) VALUES (1,1,1.2345678901234567,FROM_BASE64('aHR0cHM6Ly9zb3VyY2UuZXhhbXBsZS9h')), (2,NULL,NULL,''), (3,FROM_BASE64('cGxhaW4='),3e0,''), (1,2,99,''), (4,FROM_BASE64('Mw=='),4,'') ON DUPLICATE KEY UPDATE `id` = `id`;"
++            . "INSERT INTO `wp_sets` (`id`,`flags`,`amount`,`payload`) VALUES (1,2,99,'') ON DUPLICATE KEY UPDATE `id` = `id`;";
++        (new \ReflectionMethod($this->client, 'execute_database_import_group'))->invoke(
++            $this->client, $this->connection, $sql, hash('sha256', 'sets'), 'after', null, 'sqlite', $rewriter
++        );
++        $this->assertSame([
++            ['id' => 1, 'flags' => 'https://target.example', 'amount' => 1.2345678901234567, 'payload' => 'https://target.example/a'],
++            ['id' => 2, 'flags' => null, 'amount' => null, 'payload' => ''],
++            ['id' => 3, 'flags' => 'plain', 'amount' => 3.0, 'payload' => ''],
++            ['id' => 4, 'flags' => '3', 'amount' => 4.0, 'payload' => ''],
++        ], $this->database->query('SELECT * FROM wp_sets ORDER BY id')->fetchAll(PDO::FETCH_ASSOC));
++    }
++
++    private function import(string $sql, string $cursor = 'next-cursor'): void {
++        (new \ReflectionMethod(\ImportClient::class, 'execute_database_import_group'))->invoke(
++            $this->client, $this->connection, $sql, hash('sha256', 'sets'), $cursor, null, 'sqlite'
++        );
++    }
++}
+diff --git a/tests/Import/fixtures/sqlite-set-import-worker.php b/tests/Import/fixtures/sqlite-set-import-worker.php
+new file mode 100644
+index 00000000..03b3f048
+--- /dev/null
++++ b/tests/Import/fixtures/sqlite-set-import-worker.php
+@@ -0,0 +1,52 @@
++<?php
++
++require dirname(__DIR__, 3) . '/packages/reprint-client/src/import.php';
++
++$root = $argv[1];
++$database = new WP_PDO_MySQL_On_SQLite('mysql-on-sqlite:path=' . $root . '/target.sqlite;dbname=wordpress');
++$connection = new Reprint\Importer\Database\PdoDatabaseConnection($database, $database->get_connection()->get_pdo());
++$client = new ImportClient('https://source.example/', $root, $root . '/files');
++(new ReflectionMethod($client, 'create_database_import_position_table'))->invoke($client, $connection);
++$members = [];
++for ($index = 0; $index < 64; ++$index) {
++    $members[] = 'member' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . str_repeat('x', 247);
++}
++$columns = [];
++for ($index = 0; $index < 16; ++$index) {
++    $columns[] = '`flags' . $index . '`';
++}
++$definitions = array_map(static fn($column) => $column . " SET('" . implode("','", $members) . "')", $columns);
++$rows = [];
++for ($index = 1; $index <= 250; ++$index) {
++    $rows[] = '(' . $index . ',' . implode(',', array_fill(0, 16, '18446744073709551615')) . ')';
++}
++// This is the exporter's ordinary 250-row batch and no-op duplicate clause.
++// The masks occupy about 86 KB, but their labels need about 65 MB before base64.
++$sql = 'CREATE TABLE `wp_sets` (`id` INT PRIMARY KEY,' . implode(',', $definitions) . ');'
++    . 'INSERT INTO `wp_sets` (`id`,' . implode(',', $columns) . ') VALUES ' . implode(',', $rows)
++    . ' ON DUPLICATE KEY UPDATE `id` = `id`;';
++$statement_count = (new ReflectionMethod($client, 'execute_database_import_group'))->invoke(
++    $client, $connection, $sql, hash('sha256', 'sets'), 'after', null, 'sqlite'
++);
++if ($statement_count !== 2) {
++    throw new RuntimeException('The import must still count the two source statements, not the split rows.');
++}
++$expected = implode(',', $members);
++$result = $database->query('SELECT * FROM wp_sets ORDER BY id');
++$count = 0;
++while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
++    if ($row['id'] !== ++$count) {
++        throw new RuntimeException('SET import changed row order or omitted a row.');
++    }
++    unset($row['id']);
++    foreach ($row as $label) {
++        if ($label !== $expected) {
++            throw new RuntimeException('SET import changed a selected member.');
++        }
++    }
++}
++if ($count !== 250) {
++    throw new RuntimeException('SET import did not insert all 250 rows.');
++}
++echo json_encode(['rows' => $count, 'peak_bytes' => memory_get_peak_usage(true)]);
++$connection->close();
+diff --git a/tests/MySQLDumpProducer/DatabaseValueRoundTripTest.php b/tests/MySQLDumpProducer/DatabaseValueRoundTripTest.php
+index 254b06b1..62030d3a 100644
+--- a/tests/MySQLDumpProducer/DatabaseValueRoundTripTest.php
++++ b/tests/MySQLDumpProducer/DatabaseValueRoundTripTest.php
+@@ -149,7 +149,7 @@ class DatabaseValueRoundTripTest extends MySQLDumpProducerTestBase {
+     }
+ 
+     public static function setValueFormatProvider(): array {
+-        return [['label', '?'], ['label', '🙂']];
++        return [['label', '?'], ['unsigned', '?'], ['label', '🙂']];
+     }
+ 
+     public function testLegacySetLabelCursorRequiresANewTransfer(): void {
+diff --git a/tests/MySQLDumpProducer/SetValueFormatHttpTest.php b/tests/MySQLDumpProducer/SetValueFormatHttpTest.php
+index 35742527..8ba68db4 100644
+--- a/tests/MySQLDumpProducer/SetValueFormatHttpTest.php
++++ b/tests/MySQLDumpProducer/SetValueFormatHttpTest.php
+@@ -64,7 +64,7 @@ class SetValueFormatHttpTest extends MySQLDumpProducerTestBase {
+             // without a mask-to-label rewriter. Keep that wire format usable.
+             unset($params['set_value_format']);
+         }
+-        $unsigned = $mode === 'mysql' && !$legacy_client;
++        $unsigned = !$legacy_client;
+         self::assertSame($unsigned ? 'unsigned' : null, $params['set_value_format'] ?? null);
+         $body = http_build_query($params);
+         $curl = curl_init($request['url']);
+@@ -97,7 +97,6 @@ class SetValueFormatHttpTest extends MySQLDumpProducerTestBase {
+             // though both have the same displayed label.
+             $target = $this->executeDumpInNewDatabase($sql);
+             self::assertSame(['0', '1', '6', null], $target->query('SELECT CAST(CAST(flags AS UNSIGNED) AS CHAR) FROM wp_sets ORDER BY id')->fetchAll(PDO::FETCH_COLUMN));
+-            return;
+         }
+         $sqlite = new WP_PDO_MySQL_On_SQLite('mysql-on-sqlite:path=:memory:;dbname=wordpress');
+         $connection = new \Reprint\Importer\Database\PdoDatabaseConnection($sqlite, $sqlite->get_connection()->get_pdo());
+diff --git a/tests/UrlRewriting/SqlStatementRewriterLexerWalkerTest.php b/tests/UrlRewriting/SqlStatementRewriterLexerWalkerTest.php
+index 2272ac52..3dce6a3f 100644
+--- a/tests/UrlRewriting/SqlStatementRewriterLexerWalkerTest.php
++++ b/tests/UrlRewriting/SqlStatementRewriterLexerWalkerTest.php
+@@ -519,6 +519,19 @@ class SqlStatementRewriterLexerWalkerTest extends TestCase
+         return $method->invoke($rewriter, $tokens);
+     }
+ 
++    public function testInsertRowRangesExcludeNestedParenthesesAndDuplicateClause(): void
++    {
++        $rows = ["(1, CONCAT('),(', FROM_BASE64('YQ==')))", "(2, /* ),( */ CONVERT(FROM_BASE64('Yg==') USING utf8mb4))"];
++        $sql = 'INSERT INTO `wp_)posts` (`ID`,`post_content`) VALUES ' . implode(', ', $rows)
++            . ' ON DUPLICATE KEY UPDATE `ID` = `ID`;';
++        $parsed = $this->invokeMapValuesToColumns($sql);
++        $this->assertSame($rows, array_map(
++            static fn($range) => substr($sql, $range[0], $range[1] - $range[0]),
++            $parsed['row_ranges']
++        ));
++        $this->assertCount(4, $parsed['column_map']);
++    }
++
+     public function testWalkerEngagesOnCanonicalDumpedInsert(): void
+     {
+         $sql = sprintf(
+-- 
+2.50.0
+
