@@ -87,7 +87,54 @@ perl -pi -e '
     s/Reprint Server runtime/Pull and Push runtime/g;
     s/manage Reprint Server/manage Pull and Push access/g;
     s/Reprint Server/Pull and Push access/g;
-' "${DEST}/reprint-server-wp/lib.php" "${DEST}"/reprint-server-wp/wordpress/*.php
+    s/Standalone Reprint (requires|configuration|on a host)/The standalone transfer route $1/g;
+    s/Update the Reprint client to a version that has `reprint keygen`, run it,/Update Migrator on the pulling site, run `wp migrator remote keygen`,/g;
+    s/Reprint client/Migrator/g;
+' "${DEST}/reprint-server-wp/lib.php" "${DEST}/reprint-server-wp/standalone.php" "${DEST}"/reprint-server-wp/wordpress/*.php
+
+# Migrator serves the endpoint at ?migrator-api. The client's pull pipeline
+# appends its own query name to any address without one, which then no longer
+# matches the address the lower-level commands saved.
+python3 - "${DEST}/packages/reprint-client/src/lib/pull/class-pull.php" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+a = "!array_key_exists('reprint-api', $query_parameters)\n"
+b = "$url . $separator . 'reprint-api' . $fragment"
+if a not in s or b not in s:
+    sys.exit("migrator-api endpoint patch did not apply; check class-pull.php")
+s = s.replace(a, a + "            && !array_key_exists('migrator-api', $query_parameters)\n", 1)
+s = s.replace(b, "$url . $separator . 'migrator-api' . $fragment", 1)
+open(p, "w", encoding="utf-8").write(s)
+PY
+
+# While a push commits, the source writes a .maintenance file that lets only
+# push requests through. It recognised the library's own query names and read
+# the endpoint from the query string alone, but the client sends commit
+# requests with the endpoint in the POST body, and Migrator serves the API at
+# ?migrator-api. A commit that failed once then locked the source out of the
+# very requests that finish it: every page 503, the push unable to resume.
+python3 - "${DEST}/reprint-server-wp/vendor/wp-php-toolkit/reprint-server/src/class-push-session.php" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+old = (
+    '. "\\$reprint_push_request = (isset(\\$_GET[\'reprint-api\']) || isset(\\$_GET[\'site-export-api\']))\\n"\n'
+    '                . "    && isset(\\$_GET[\'endpoint\']) && is_string(\\$_GET[\'endpoint\'])\\n"\n'
+    '                . "    && strpos(\\$_GET[\'endpoint\'], \'push_\') === 0;\\n"\n'
+)
+new = (
+    '. "\\$reprint_push_endpoint = \\$_GET[\'endpoint\'] ?? \\$_POST[\'endpoint\'] ?? null;\\n"\n'
+    '                . "\\$reprint_push_request = (isset(\\$_GET[\'reprint-api\']) || isset(\\$_GET[\'migrator-api\']) || isset(\\$_GET[\'site-export-api\']))\\n"\n'
+    '                . "    && is_string(\\$reprint_push_endpoint)\\n"\n'
+    '                . "    && strpos(\\$reprint_push_endpoint, \'push_\') === 0;\\n"\n'
+)
+if old not in s:
+    sys.exit("maintenance pass-through patch did not apply; check class-push-session.php")
+s = s.replace(old, new, 1)
+s = s.replace('. "unset(\\$reprint_push_request);\\n"', '. "unset(\\$reprint_push_request, \\$reprint_push_endpoint);\\n"', 1)
+open(p, "w", encoding="utf-8").write(s)
+PY
 
 # The client's terminal messages name the library and its own CLI; inside
 # Migrator they point at Migrator's screen and wp migrator commands instead.
@@ -117,6 +164,12 @@ find "${DEST}/packages/reprint-client/src" "${DEST}/packages/reprint-client/bin"
         s/Uses Reprint/Uses Migrator/g;
         s/as Reprint\./as Migrator./g;
         s/previous Reprint build/previous Migrator version/g;
+        s/Reprint internal table/transfer internal table/g;
+        s/Reprint config/remote config/g;
+        s/its Reprint plugin path/its Pull and Push path/g;
+        s/maximum Reprint waits/maximum Migrator waits/g;
+        s/source Reprint plugin/source Pull and Push files/g;
+        s/run any reprint command against this site/run the same wp migrator command again/g;
         s/"Reprint\/1\.0"/"Migrator\/1.5"/g;
     '
 

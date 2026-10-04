@@ -33,20 +33,17 @@ final class Mirror
             throw new \RuntimeException('There is no wp-content folder at ' . $from . '.');
         }
 
-        $skip = [
-            $from . '/' . Workspace::DIR_NAME,
-            $to . '/' . Workspace::DIR_NAME,
-            untrailingslashit(\Migrator\PLUGIN_DIR),
-        ];
+        // Matched on the path relative to wp-content, on both sides alike.
+        // Absolute paths cannot be used: the pushed tree itself sits inside
+        // this site's backups folder, so every target would look protected.
+        // Migrator is skipped under its folder here and under its wp.org slug,
+        // which is what the other site most likely runs it from.
+        $skip = ['/' . Workspace::DIR_NAME, '/plugins/' . basename(untrailingslashit(\Migrator\PLUGIN_DIR)), '/plugins/plogins-migrator', '/plugins/plogins-migrator-pro'];
         if (defined('Migrator\\Pro\\PLUGIN_FILE')) {
-            $skip[] = dirname((string) constant('Migrator\\Pro\\PLUGIN_FILE'));
+            $skip[] = '/plugins/' . basename(dirname((string) constant('Migrator\\Pro\\PLUGIN_FILE')));
         }
-        // The plugin folder may have a different name on the other side of the copy.
-        $own = basename(untrailingslashit(\Migrator\PLUGIN_DIR));
-        $skip[] = $from . '/plugins/' . $own;
-        $skip[] = $to . '/plugins/' . $own;
         foreach (self::DROP_INS as $dropIn) {
-            $skip[] = $from . '/' . $dropIn;
+            $skip[] = '/' . $dropIn;
         }
 
         $copied = 0;
@@ -57,10 +54,11 @@ final class Mirror
 
         foreach ($items as $item) {
             /** @var \SplFileInfo $item */
-            $path   = $item->getPathname();
-            $target = $to . substr($path, strlen($from));
+            $path     = $item->getPathname();
+            $relative = substr($path, strlen($from));
+            $target   = $to . $relative;
             foreach ($skip as $protected) {
-                if (str_starts_with($path . '/', $protected . '/') || str_starts_with($target . '/', $protected . '/')) {
+                if ($relative === $protected || str_starts_with($relative, $protected . '/')) {
                     continue 2;
                 }
             }

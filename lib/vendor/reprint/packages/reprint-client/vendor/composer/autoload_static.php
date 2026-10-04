@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit19a2b22c11a51e29154a933870d41236
+class ComposerStaticInitdabcd01a97770398cc9cc77cafff2df8
 {
     public static $files = array (
         'c8f84af3c24cff85f963d6926f4b2d42' => __DIR__ . '/..' . '/wp-php-toolkit/filesystem/functions.php',
@@ -12,6 +12,27 @@ class ComposerStaticInit19a2b22c11a51e29154a933870d41236
         'c2c7ec202e84a85f19abab25dd38d82d' => __DIR__ . '/..' . '/wp-php-toolkit/encoding/compat-utf8.php',
         '713ad46f1f515216614131421c1ab59c' => __DIR__ . '/..' . '/wp-php-toolkit/encoding/utf8-encoder.php',
         '3ece6d8ef10b1c2fd398a0c341044be9' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/URL/functions.php',
+        'e69f7f6ee287b969198c3c9d6777bd38' => __DIR__ . '/..' . '/symfony/polyfill-intl-normalizer/bootstrap.php',
+        'f598d06aa772fa33d905e87be6398fb1' => __DIR__ . '/..' . '/symfony/polyfill-intl-idn/bootstrap.php',
+    );
+
+    public static $prefixLengthsPsr4 = array (
+        'S' => 
+        array (
+            'Symfony\\Polyfill\\Intl\\Normalizer\\' => 33,
+            'Symfony\\Polyfill\\Intl\\Idn\\' => 26,
+        ),
+    );
+
+    public static $prefixDirsPsr4 = array (
+        'Symfony\\Polyfill\\Intl\\Normalizer\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-intl-normalizer',
+        ),
+        'Symfony\\Polyfill\\Intl\\Idn\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-intl-idn',
+        ),
     );
 
     public static $classMap = array (
@@ -32,7 +53,7 @@ class ComposerStaticInit19a2b22c11a51e29154a933870d41236
         'Brick\\Math\\Internal\\Calculator\\NativeCalculator' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/brick/math/src/Internal/Calculator/NativeCalculator.php',
         'Brick\\Math\\RoundingMode' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/brick/math/src/RoundingMode.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'Normalizer' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/symfony/polyfill-intl-normalizer/Resources/stubs/Normalizer.php',
+        'Normalizer' => __DIR__ . '/..' . '/symfony/polyfill-intl-normalizer/Resources/stubs/Normalizer.php',
         'PhpToken' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/symfony/polyfill-php80/Resources/stubs/PhpToken.php',
         'Psr\\EventDispatcher\\EventDispatcherInterface' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/psr/event-dispatcher/src/EventDispatcherInterface.php',
         'Psr\\EventDispatcher\\ListenerProviderInterface' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/psr/event-dispatcher/src/ListenerProviderInterface.php',
@@ -187,6 +208,10 @@ class ComposerStaticInit19a2b22c11a51e29154a933870d41236
         'Site_Export_HMAC_Client' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-hmac-client.php',
         'Stringable' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/symfony/polyfill-php80/Resources/stubs/Stringable.php',
         'Symfony\\Polyfill\\Ctype\\Ctype' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/symfony/polyfill-ctype/Ctype.php',
+        'Symfony\\Polyfill\\Intl\\Idn\\Idn' => __DIR__ . '/..' . '/symfony/polyfill-intl-idn/Idn.php',
+        'Symfony\\Polyfill\\Intl\\Idn\\Info' => __DIR__ . '/..' . '/symfony/polyfill-intl-idn/Info.php',
+        'Symfony\\Polyfill\\Intl\\Idn\\Resources\\unidata\\DisallowedRanges' => __DIR__ . '/..' . '/symfony/polyfill-intl-idn/Resources/unidata/DisallowedRanges.php',
+        'Symfony\\Polyfill\\Intl\\Idn\\Resources\\unidata\\Regex' => __DIR__ . '/..' . '/symfony/polyfill-intl-idn/Resources/unidata/Regex.php',
         'Symfony\\Polyfill\\Intl\\Normalizer\\Normalizer' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/symfony/polyfill-intl-normalizer/Normalizer.php',
         'Symfony\\Polyfill\\Php80\\Php80' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/symfony/polyfill-php80/Php80.php',
         'Symfony\\Polyfill\\Php80\\PhpToken' => __DIR__ . '/..' . '/wp-php-toolkit/data-liberation/vendor-patched/symfony/polyfill-php80/PhpToken.php',
@@ -350,7 +375,9 @@ class ComposerStaticInit19a2b22c11a51e29154a933870d41236
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->classMap = ComposerStaticInit19a2b22c11a51e29154a933870d41236::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitdabcd01a97770398cc9cc77cafff2df8::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitdabcd01a97770398cc9cc77cafff2df8::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitdabcd01a97770398cc9cc77cafff2df8::$classMap;
 
         }, null, ClassLoader::class);
     }

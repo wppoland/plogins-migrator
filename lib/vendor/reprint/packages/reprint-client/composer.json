@@ -9,6 +9,8 @@
     "require": {
         "php": ">=7.4",
         "ext-pdo": "*",
+        "symfony/polyfill-intl-idn": "^1.31",
+        "symfony/polyfill-intl-normalizer": "^1.31",
         "wp-php-toolkit/data-liberation": "^0.10.1",
         "wp-php-toolkit/html": "^0.10.1",
         "wp-php-toolkit/reprint-server": "*@dev"

@@ -785,6 +785,7 @@ class Pull
         }
         if (
             !array_key_exists('reprint-api', $query_parameters)
+            && !array_key_exists('migrator-api', $query_parameters)
             && !array_key_exists('site-export-api', $query_parameters)
         ) {
             $fragment_position = strpos($url, '#');
@@ -794,7 +795,7 @@ class Pull
                 $url = substr($url, 0, $fragment_position);
             }
             $separator = strpos($url, '?') === false ? '?' : '&';
-            $this->client->remote_reprint_api_url = $url . $separator . 'reprint-api' . $fragment;
+            $this->client->remote_reprint_api_url = $url . $separator . 'migrator-api' . $fragment;
         }
     }
 

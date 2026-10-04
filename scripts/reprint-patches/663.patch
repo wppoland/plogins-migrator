@@ -1,0 +1,401 @@
+From c356e3164a8ef6b237e0d12d9872fe9f96ed3fb0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Adam=20Zieli=C5=84ski?= <adam@adamziel.com>
+Date: Mon, 17 Aug 2026 21:57:52 +0200
+Subject: [PATCH] PR #663: [PHP] Store mapped remote indexes with separate
+ paths
+
+---
+ .../class-mapped-remote-index-builder.php     |  43 +++++---
+ .../src/lib/sort-index-file.php               | 101 ++++++++++--------
+ tests/Import/FilesPullMirrorDiffTest.php      |  15 ++-
+ tests/Import/MappedRemoteIndexBuilderTest.php |  50 ++++++++-
+ tests/Import/SortIndexFileTest.php            |  21 ++++
+ 5 files changed, 165 insertions(+), 65 deletions(-)
+
+diff --git a/packages/reprint-client/src/lib/pull/class-mapped-remote-index-builder.php b/packages/reprint-client/src/lib/pull/class-mapped-remote-index-builder.php
+index fcbb075a..236b88b3 100644
+--- a/packages/reprint-client/src/lib/pull/class-mapped-remote-index-builder.php
++++ b/packages/reprint-client/src/lib/pull/class-mapped-remote-index-builder.php
+@@ -7,7 +7,13 @@ use function Reprint\Importer\sort_index_file;
+ // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound -- Importer classes use unprefixed domain names.
+ // phpcs:disable Generic.Classes.OpeningBraceSameLine.BraceOnNewLine -- Importer classes place braces on the following line.
+ 
+-/** Builds the current remote index in mapped local path order. */
++/**
++ * Builds the current remote index in mapped local path order.
++ *
++ * Each row stores the local relative path in `path` and the remote absolute
++ * path in `copy_source_path`. Both values are base64 text because filesystem
++ * paths may contain bytes which JSON strings cannot represent.
++ */
+ final class MappedRemoteIndexBuilder
+ {
+     /**
+@@ -134,7 +140,13 @@ final class MappedRemoteIndexBuilder
+             fclose($mapped_index_handle);
+         }
+ 
+-        if (!sort_index_file($mapped_remote_index_file)) {
++        $get_sort_key = static function (string $line): string {
++            $mapped_entry = self::decode_index_line($line);
++            return bin2hex($mapped_entry["path"])
++                . "/"
++                . bin2hex($mapped_entry["copy_source_path"]);
++        };
++        if (!sort_index_file($mapped_remote_index_file, $get_sort_key)) {
+             throw new RuntimeException(
+                 "Failed to sort the mapped remote index: {$mapped_remote_index_file}."
+             );
+@@ -171,17 +183,18 @@ final class MappedRemoteIndexBuilder
+     public static function decode_index_line(string $line): array
+     {
+         $entry = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
+-        $encoded_mapping = is_array($entry) ? $entry["path"] ?? null : null;
+-        $mapping = is_string($encoded_mapping)
+-            ? base64_decode($encoded_mapping, true)
++        $encoded_local_relative_path = is_array($entry)
++            ? $entry["path"] ?? null
++            : null;
++        $local_relative_path = is_string($encoded_local_relative_path)
++            ? base64_decode($encoded_local_relative_path, true)
++            : false;
++        $encoded_remote_absolute_path = is_array($entry)
++            ? $entry["copy_source_path"] ?? null
++            : null;
++        $remote_absolute_path = is_string($encoded_remote_absolute_path)
++            ? base64_decode($encoded_remote_absolute_path, true)
+             : false;
+-        $separator = is_string($mapping) ? strpos($mapping, "/") : false;
+-        $local_relative_path = $separator === false
+-            ? false
+-            : @hex2bin(substr($mapping, 0, $separator));
+-        $remote_absolute_path = $separator === false
+-            ? false
+-            : @hex2bin(substr($mapping, $separator + 1));
+         $type = is_array($entry) ? $entry["type"] ?? null : null;
+         if (
+             !is_string($local_relative_path)
+@@ -236,11 +249,9 @@ final class MappedRemoteIndexBuilder
+             return;
+         }
+ 
+-        $mapped_key = bin2hex($local_relative_path)
+-            . "/"
+-            . bin2hex($remote_absolute_path);
+         $mapped_record = [
+-            "path" => base64_encode($mapped_key),
++            "path" => base64_encode($local_relative_path),
++            "copy_source_path" => base64_encode($remote_absolute_path),
+             "ctime" => 0,
+             "size" => $remote_entry["size"],
+             "type" => $remote_entry["type"],
+diff --git a/packages/reprint-client/src/lib/sort-index-file.php b/packages/reprint-client/src/lib/sort-index-file.php
+index 3f589f1a..f00c65fc 100644
+--- a/packages/reprint-client/src/lib/sort-index-file.php
++++ b/packages/reprint-client/src/lib/sort-index-file.php
+@@ -8,23 +8,31 @@ use WordPress\Reprint\Server\Utils;
+ require_once __DIR__ . '/external-merge-sort.php';
+ 
+ /**
+- * Sort an index file by path and remove duplicate entries.
++ * Sort an index file by path or a caller-provided key.
+  *
+  * The fast path prepends a hex-encoded sort key to each line, shells out to
+  * `sort(1)` with a fixed memory buffer and one worker, then strips the keys.
+  * Larger sorts spill to disk beside the index. When exec() is unavailable or
+  * the command fails, the fallback uses an external merge sort with bounded
+  * memory.
+- * Paths may be remote absolute paths or local relative paths.
++ * Paths may be remote absolute paths or local relative paths. A caller may
++ * provide another key when an index row needs more than its `path` field to
++ * define its sort order.
+  *
+- * Duplicates arise from overlapping symlink targets that index the same
+- * files; they are removed during the final write pass.
++ * Duplicate keys are removed during the final write pass. Duplicate paths
++ * arise when overlapping symlink targets index the same files.
+  *
+- * @param string $path The JSONL index file to sort in place.
++ * @param string                        $path         The JSONL index file to sort in place.
++ * @param callable(string):?string|null $get_sort_key Returns the sort key for a
++ *                                                    JSONL line. Defaults to
++ *                                                    its decoded path.
+  * @return bool True when the index file was sorted or was empty, false when
+  *              the index file does not exist.
+  */
+-function sort_index_file(string $path): bool
++function sort_index_file(
++    string $path,
++    ?callable $get_sort_key = null
++): bool
+ {
+     if (!file_exists($path)) {
+         return false;
+@@ -33,42 +41,44 @@ function sort_index_file(string $path): bool
+         return true;
+     }
+ 
+-    $parse_index_path = static function (string $line): ?string {
+-        $line = trim($line);
+-        if ($line === '') {
+-            return null;
+-        }
+-
+-        $data = json_decode($line, true);
+-        if (!is_array($data)) {
+-            throw new RuntimeException('Invalid index line format');
+-        }
+-
+-        $path_encoded = $data['path'] ?? '';
+-        if (!is_string($path_encoded) || $path_encoded === '') {
+-            throw new RuntimeException('Invalid index path');
+-        }
+-
+-        $path = base64_decode($path_encoded, true);
+-        if ($path === '' || $path === false) {
+-            throw new RuntimeException('Invalid index path (base64 decode failed)');
+-        }
+-
+-        // This sorter also handles local relative names. Check slash-delimited
+-        // components without treating backslashes or drive-like names as roots.
+-        Utils::assert_valid_path(
+-            $path[0] === '/' ? $path : '/' . $path,
+-            'unix',
+-            'index path'
+-        );
+-        return $path;
+-    };
++    if ($get_sort_key === null) {
++        $get_sort_key = static function (string $line): ?string {
++            $line = trim($line);
++            if ($line === '') {
++                return null;
++            }
++
++            $data = json_decode($line, true);
++            if (!is_array($data)) {
++                throw new RuntimeException('Invalid index line format');
++            }
++
++            $path_encoded = $data['path'] ?? '';
++            if (!is_string($path_encoded) || $path_encoded === '') {
++                throw new RuntimeException('Invalid index path');
++            }
++
++            $index_path = base64_decode($path_encoded, true);
++            if ($index_path === '' || $index_path === false) {
++                throw new RuntimeException('Invalid index path (base64 decode failed)');
++            }
++
++            // This sorter also handles local relative names. Check slash-delimited
++            // components without treating backslashes or drive-like names as roots.
++            Utils::assert_valid_path(
++                $index_path[0] === '/' ? $index_path : '/' . $index_path,
++                'unix',
++                'index path'
++            );
++            return $index_path;
++        };
++    }
+ 
+     $tmp = $path . '.sorted';
+ 
+     // Fast path: shell out to `sort` for O(n log n) with a fixed memory buffer.
+     // If anything goes wrong, fall through to the pure-PHP external merge sort.
+-    if (try_exec_sort_index_file($path, $tmp, $parse_index_path)) {
++    if (try_exec_sort_index_file($path, $tmp, $get_sort_key)) {
+         return true;
+     }
+ 
+@@ -85,7 +95,7 @@ function sort_index_file(string $path): bool
+         : 256 * 1024 * 1024;
+ 
+     $sorter = new \ExternalMergeSort(
+-        $parse_index_path,
++        $get_sort_key,
+         max(1024, (int) ($available_memory * 0.8)),
+         true,
+         dirname($path),
+@@ -99,13 +109,13 @@ function sort_index_file(string $path): bool
+  *
+  * @param string                   $path             The JSONL index file to sort.
+  * @param string                   $temporary_output Path to write before replacing $path.
+- * @param callable(string):?string $parse_index_path Returns an index path for a JSONL line.
++ * @param callable(string):?string $get_sort_key     Returns the sort key for a JSONL line.
+  * @return bool True when the system command sorted and replaced the file.
+  */
+ function try_exec_sort_index_file(
+     string $path,
+     string $temporary_output,
+-    callable $parse_index_path
++    callable $get_sort_key
+ ): bool {
+     $exec_is_available = function_exists('exec') && !in_array(
+         'exec',
+@@ -132,11 +142,11 @@ function try_exec_sort_index_file(
+ 
+     while (($line = fgets($input)) !== false) {
+         $line = rtrim($line, "\r\n");
+-        $index_path = $parse_index_path($line);
+-        if ($index_path === null) {
++        $sort_key = $get_sort_key($line);
++        if ($sort_key === null) {
+             continue;
+         }
+-        fwrite($output, bin2hex($index_path) . "\t" . $line . "\n");
++        fwrite($output, bin2hex($sort_key) . "\t" . $line . "\n");
+     }
+     fclose($input);
+     fclose($output);
+@@ -179,7 +189,10 @@ function try_exec_sort_index_file(
+         }
+         $key = substr($line, 0, $tab_position);
+         $data = substr($line, $tab_position + 1);
+-        if ($data === '' || $key === $previous_key) {
++        if ($data === '') {
++            continue;
++        }
++        if ($key === $previous_key) {
+             continue;
+         }
+         $previous_key = $key;
+diff --git a/tests/Import/FilesPullMirrorDiffTest.php b/tests/Import/FilesPullMirrorDiffTest.php
+index 76cb0123..9437b203 100644
+--- a/tests/Import/FilesPullMirrorDiffTest.php
++++ b/tests/Import/FilesPullMirrorDiffTest.php
+@@ -213,9 +213,8 @@ final class FilesPullMirrorDiffTest extends TestCase
+         foreach ($entries as $entry) {
+             [$localPath, $remotePath, $type, $size] = $entry;
+             $record = [
+-                'path' => base64_encode(
+-                    bin2hex($localPath) . '/' . bin2hex($remotePath)
+-                ),
++                'path' => base64_encode($localPath),
++                'copy_source_path' => base64_encode($remotePath),
+                 'ctime' => 0,
+                 'size' => $size,
+                 'type' => $type,
+@@ -230,7 +229,15 @@ final class FilesPullMirrorDiffTest extends TestCase
+         }
+         $path = $this->path($client, 'mapped_remote_index_file');
+         file_put_contents($path, $lines);
+-        $this->assertTrue(sort_index_file($path));
++        $this->assertTrue(sort_index_file(
++            $path,
++            static function (string $line): string {
++                $entry = \MappedRemoteIndexBuilder::decode_index_line($line);
++                return bin2hex($entry['path'])
++                    . '/'
++                    . bin2hex($entry['copy_source_path']);
++            }
++        ));
+     }
+ 
+     /** @param list<string> $remotePaths */
+diff --git a/tests/Import/MappedRemoteIndexBuilderTest.php b/tests/Import/MappedRemoteIndexBuilderTest.php
+index 92ccd357..63131709 100644
+--- a/tests/Import/MappedRemoteIndexBuilderTest.php
++++ b/tests/Import/MappedRemoteIndexBuilderTest.php
+@@ -46,6 +46,11 @@ final class MappedRemoteIndexBuilderTest extends TestCase
+             'path_mapper' => $mapper,
+         ]);
+ 
++        $storedLines = file(
++            $mappedIndex,
++            FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES
++        );
++        $this->assertIsArray($storedLines);
+         $this->assertSame([
+             ['path' => 'a', 'source' => '/remote/b'],
+             ['path' => 'z', 'source' => '/remote/a'],
+@@ -57,11 +62,54 @@ final class MappedRemoteIndexBuilderTest extends TestCase
+                     'source' => $entry['copy_source_path'],
+                 ];
+             },
+-            file($mappedIndex, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)
++            $storedLines
+         ));
++        $firstStoredEntry = json_decode(
++            $storedLines[0],
++            true,
++            512,
++            JSON_THROW_ON_ERROR
++        );
++        $this->assertSame(base64_encode('a'), $firstStoredEntry['path']);
++        $this->assertSame(
++            base64_encode('/remote/b'),
++            $firstStoredEntry['copy_source_path']
++        );
+         $this->assertFileDoesNotExist($mappedIndex . '.collision-stack');
+     }
+ 
++    public function testPreservesArbitraryPathBytesInSeparateFields(): void
++    {
++        $remotePath = "/remote/source-\xff";
++        $localPath = "local-\xfe";
++        $remoteIndex = $this->root . '/remote.jsonl';
++        $mappedIndex = $this->root . '/mapped.jsonl';
++        $this->writeRemoteIndex($remoteIndex, [$remotePath]);
++
++        \MappedRemoteIndexBuilder::build([
++            'remote_index_file' => $remoteIndex,
++            'mapped_remote_index_file' => $mappedIndex,
++            'filesystem_root' => $this->root . '/files',
++            'path_mapper' => new \RemoteToLocalPathMapper(
++                $this->root . '/files', 'unix',
++                ['/remote'],
++                [$remotePath => $this->root . '/files/' . $localPath]
++            ),
++        ]);
++
++        $line = file_get_contents($mappedIndex);
++        $this->assertIsString($line);
++        $storedEntry = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
++        $this->assertSame(base64_encode($localPath), $storedEntry['path']);
++        $this->assertSame(
++            base64_encode($remotePath),
++            $storedEntry['copy_source_path']
++        );
++        $decodedEntry = \MappedRemoteIndexBuilder::decode_index_line($line);
++        $this->assertSame($localPath, $decodedEntry['path']);
++        $this->assertSame($remotePath, $decodedEntry['copy_source_path']);
++    }
++
+     /**
+      * @dataProvider collisionProvider
+      * @param array<string,string> $mappings
+diff --git a/tests/Import/SortIndexFileTest.php b/tests/Import/SortIndexFileTest.php
+index 2a49b51d..56ac81c4 100644
+--- a/tests/Import/SortIndexFileTest.php
++++ b/tests/Import/SortIndexFileTest.php
+@@ -226,6 +226,27 @@ PHP;
+         $this->assertSame(['/apple', '/banana', '/zebra'], $this->index_paths($path));
+     }
+ 
++    public function testUsesACallerProvidedSortKey(): void
++    {
++        $path = $this->write_unsorted_index();
++
++        $this->assertTrue(sort_index_file(
++            $path,
++            function (string $line): ?string {
++                $index_path = $this->index_path_from_line($line);
++                if ($index_path === null) {
++                    return null;
++                }
++                $entry = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
++                return $index_path . '/' . $entry['ctime'];
++            }
++        ));
++        $this->assertSame(
++            ['/apple', '/banana', '/zebra', '/zebra'],
++            $this->index_paths($path)
++        );
++    }
++
+     public function testReturnsFalseForAMissingIndexFile(): void
+     {
+         $this->assertFalse(sort_index_file($this->temporary_directory . '/missing.jsonl'));
+-- 
+2.50.0
+

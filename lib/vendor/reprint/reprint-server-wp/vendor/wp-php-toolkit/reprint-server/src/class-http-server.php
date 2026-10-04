@@ -24,7 +24,7 @@ final class HTTPServer {
         'push_remove' => 'remove',
     ];
 
-    private const DATABASE_PUSH_ENDPOINTS = ['push_db_create', 'push_db_upload', 'push_db_status', 'push_db_commit', 'push_db_cleanup', 'push_db_discard'];
+    private const DATABASE_PUSH_ENDPOINTS = ['push_db_create', 'push_db_upload', 'push_db_status', 'push_db_commit', 'push_db_cleanup', 'push_db_discard', 'push_db_changes', 'push_db_changes_status'];
 
     /** @var DatabasePushEndpoints|null */
     private $database_push_endpoints;
@@ -101,6 +101,9 @@ final class HTTPServer {
             // router has applied push authorization to that query endpoint.
             $post = [];
         } else {
+            // The plugin handles the query routing marker. Export parameters
+            // come only from the body, even if a query value has no POST match.
+            $get = [];
             $body = array_key_exists('body', $request)
                 ? (string) $request['body']
                 : ( $this->is_json_content_type($server) ? call_user_func($this->body_reader) : '' );

@@ -11,6 +11,7 @@ use Migrator\Engine\Export\Exporter;
 use Migrator\Engine\Import\Importer;
 use Migrator\Engine\Transform\SerializedReplacer;
 use Migrator\Reprint\Client;
+use Migrator\Reprint\EnrolKey;
 use Migrator\Reprint\Pull;
 use Migrator\Reprint\Push;
 use Migrator\Support\Access;
@@ -304,6 +305,15 @@ final class Command
 
         try {
             $result = $pull->run($url, $this->authFlags($assoc_args), $withFiles, $withDatabase, isset($assoc_args['include-host-plugins']));
+        } catch (EnrolKey $key) {
+            \WP_CLI::log('');
+            \WP_CLI::log('This site made a key to sign its requests to ' . $url . '. On that site open');
+            \WP_CLI::log('Migrator > Pull and Push, choose "Set the token or enrol a key", paste this line and save:');
+            \WP_CLI::log('');
+            \WP_CLI::log($key->publicKey);
+            \WP_CLI::log('');
+            \WP_CLI::warning('Then run the same command again. Nothing has been changed here.');
+            \WP_CLI::halt(4);
         } catch (\Throwable $e) {
             \WP_CLI::error($e->getMessage());
         }
