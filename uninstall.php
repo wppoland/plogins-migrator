@@ -50,6 +50,29 @@ if (is_multisite()) {
     $migrator_clean_site();
 }
 
+// Pull and Push: the switch, and the bundled Reprint Server's credentials. Those
+// options are shared with the standalone Reprint Server plugin, so they stay
+// when that plugin is installed and still needs them.
+delete_site_option('migrator_reprint_source');
+if ([] === (array) glob(rtrim((string) WP_PLUGIN_DIR, '/') . '/reprint-*', GLOB_ONLYDIR)) {
+    $migrator_reprint = static function (): void {
+        foreach (['reprint_server_connection_token', 'reprint_server_push_authorized_token_fingerprint', 'reprint_server_public_keys'] as $migrator_option) {
+            delete_option($migrator_option);
+        }
+    };
+    if (is_multisite()) {
+        foreach (get_sites(['fields' => 'ids', 'number' => 0]) as $migrator_site) {
+            switch_to_blog((int) $migrator_site);
+            $migrator_reprint();
+            restore_current_blog();
+        }
+        delete_site_option('reprint_server_connection_token');
+        delete_site_option('reprint_server_public_keys');
+    } else {
+        $migrator_reprint();
+    }
+}
+
 // The PRO banner's dismissal is stored per user, so it belongs to the
 // plugin rather than to the site content. User meta is global, not
 // per-site, which is why this uses delete_metadata's \$delete_all rather
