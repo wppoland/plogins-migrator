@@ -8,6 +8,8 @@ use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped, WordPress.WP.AlternativeFunctions -- WP-CLI only: messages go to a terminal, and the files are copied in bulk outside any request.
+
 /**
  * The target role: runs the bundled Reprint client against a remote site.
  *
@@ -24,7 +26,7 @@ final class Client
     /** Exit code for "partial or interrupted, run again". */
     public const EXIT_AGAIN = 2;
 
-    private const BIN = '/lib/reprint/packages/reprint-client/bin/reprint-client';
+    private const BIN = '/lib/vendor/reprint/packages/reprint-client/bin/reprint-client';
 
     public function __construct(private Workspace $workspace)
     {
