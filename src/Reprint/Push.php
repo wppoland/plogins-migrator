@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Migrator\Reprint;
 
-use Migrator\Support\Workspace;
-
 defined('ABSPATH') || exit;
 
 // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped, WordPress.WP.AlternativeFunctions -- WP-CLI only: messages go to a terminal, and the files are copied in bulk outside any request.
@@ -61,7 +59,7 @@ final class Push
         }
 
         ($this->log)('Collecting this site\'s changes…');
-        $copied = $this->mirrorContent(untrailingslashit((string) WP_CONTENT_DIR), $dirs['files'] . untrailingslashit($content));
+        $copied = Mirror::copy(untrailingslashit((string) WP_CONTENT_DIR), $dirs['files'] . untrailingslashit($content));
         ($this->log)(sprintf('%d files changed here since the pull.', $copied));
 
         $base = ['--state-dir=' . $dirs['state'], '--fs-root=' . $dirs['files'], '--progress=compact'];
@@ -74,50 +72,6 @@ final class Push
 
         if (0 !== $code) {
             throw new \RuntimeException('The files push stopped (Reprint exit code ' . $code . '). The output above says why; run the same command again to continue.');
-        }
-
-        return $copied;
-    }
-
-    /**
-     * Make the push tree's wp-content match this one, skipping Migrator and its
-     * backups, which must never travel to the source.
-     */
-    private function mirrorContent(string $from, string $to): int
-    {
-        $skip = [$from . '/' . Workspace::DIR_NAME, untrailingslashit(\Migrator\PLUGIN_DIR)];
-        if (defined('Migrator\\Pro\\PLUGIN_FILE')) {
-            $skip[] = dirname((string) constant('Migrator\\Pro\\PLUGIN_FILE'));
-        }
-
-        $copied = 0;
-        $items  = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($from, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST,
-        );
-
-        foreach ($items as $item) {
-            /** @var \SplFileInfo $item */
-            $path = $item->getPathname();
-            foreach ($skip as $protected) {
-                if ($path === $protected || str_starts_with($path, $protected . '/')) {
-                    continue 2;
-                }
-            }
-
-            $target = $to . substr($path, strlen($from));
-            if ($item->isDir()) {
-                wp_mkdir_p($target);
-                continue;
-            }
-            if (is_file($target) && filesize($target) === $item->getSize() && filemtime($target) === $item->getMTime()) {
-                continue;
-            }
-            if (! copy($path, $target)) {
-                throw new \RuntimeException('Could not copy ' . $path . ' into the push tree.');
-            }
-            touch($target, $item->getMTime());
-            $copied++;
         }
 
         return $copied;

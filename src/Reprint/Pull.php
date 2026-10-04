@@ -93,7 +93,7 @@ final class Pull
         $files = 0;
         if ($withFiles) {
             ($this->log)('Copying wp-content into this site…');
-            $files = $this->copyContent($dirs['files'] . $content, untrailingslashit(WP_CONTENT_DIR));
+            $files = Mirror::copy($dirs['files'] . $content, untrailingslashit(WP_CONTENT_DIR));
         }
 
         wp_cache_flush();
@@ -221,61 +221,6 @@ final class Pull
             'homeUrl'          => (string) ($site['homeUrl'] ?? ''),
             'siteUrl'          => (string) ($site['siteUrl'] ?? ''),
         ];
-    }
-
-    /**
-     * Copy the pulled wp-content over this one. A file is copied only when its
-     * size or modification time differs, so a delta pull copies only what the
-     * delta brought. Files that exist only here are left alone.
-     */
-    private function copyContent(string $from, string $to): int
-    {
-        if (! is_dir($from)) {
-            throw new \RuntimeException('The pulled files have no wp-content folder at ' . $from . '.');
-        }
-
-        $skip = [
-            $to . '/' . Workspace::DIR_NAME,
-            untrailingslashit(\Migrator\PLUGIN_DIR),
-        ];
-        if (defined('Migrator\\Pro\\PLUGIN_FILE')) {
-            $skip[] = dirname((string) constant('Migrator\\Pro\\PLUGIN_FILE'));
-        }
-
-        $copied = 0;
-        $items  = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($from, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST,
-        );
-
-        foreach ($items as $item) {
-            /** @var \SplFileInfo $item */
-            $relative = substr($item->getPathname(), strlen($from));
-            $target   = $to . $relative;
-
-            foreach ($skip as $protected) {
-                if ($target === $protected || str_starts_with($target, $protected . '/')) {
-                    continue 2;
-                }
-            }
-
-            if ($item->isDir()) {
-                wp_mkdir_p($target);
-                continue;
-            }
-
-            if (is_file($target) && filesize($target) === $item->getSize() && filemtime($target) === $item->getMTime()) {
-                continue;
-            }
-
-            if (! copy($item->getPathname(), $target)) {
-                throw new \RuntimeException('Could not write ' . $target . '. Check that the web server user can write to wp-content.');
-            }
-            touch($target, $item->getMTime());
-            $copied++;
-        }
-
-        return $copied;
     }
 
     private function stopOn(int $code, string $stage): void
