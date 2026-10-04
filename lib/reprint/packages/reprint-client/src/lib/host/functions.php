@@ -1,0 +1,322 @@
+<?php
+/**
+ * Host analyzer functions.
+ *
+ * Registry, detection logic, and shared preflight extraction helpers.
+ */
+
+use WordPress\Reprint\Server\Utils;
+use function WordPress\Filesystem\wp_join_unix_paths;
+
+/**
+ * All known host analyzers.
+ *
+ * @return array<string, class-string<HostAnalyzer>>
+ */
+function host_analyzer_registry(): array
+{
+    return [
+        'wpcloud' => WpcloudHostAnalyzer::class,
+        'wpengine' => WpengineHostAnalyzer::class,
+    ];
+}
+
+/**
+ * Detect the source host from preflight data using likelihood scoring.
+ *
+ * Each registered host analyzer scores the preflight data independently.
+ * The host with the highest score wins, provided it reaches the minimum
+ * threshold of 0.5. Returns "other" if no host qualifies.
+ */
+function detect_host(array $preflight_data): string
+{
+    $best_host = 'other';
+    $best_score = 0.0;
+
+    foreach (matching_host_analyzer_scores($preflight_data) as $name => $score) {
+        if ($score > $best_score) {
+            $best_host = $name;
+            $best_score = $score;
+        }
+    }
+
+    return $best_host;
+}
+
+/**
+ * Build the runtime manifest for a local import.
+ *
+ * @param array $preflight_data The preflight response data.
+ */
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Matches the existing host helper names.
+function runtime_manifest_for(array $preflight_data): RuntimeManifest
+{
+    $matching_hosts = matching_host_analyzer_scores($preflight_data);
+
+    if (isset($matching_hosts['wpcloud'])) {
+        $manifest = ( new WpcloudHostAnalyzer() )->analyze($preflight_data);
+    } elseif (isset($matching_hosts['wpengine'])) {
+        $manifest = ( new WpengineHostAnalyzer() )->analyze($preflight_data);
+    } else {
+        $manifest = ( new DefaultHostAnalyzer() )->analyze($preflight_data);
+    }
+
+    return $manifest;
+}
+
+/**
+ * Score every runtime-specific host which reaches the detection threshold.
+ *
+ * @return array<string, float>
+ */
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Matches the existing host helper names.
+function matching_host_analyzer_scores(array $preflight_data): array
+{
+    $matching_hosts = [];
+
+    foreach (host_analyzer_registry() as $name => $class) {
+        $score = $class::score($preflight_data);
+        if ($score >= 0.5) {
+            $matching_hosts[$name] = $score;
+        }
+    }
+
+    return $matching_hosts;
+}
+
+/**
+ * Resolve plugins, MU plugins, and drop-ins excluded from a local import.
+ *
+ * Host platform integrations are excluded when cleanup is requested. Portable
+ * cache, backup, security, and password-policy plugins stay, even when a host
+ * bundles them.
+ * Generic drop-ins enter the exclusion list only when current preflight paths
+ * identify WP Cloud or WP Engine.
+ * Source paths use the actual WordPress directories reported by preflight,
+ * including custom plugin and MU-plugin locations.
+ * Pantheon's package stays because its generic loader.php requires it even
+ * outside Pantheon. Its platform features require PANTHEON_ENVIRONMENT.
+ *
+ * @param array $preflight_data The preflight response data.
+ * @return array<int, array{
+ *     source_path: string|null,
+ *     local_path: string,
+ *     regular_plugin_directory: string|null
+ * }>
+ */
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Matches the existing host helper names.
+function excluded_plugins(array $preflight_data): array
+{
+    $local_paths = [
+        // Aruba's managed hosting checker.
+        'wp-content/mu-plugins/aruba-wpchecker.php',
+        'wp-content/mu-plugins/aruba-wpchecker',
+
+        // Kinsta's platform MU plugin.
+        'wp-content/mu-plugins/kinsta-mu-plugins.php',
+        'wp-content/mu-plugins/kinsta-mu-plugins',
+
+        // IONOS platform and setup plugins.
+        'wp-content/mu-plugins/ionos-core.php',
+        'wp-content/mu-plugins/ionos-core',
+        'wp-content/mu-plugins/stretch-extra.php',
+        'wp-content/mu-plugins/stretch-extra',
+        'wp-content/plugins/ionos-essentials',
+        'wp-content/plugins/ionos-wpdev-caddy',
+
+        // Pressable cache and dashboard sign-on plugins.
+        'wp-content/mu-plugins/pcm-extend-batcache.php',
+        'wp-content/mu-plugins/pcm-exclude-pages-from-batcache.php',
+        'wp-content/plugins/pressable-cache-management',
+        'wp-content/plugins/pressable-onepress-login',
+
+        // GoDaddy's Managed WordPress system plugin.
+        'wp-content/mu-plugins/gd-system-plugin.php',
+        'wp-content/mu-plugins/gd-system-plugin',
+
+        // Bluehost's control plugin and Endurance cache plugins.
+        'wp-content/plugins/bluehost-wordpress-plugin',
+        'wp-content/mu-plugins/endurance-page-cache.php',
+        'wp-content/mu-plugins/endurance-browser-cache.php',
+
+        // HostGator's control plugin. The shared Endurance files are listed above.
+        'wp-content/plugins/wp-plugin-hostgator',
+
+        // Hostinger's control, onboarding, and setup plugins.
+        'wp-content/plugins/hostinger',
+        'wp-content/plugins/hostinger-easy-onboarding',
+        'wp-content/mu-plugins/hostinger-mu-plugin.php',
+
+        // Nexcess's managed application plugin and loader.
+        'wp-content/mu-plugins/nexcess-mapps.php',
+        'wp-content/mu-plugins/nexcess-mapps',
+
+        // Rocket.net's CDN cache plugin.
+        'wp-content/mu-plugins/cdn-cache-management.php',
+
+        // SpinupWP's server cache plugin.
+        'wp-content/plugins/spinupwp',
+
+        // WordPress VIP's platform MU-plugin package.
+        'wp-content/mu-plugins/vip-go-mu-plugins',
+
+        // WP Engine's platform plugins, including its current cache and
+        // update-source layout. Its standalone password and comment-policy
+        // plugins are portable and stay installed.
+        'wp-content/plugins/wp-engine-smart-plugin-manager',
+        'wp-content/mu-plugins/wpengine-common',
+        'wp-content/mu-plugins/wpe-cache-plugin',
+        'wp-content/mu-plugins/wpe-cache-plugin.php',
+        'wp-content/mu-plugins/wpe-update-source-selector',
+        'wp-content/mu-plugins/wpe-update-source-selector.php',
+        'wp-content/mu-plugins/wpe-wp-sign-on-plugin',
+        'wp-content/mu-plugins/wpe-wp-sign-on-plugin.php',
+        'wp-content/mu-plugins/wpengine-security-auditor.php',
+
+        // WP Cloud's MU plugins depend on multisite functions and wp.com APIs.
+        'wp-content/mu-plugins/wpcomsh',
+        'wp-content/mu-plugins/wpcomsh-dev',
+        'wp-content/mu-plugins/wpcomsh-loader.php',
+    ];
+
+    $matching_hosts = matching_host_analyzer_scores($preflight_data);
+    // WP Cloud and WP Engine cache drop-ins talk to platform services which
+    // are unavailable locally. These generic filenames can belong to another
+    // cache implementation, so exclude them only for a current host match.
+    if (isset($matching_hosts['wpcloud']) || isset($matching_hosts['wpengine'])) {
+        $local_paths[] = 'wp-content/object-cache.php';
+        $local_paths[] = 'wp-content/advanced-cache.php';
+    }
+    // mu-plugin.php is WP Engine's loader, but its name is otherwise generic.
+    if (isset($matching_hosts['wpengine'])) {
+        $local_paths[] = 'wp-content/mu-plugins/mu-plugin.php';
+    }
+    // A copied WP Engine loader still requires wpengine-common after the site
+    // moves to another host. Exclude the pair without changing host detection.
+    // A generic mu-plugin.php alone does not identify the WP Engine loader.
+    foreach ($preflight_data['wp_content']['roots'] ?? [] as $root) {
+        $mu_plugin_names = array_column($root['mu_plugins'] ?? [], 'name');
+        if (
+            in_array('mu-plugin.php', $mu_plugin_names, true)
+            && in_array('wpengine-common', $mu_plugin_names, true)
+        ) {
+            $local_paths[] = 'wp-content/mu-plugins/mu-plugin.php';
+            break;
+        }
+    }
+
+    $paths_urls = $preflight_data['database']['wp']['paths_urls'] ?? [];
+    $remote_path_format = Utils::preflight_path_format($preflight_data);
+    $clean_absolute_directory = static function ($path) use ($remote_path_format): ?string {
+        if (!is_string($path) || !Utils::is_absolute_path($path, $remote_path_format)) {
+            return null;
+        }
+        return Utils::trim_right_slash($path, $remote_path_format);
+    };
+    $wordpress_absolute_path = $clean_absolute_directory($paths_urls['abspath'] ?? null);
+    $content_directory = $clean_absolute_directory($paths_urls['content_dir'] ?? null);
+    if ($content_directory === null && $wordpress_absolute_path !== null) {
+        $content_directory = wp_join_unix_paths($wordpress_absolute_path, 'wp-content');
+    }
+    $plugins_directory = $clean_absolute_directory($paths_urls['plugins_dir'] ?? null);
+    $mu_plugins_directory = $clean_absolute_directory($paths_urls['mu_plugins_dir'] ?? null);
+    if ($content_directory !== null) {
+        $plugins_directory = $plugins_directory
+            ?? wp_join_unix_paths($content_directory, 'plugins');
+        $mu_plugins_directory = $mu_plugins_directory
+            ?? wp_join_unix_paths($content_directory, 'mu-plugins');
+    }
+
+    $excluded_plugins = [];
+    foreach (array_values(array_unique($local_paths)) as $local_path) {
+        $source_directory = $content_directory;
+        $path_within_source_directory = substr($local_path, strlen('wp-content/'));
+        $regular_plugin_directory = null;
+
+        if (strpos($local_path, 'wp-content/plugins/') === 0) {
+            $source_directory = $plugins_directory;
+            $path_within_source_directory = substr($local_path, strlen('wp-content/plugins/'));
+            $regular_plugin_directory = $path_within_source_directory;
+        } elseif (strpos($local_path, 'wp-content/mu-plugins/') === 0) {
+            $source_directory = $mu_plugins_directory;
+            $path_within_source_directory = substr($local_path, strlen('wp-content/mu-plugins/'));
+        }
+
+        $excluded_plugins[] = [
+            'source_path' => $source_directory === null
+                ? null
+                : wp_join_unix_paths($source_directory, $path_within_source_directory),
+            'local_path' => $local_path,
+            'regular_plugin_directory' => $regular_plugin_directory,
+        ];
+    }
+
+    return $excluded_plugins;
+}
+
+/**
+ * Extract selected INI directives from preflight's ini_get_all.
+ * Only includes values that are likely to affect whether a migrated
+ * site works or breaks.
+ */
+function extract_php_ini(array $preflight_data): array
+{
+    $ini_all = $preflight_data['runtime']['ini_get_all'] ?? [];
+    if (empty($ini_all)) {
+        return [];
+    }
+
+    $interesting_keys = [
+        'memory_limit',
+        'upload_max_filesize',
+        'post_max_size',
+        'max_execution_time',
+        'max_input_vars',
+        'max_input_time',
+    ];
+
+    $result = [];
+    foreach ($interesting_keys as $key) {
+        if (isset($ini_all[$key]) && $ini_all[$key] !== '') {
+            $result[$key] = (string) $ini_all[$key];
+        }
+    }
+    return $result;
+}
+
+/**
+ * Extract PHP constants from preflight that need to be defined on the
+ * target. Reads paths_urls from the preflight response.
+ *
+ * Returns only constants where the source value is a path that differs
+ * from the standard WordPress layout (meaning WordPress won't derive
+ * the right value on its own).
+ */
+function extract_constants(array $preflight_data): array
+{
+    $paths_urls = $preflight_data['database']['wp']['paths_urls'] ?? [];
+    $remote_path_format = Utils::preflight_path_format($preflight_data);
+    $abspath = $paths_urls['abspath'] ?? '';
+    if ($abspath !== '') {
+        $abspath = Utils::trim_right_slash($abspath, $remote_path_format);
+    }
+    $content_dir = $paths_urls['content_dir'] ?? '';
+    if ($content_dir !== '') {
+        $content_dir = Utils::trim_right_slash($content_dir, $remote_path_format);
+    }
+
+    $result = [];
+
+    // WP_CONTENT_DIR: if wp-content lives outside ABSPATH on the source
+    // (e.g. wpcloud has ABSPATH at /wordpress/core/X.Y.Z/ but wp-content
+    // at /srv/htdocs/wp-content), we need to explicitly set it.
+    if (
+        $content_dir !== ''
+        && $abspath !== ''
+        && !Utils::path_is_same_as_or_descendant_of($content_dir, $abspath)
+    ) {
+        $result['WP_CONTENT_DIR'] = '{fs-root}/wp-content';
+    }
+
+    return $result;
+}

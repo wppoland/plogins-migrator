@@ -1,0 +1,172 @@
+<?php
+
+use WordPress\Reprint\Server\Utils;
+use function WordPress\Filesystem\wp_join_unix_paths;
+
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Filesystem paths are CLI values, never HTML output.
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound -- Importer classes use unprefixed domain names.
+// phpcs:disable Generic.Classes.OpeningBraceSameLine.BraceOnNewLine -- Importer classes place braces on the following line.
+
+/**
+ * Maps remote absolute paths into one local filesystem tree.
+ *
+ * An explicit resolved path mapping wins first. If several mappings match,
+ * the longest remote prefix wins. An unmatched path from the original pull
+ * scope keeps its remote spelling under the local filesystem root. A followed
+ * symlink target outside that scope goes under the configured local followed
+ * symlinks root instead.
+ *
+ * Windows drive paths use forward slashes beneath the local root: D:\site\a.txt
+ * becomes /local/D:/site/a.txt. The drive stays in the path so D: and E: do not
+ * collide. A UNC path `\\SERVER\SHARE/file.txt` becomes
+ * /local/UNC/SERVER/SHARE/file.txt. Unix paths keep literal backslashes in names.
+ *
+ * Copied targets and rewritten symlink destinations both use this mapping, so
+ * a rewritten link points to the place where its target was copied.
+ *
+ * Paths remain byte strings in memory. This class does not encode them as JSON
+ * or require them to be valid UTF-8.
+ */
+final class RemoteToLocalPathMapper
+{
+    /** Local filesystem root beneath which pulled paths are written. */
+    private string $filesystem_root;
+
+    /** Source path format from preflight; never inferred from an index path. */
+    private string $remote_path_format;
+
+    /** @var list<string> Remote absolute path roots selected before following symlinks. */
+    private array $original_remote_absolute_path_roots;
+
+    /** @var array<string,string> Remote absolute prefix to local absolute prefix. */
+    private array $resolved_path_mappings;
+
+    /** Local root for followed targets outside the original pull scope. */
+    private ?string $local_followed_symlinks_root;
+
+    /**
+     * Stores the resolved path settings used by one files pull.
+     *
+     * The caller resolves and validates these settings before constructing the
+     * mapper. Local prefixes and the followed-symlinks root must be equal to or
+     * below the filesystem root.
+     *
+     * @param string               $filesystem_root                    Local filesystem root.
+     * @param string               $remote_path_format                 Source path format: 'unix' or 'windows'.
+     * @param list<string>         $original_remote_absolute_path_roots Remote absolute path roots selected before following symlinks.
+     * @param array<string,string> $resolved_path_mappings             Remote absolute prefix to local absolute prefix.
+     * @param string|null          $local_followed_symlinks_root       Local root for followed targets outside the original scope.
+     */
+    public function __construct(
+        string $filesystem_root,
+        string $remote_path_format,
+        array $original_remote_absolute_path_roots,
+        array $resolved_path_mappings = [],
+        ?string $local_followed_symlinks_root = null
+    ) {
+        $this->filesystem_root = $filesystem_root;
+        Utils::assert_valid_path_format($remote_path_format);
+        $this->remote_path_format = $remote_path_format;
+        $this->original_remote_absolute_path_roots = $original_remote_absolute_path_roots;
+        $this->resolved_path_mappings = $resolved_path_mappings;
+        $this->local_followed_symlinks_root = $local_followed_symlinks_root;
+    }
+
+    /**
+     * Maps one remote absolute path to its local absolute path.
+     *
+     * @param string $remote_absolute_path Remote absolute path.
+     * @return string Local absolute path under the filesystem root.
+     */
+    public function remote_path_to_local_path(string $remote_absolute_path): string
+    {
+        Utils::assert_valid_path($remote_absolute_path, $this->remote_path_format, "remote absolute path");
+        $remote_absolute_path = Utils::normalize_path_separators($remote_absolute_path, $this->remote_path_format);
+        $local_absolute_path = null;
+        $longest_remote_prefix_length = -1;
+        foreach ($this->resolved_path_mappings as $remote_prefix => $local_prefix) {
+            $remainder = Utils::path_remainder_under(
+                $remote_absolute_path,
+                $remote_prefix
+            );
+            if (
+                $remainder !== null
+                && strlen($remote_prefix) > $longest_remote_prefix_length
+            ) {
+                $local_absolute_path = wp_join_unix_paths(
+                    $local_prefix,
+                    $remainder
+                );
+                $longest_remote_prefix_length = strlen($remote_prefix);
+            }
+        }
+        if ($local_absolute_path !== null) {
+            return $local_absolute_path;
+        }
+
+        $local_relative_path = $remote_absolute_path;
+        if ($this->remote_path_format === 'windows' && substr($remote_absolute_path, 0, 2) === '\\\\') {
+            $local_relative_path = 'UNC/' . str_replace('\\', '/', substr($remote_absolute_path, 2));
+        }
+
+        if (
+            $this->local_followed_symlinks_root !== null
+            && !Utils::path_is_same_as_or_descendant_of(
+                $remote_absolute_path,
+                $this->original_remote_absolute_path_roots
+            )
+        ) {
+            return wp_join_unix_paths(
+                $this->local_followed_symlinks_root,
+                $local_relative_path
+            );
+        }
+
+        return wp_join_unix_paths($this->filesystem_root, $local_relative_path);
+    }
+
+    /** Returns the source format required to validate entries before mapping them. */
+    public function remote_path_format(): string
+    {
+        return $this->remote_path_format;
+    }
+
+    /**
+     * Returns every local prefix reached by remote include or exclude prefixes.
+     *
+     * A nested remap can split one remote subtree across several local roots.
+     * For example, /remote/wp-content may map to /local/wp-content while its
+     * /remote/wp-content/uploads subtree maps separately to /local/media. The
+     * remote /remote/wp-content prefix therefore covers both local roots.
+     *
+     * @param list<string> $remote_absolute_path_prefixes Remote absolute include
+     *                                                    or exclude prefixes.
+     * @return list<string> Local absolute prefixes covered by the remote prefixes.
+     */
+    public function remote_path_prefixes_to_local_path_prefixes(
+        array $remote_absolute_path_prefixes
+    ): array {
+        $local_absolute_path_prefixes = [];
+        foreach ($remote_absolute_path_prefixes as $remote_absolute_path_prefix) {
+            $local_absolute_path_prefixes[
+                $this->remote_path_to_local_path($remote_absolute_path_prefix)
+            ] = true;
+            foreach (
+                $this->resolved_path_mappings
+                as $mapped_remote_absolute_path_prefix => $mapped_local_absolute_path_prefix
+            ) {
+                if (
+                    Utils::path_remainder_under(
+                        $mapped_remote_absolute_path_prefix,
+                        $remote_absolute_path_prefix
+                    ) !== null
+                ) {
+                    $local_absolute_path_prefixes[
+                        $mapped_local_absolute_path_prefix
+                    ] = true;
+                }
+            }
+        }
+        return array_keys($local_absolute_path_prefixes);
+    }
+}
