@@ -49,7 +49,7 @@ final class Pull
      *                           (--secret, --private-key-path, --insecure).
      * @return array{files: int, database: bool}
      */
-    public function run(string $url, array $auth, bool $withFiles, bool $withDatabase): array
+    public function run(string $url, array $auth, bool $withFiles, bool $withDatabase, bool $hostPlugins = false): array
     {
         $this->workspace->ensure();
         $dirs = $this->client->dirs($url);
@@ -58,6 +58,10 @@ final class Pull
             wp_mkdir_p($dir);
         }
         $base = ['--state-dir=' . $dirs['state'], '--fs-root=' . $dirs['files'], '--progress=compact'];
+
+        // The old host's own must-use plugins (caching, staging tools, login
+        // bridges) rarely work anywhere else; leave them behind unless asked.
+        $hostFlag = $hostPlugins ? '--include-host-plugins' : '--exclude-host-plugins';
 
         ($this->log)('Checking the source site…');
         $code = $this->client->run(array_merge(['preflight', $url], $base, $auth));
@@ -74,9 +78,12 @@ final class Pull
 
         $content = untrailingslashit($source['contentDirectory']);
         if ($withFiles) {
+            $this->checkSpace($url, $base, $auth, $dirs['state'], $dirs['files']);
+        }
+        if ($withFiles) {
             ($this->log)('Downloading wp-content…');
             $code = $this->client->run(array_merge(
-                ['pull-files', $url, '--include=' . $content, '--exclude=' . $content . '/' . Workspace::DIR_NAME],
+                ['pull-files', $url, '--include=' . $content, '--exclude=' . $content . '/' . Workspace::DIR_NAME, $hostFlag],
                 $base,
                 $auth,
             ));
@@ -87,7 +94,7 @@ final class Pull
             ($this->log)('Downloading the database…');
             $code = $this->client->run(array_merge(['db-pull', $url], $base, $auth));
             $this->stopOn($code, 'db-pull');
-            $this->applyDatabase($url, $base, $auth, $source);
+            $this->applyDatabase($url, array_merge($base, [$hostFlag]), $auth, $source);
         }
 
         $files = 0;
@@ -221,6 +228,43 @@ final class Pull
             'homeUrl'          => (string) ($site['homeUrl'] ?? ''),
             'siteUrl'          => (string) ($site['siteUrl'] ?? ''),
         ];
+    }
+
+    /**
+     * Refuse a first pull this disk cannot hold (Reprint issue #25). The pulled
+     * files are stored once in the private copy and once in wp-content, so the
+     * check asks for twice the source's size (core included, so it errs on the
+     * safe side).
+     *
+     * @param list<string> $base
+     * @param list<string> $auth
+     */
+    private function checkSpace(string $url, array $base, array $auth, string $state, string $files): void
+    {
+        // Only before a first pull: files-index runs once per state, and a
+        // delta brings what changed, which is rarely the size of the site.
+        if (is_dir($files) && [] !== array_diff((array) scandir($files), ['.', '..'])) {
+            return;
+        }
+
+        $code = $this->client->run(array_merge(['files-index', $url], $base, $auth));
+        $this->stopOn($code, 'files-index');
+
+        $out   = $this->client->capture(array_merge(['files-stats', $url], array_slice($base, 0, 2), in_array('--insecure', $auth, true) ? ['--insecure'] : []));
+        $json  = substr($out, 0, (int) strpos($out, "\n}") + 2);
+        $stats = json_decode($json, true);
+        $bytes = is_array($stats) ? (int) ($stats['indexed']['bytes'] ?? 0) : 0;
+        $free  = @disk_free_space($state);
+
+        if (false !== $free && $bytes > 0 && $free < $bytes * 2) {
+            throw new \RuntimeException(sprintf(
+                'Not enough disk space: the source holds %1$s, and needs about %2$s free (a private copy plus wp-content), but only %3$s is free. Nothing has been changed here.',
+                size_format($bytes),
+                size_format($bytes * 2),
+                size_format((int) $free),
+            ));
+        }
+        ($this->log)(sprintf('%s to download, %s free.', size_format($bytes), false === $free ? '?' : size_format((int) $free)));
     }
 
     private function stopOn(int $code, string $stage): void
