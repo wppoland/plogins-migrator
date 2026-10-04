@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
 "Stable (latest release)\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-10-02T07:10:57+00:00\n"
+"POT-Creation-Date: 2026-10-04T20:35:50+00:00\n"
 "PO-Revision-Date: 2026-07-15 09:54:08+0000\n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
@@ -48,65 +48,65 @@ msgstr "https://wppoland.com"
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr "El Migrator requiere PHP %1$s o superior. Estás ejecutando PHP %2$s."
 
-#: src/Admin/Ajax.php:176
+#: src/Admin/Ajax.php:183
 msgid "Backup not found."
 msgstr "Copia de seguridad no encontrada."
 
-#: src/Admin/Ajax.php:190 src/Admin/Ajax.php:206 src/Admin/Ajax.php:245
-#: src/Admin/Ajax.php:292 src/Admin/Ajax.php:452 src/Admin/Ajax.php:595
+#: src/Admin/Ajax.php:197 src/Admin/Ajax.php:213 src/Admin/Ajax.php:252
+#: src/Admin/Ajax.php:299 src/Admin/Ajax.php:459 src/Admin/Ajax.php:602
 msgid "Not allowed."
 msgstr "No permitido."
 
-#: src/Admin/Ajax.php:213
+#: src/Admin/Ajax.php:220
 msgid "Bad upload request."
 msgstr "Solicitud de carga incorrecta."
 
-#: src/Admin/Ajax.php:218
+#: src/Admin/Ajax.php:225
 msgid "Invalid upload."
 msgstr "Subida no válida."
 
-#: src/Admin/Ajax.php:229
+#: src/Admin/Ajax.php:236
 msgid "Could not store upload."
 msgstr "No se pudo almacenar la carga."
 
-#: src/Admin/Ajax.php:255
+#: src/Admin/Ajax.php:262
 msgid "Uploaded archive not found."
 msgstr "Archivo subido no encontrado."
 
-#: src/Admin/Ajax.php:283
+#: src/Admin/Ajax.php:290
 msgid "Invalid upload id."
 msgstr "ID de carga no válida."
 
-#: src/Admin/Ajax.php:304
+#: src/Admin/Ajax.php:311
 msgid ""
 "Another backup is being made right now, in another tab or by another "
 "administrator. Wait for it to finish, or about ten minutes if that tab was "
 "closed."
 msgstr ""
 
-#: src/Admin/Ajax.php:462
+#: src/Admin/Ajax.php:469
 msgid "File not found."
 msgstr "Archivo no encontrado."
 
-#: src/Admin/Ajax.php:547
+#: src/Admin/Ajax.php:554
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:551 src/Admin/Page.php:116
+#: src/Admin/Ajax.php:558 src/Admin/Page.php:116
 msgid "Enter the text to search for."
 msgstr "Introduce el texto a buscar."
 
-#: src/Admin/Ajax.php:554
+#: src/Admin/Ajax.php:561
 msgid "Search and replace values are identical."
 msgstr "Los valores de búsqueda y reemplazo son idénticos."
 
 #. translators: 1: number of rows, 2: database error
-#: src/Admin/Ajax.php:582
+#: src/Admin/Ajax.php:589
 #, php-format
 msgid "%1$d rows could not be written (%2$s)."
 msgstr ""
 
-#: src/Admin/Ajax.php:592
+#: src/Admin/Ajax.php:599
 msgid "Security check failed."
 msgstr "El control de seguridad falló."
 
@@ -282,6 +282,7 @@ msgid "Scheduled Backups"
 msgstr ""
 
 #: src/Backup/Scheduler.php:114 src/Backup/Scheduler.php:217
+#: src/Reprint/Source.php:148
 msgid "You are not allowed to do this."
 msgstr ""
 
@@ -553,6 +554,11 @@ msgid ""
 msgstr ""
 "La copia de seguridad se realizó en PHP %1$s; este servidor ejecuta %2$s. Es "
 "posible que el código que se basa en PHP más reciente no se ejecute aquí."
+
+#: src/Reprint/Source.php:116 src/Reprint/Source.php:117
+#: templates/pull-push-page.php:20
+msgid "Pull and Push"
+msgstr ""
 
 #: src/Storage/DestinationRegistry.php:36
 msgid "Folder on this server"
@@ -831,6 +837,83 @@ msgstr "Ejecutar"
 msgid "From the command line:"
 msgstr "Desde la línea de comandos:"
 
+#: templates/pull-push-page.php:23
+msgid ""
+"Copy a whole site to another server over HTTP, with no archive to download "
+"or upload, no SSH and no FTP. Files and the database travel in small pieces, "
+"an interrupted copy carries on where it stopped, and the next pull fetches "
+"only what changed."
+msgstr ""
+
+#: templates/pull-push-page.php:27
+msgid "Saved."
+msgstr ""
+
+#: templates/pull-push-page.php:35
+msgid "This site as the source"
+msgstr ""
+
+#: templates/pull-push-page.php:38
+msgid ""
+"The Reprint Server plugin is active on this site and already answers pull "
+"requests, so Migrator leaves the endpoint to it. Manage access under Tools > "
+"Reprint Server."
+msgstr ""
+
+#: templates/pull-push-page.php:42
+msgid "Let another site pull this one"
+msgstr ""
+
+#: templates/pull-push-page.php:45
+msgid ""
+"Switching this on opens an address other sites can request, and nothing is "
+"answered until you also set a connection token or enrol a key. Anyone "
+"holding that credential can read every file and the whole database, user "
+"password hashes included. Switch it off when the move is done."
+msgstr ""
+
+#: templates/pull-push-page.php:47
+msgid "Save"
+msgstr ""
+
+#: templates/pull-push-page.php:52
+msgid "Set the token or enrol a key"
+msgstr ""
+
+#: templates/pull-push-page.php:58
+msgid "On the destination"
+msgstr ""
+
+#: templates/pull-push-page.php:59
+msgid ""
+"Install Migrator on the destination site and run these from its WordPress "
+"folder with WP-CLI. A pull replaces the destination database and copies wp-"
+"content over it; Migrator keeps its own folder and a dump of the database it "
+"replaced."
+msgstr ""
+
+#: templates/pull-push-page.php:60
+msgid "Copy this site to the destination"
+msgstr ""
+
+#: templates/pull-push-page.php:62
+msgid "Fetch only what changed since the last pull"
+msgstr ""
+
+#: templates/pull-push-page.php:63
+msgid "Run the same command again."
+msgstr ""
+
+#: templates/pull-push-page.php:64
+msgid "Send the destination's changes back here"
+msgstr ""
+
+#: templates/pull-push-page.php:66
+msgid ""
+"Pushing needs PHP 7.2 or newer here, display_errors switched off, and push "
+"access granted on the Reprint Server screen."
+msgstr ""
+
 #: templates/schedule-page.php:23
 msgid "Schedule saved."
 msgstr ""
@@ -999,6 +1082,318 @@ msgstr ""
 
 #: templates/schedule-page.php:264
 msgid "Size"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:43
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:44
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:55
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:56
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:69
+msgid "Reprint Server"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:70
+msgid ""
+"This network token can pull any site in this network. Use the selected "
+"site’s home URL followed by ?reprint-api. Each pull creates a separate one-"
+"site network. Push is not supported."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:82
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:302
+msgid "Public keys"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:90
+msgid "You are not allowed to manage this network."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:98
+msgid "The network connection token could not be saved."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:108
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:114
+msgid "Connection token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:158
+msgid ""
+"Paste the connection token supplied by your tool, or generate a random token "
+"and use it in your tool. Save Changes to apply the token."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:178
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:179
+msgid "Show connection token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:180
+msgid "Hide connection token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:186
+msgid "Random connection token generated. Save Changes to apply it."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:187
+msgid "Generate new token"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:195
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:253
+msgid "You are not allowed to manage Reprint Server."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:284
+msgid "Allow an external tool to download your site's database and files."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:308
+msgid "Push access"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:311
+msgid "You do not need push access when moving this site to another host."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:321
+msgid "Remote Reprint API URL"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:324
+msgid "Use this URL when another tool asks for the remote Reprint API URL."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:337
+msgid "Remote Reprint API URL copied."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:338
+msgid "Copy"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:354
+msgid ""
+"This page updates only the network option. Remove secret.php to use the "
+"stored option value."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:359
+msgid ""
+"This page and the REST API update only the site option. Remove secret.php to "
+"use the stored option value."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:365
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:413
+msgid "override is active."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:373
+msgid "Not configured yet."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:376
+msgid "Enter a connection token or enroll a public key to get started."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:377
+msgid "Enter a connection token to get started."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:384
+msgid "Connected for downloads and push."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:386
+msgid "The connection token or an enrolled key can change files on this site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:387
+msgid "The current connection token can change files on this site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:390
+msgid "Connected for downloads."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:392
+msgid ""
+"Neither the connection token nor an enrolled key can change files on this "
+"site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:393
+msgid "The connection token cannot change files on this site."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:406
+msgid "Public keys need OpenSSL, which this host does not have."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:414
+msgid "Keys come from that file; this page cannot change them."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:421
+msgid "Public key"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:426
+msgid ""
+"Paste the public key printed by \"reprint keygen\" or by \"reprint pull\". A "
+"PEM block or the single line are both accepted."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:432
+msgid "Enroll key"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:439
+msgid "Key id"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:440
+msgid "Added"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:441
+msgid "May push"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:465
+msgid "Allow push"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:474
+msgid "Remove"
+msgstr ""
+
+#. translators: %s: Current PHP version.
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:494
+#, php-format
+msgid ""
+"Push access requires PHP 7.2 or newer. This site runs PHP %s. Downloads "
+"remain available."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:509
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:539
+msgid "Allow push to change files on this site"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:513
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:543
+msgid ""
+"While enabled, anyone with the connection token can upload, replace, and "
+"delete files in this site's document root, except excluded paths."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:521
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:574
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:593
+msgid "Push access is managed by your hosting provider."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:550
+msgid "Save push access"
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:571
+msgid "Push access updated."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:572
+msgid "Push access was already up to date."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:573
+msgid "Push access requires PHP 7.2 or newer. Downloads remain available."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:575
+msgid "Configure a connection token before enabling push access."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:576
+msgid "Failed to save push access."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:577
+msgid "Public key enrolled."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:578
+msgid ""
+"That is not a usable public key. Paste an RSA public key of at least 3072 "
+"bits, as a PEM block or one line."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:579
+msgid "That public key is already enrolled."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:580
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:585
+msgid "public-keys.php is active. Edit that file to change enrolled keys."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:581
+msgid "Failed to save the public key."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:582
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:587
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:596
+msgid ""
+"The Reprint Server runtime is missing. Run composer install in the plugin "
+"directory or reinstall the release package."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:583
+msgid "Public key removed."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:584
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:590
+msgid "That key is not enrolled."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:586
+msgid "Failed to remove the public key."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:588
+msgid "Push access for the key updated."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:589
+msgid "Push access for the key was already up to date."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:591
+msgid "Push is not supported on multisite networks."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:592
+msgid "Push access requires PHP 7.2 or newer."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:594
+msgid ""
+"public-keys.php is active. Push grants cannot be stored for file-provided "
+"keys."
+msgstr ""
+
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:595
+msgid "Failed to save push access for the key."
+msgstr ""
+
+#. translators: %s: Key id of the public key that was just enrolled.
+#: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:607
+#, php-format
+msgid "Key id: %s"
 msgstr ""
 
 #~ msgid ""
