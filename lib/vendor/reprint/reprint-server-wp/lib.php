@@ -3,9 +3,9 @@
 namespace WordPress\Reprint\Server\Plugin;
 
 /**
- * Reprint Server library – constants and function declarations, no request handling.
+ * Pull and Push access library – constants and function declarations, no request handling.
  *
- * Require this file to get access to the Reprint Server API functions without
+ * Require this file to get access to the Pull and Push access API functions without
  * triggering any HTTP dispatch.
  */
 
@@ -516,7 +516,7 @@ function verify_hmac(string $secret): ?string {
     }
 
     if (!class_exists(HMACServer::class)) {
-        return 'Reprint Server runtime is incomplete. Run composer install in reprint-server-wp or rebuild the release package.';
+        return 'Pull and Push runtime is incomplete. Reinstall Migrator.';
     }
 
     $server = new HMACServer($secret, TIMESTAMP_TOLERANCE);
@@ -543,7 +543,7 @@ function default_authenticate(): void {
     }
 
     if (empty($connection_token) || !is_string($connection_token)) {
-        error(503, 'Export not configured. Please configure the connection token in WordPress admin under Tools > Reprint Server.');
+        error(503, 'Export not configured. Please configure the connection token in WordPress admin under Migrator > Pull and Push.');
     }
 
     $auth_error = verify_hmac($connection_token);
@@ -579,7 +579,7 @@ function default_authenticate(): void {
  *                                     outside the document root.
  *                                     Defaults to a document-root-specific sibling.
  *     @type string[] $excluded_paths Optional. Document-root-relative paths
- *                                    push must preserve. The Reprint Server
+ *                                    push must preserve. The Pull and Push access
  *                                    plugin directory is always included when
  *                                    it is below the document root.
  *     @type int $maximum_part_bytes Optional. Maximum Content-Length for one
@@ -639,7 +639,7 @@ function handle_api_request(array $options = []): void {
             'line' => $errline,
             'type' => $errno,
         ];
-        error_log('Reprint Server API error: ' . json_encode($error));
+        error_log('Pull and Push API error: ' . json_encode($error));
         http_response_code(500);
         // Hosts such as Hostinger rewrite domains so links and assets stay on a
         // preview domain while the stored site URL still uses the real domain.
@@ -656,7 +656,7 @@ function handle_api_request(array $options = []): void {
             'file' => $e->getFile(),
             'line' => $e->getLine(),
         ];
-        error_log('Reprint Server API exception: ' . json_encode($error));
+        error_log('Pull and Push API exception: ' . json_encode($error));
         http_response_code(500);
         // Hosts such as Hostinger rewrite domains so links and assets stay on a
         // preview domain while the stored site URL still uses the real domain.
@@ -683,7 +683,7 @@ function handle_api_request(array $options = []): void {
             load_server_runtime();
         }
         if (!class_exists(RequestAuthenticator::class)) {
-            $runtime_message = 'Reprint Server runtime is incomplete. Run composer install in reprint-server-wp or rebuild the release package.';
+            $runtime_message = 'Pull and Push runtime is incomplete. Reinstall Migrator.';
             if (is_push_endpoint($endpoint)) {
                 push_error(500, 'filesystem_error', $runtime_message);
             }
@@ -707,7 +707,7 @@ function handle_api_request(array $options = []): void {
             $status = $reason === RequestAuthenticator::REASON_NOT_CONFIGURED ? 503 : 403;
             if ($reason === RequestAuthenticator::REASON_NOT_CONFIGURED) {
                 // Released clients print this message as they receive it.
-                $auth_error .= '. Set up the connection in WordPress admin under Tools > Reprint Server.';
+                $auth_error .= '. Set up the connection in WordPress admin under Migrator > Pull and Push.';
             }
             if (is_push_endpoint($endpoint)) {
                 push_error($status, $reason, $auth_error);
@@ -751,7 +751,7 @@ function handle_api_request(array $options = []): void {
     if (load_server_runtime() === null) {
         error(
             500,
-            'Reprint Server runtime is incomplete. Run composer install in reprint-server-wp or rebuild the release package.'
+            'Pull and Push runtime is incomplete. Reinstall Migrator.'
         );
     }
 
@@ -846,7 +846,7 @@ function handle_api_request(array $options = []): void {
                         || rtrim($resolved_logical_plugin_directory, '/\\') !== $plugin_directory
                     ) {
                         throw new PushConfigurationException(
-                            'WordPress reports the Reprint Server plugin inside the document root at '
+                            'WordPress reports the Pull and Push access plugin inside the document root at '
                             . json_encode($logical_plugin_directory_to_verify)
                             . ', but that path does not resolve to PLUGIN_DIR '
                             . json_encode(PLUGIN_DIR) . '.'
@@ -926,6 +926,6 @@ function handle_api_request(array $options = []): void {
 \reprint_server_compat_migrate_legacy_options();
 
 if (function_exists('do_action')) {
-    /** Fires after the canonical Reprint Server library has loaded. */
+    /** Fires after the canonical Pull and Push access library has loaded. */
     do_action('reprint_server_library_loaded');
 }

@@ -244,8 +244,7 @@ final class Command
     /**
      * Copy a remote site into this one over HTTP: its database and wp-content.
      *
-     * The source runs Migrator with Pull and Push switched on (or the Reprint
-     * Server plugin). This site's WordPress core, wp-config.php and Migrator
+     * The source runs Migrator with Pull and Push switched on. This site's WordPress core, wp-config.php and Migrator
      * itself stay as they are. Run it again to resume an interrupted pull or,
      * after a finished one, to fetch only what changed.
      *
@@ -320,9 +319,9 @@ final class Command
      * Send this site's wp-content changes back to the site it was pulled from.
      *
      * Only files that differ from the last pull travel. The source must grant
-     * push access on its Reprint Server screen and needs a writable folder
+     * push access on its Pull and Push screen and needs a writable folder
      * beside its web root on the same disk. The database is not pushed here;
-     * see `wp migrator reprint db-push --help` for hosts that support it.
+     * see `wp migrator remote db-push --help` for hosts that support it.
      *
      * ## OPTIONS
      *
@@ -368,33 +367,33 @@ final class Command
     }
 
     /**
-     * Run any Reprint client command against a remote site.
+     * Run any low-level transfer command against a remote site.
      *
      * For everything the pull and push shortcuts do not cover: keygen,
      * files-stats, db-push with --commit, mirror mode, and the rest. Migrator
      * supplies --state-dir and --fs-root (the same ones `pull` uses) unless you
-     * pass your own. Run `wp migrator reprint help` for the full list.
+     * pass your own. Run `wp migrator remote help` for the full list.
      *
      * ## OPTIONS
      *
      * <command>
-     * : The Reprint command, e.g. keygen, files-stats, db-push.
+     * : The command, e.g. keygen, files-stats, db-push.
      *
      * [<args>...]
      * : The remote URL and any further arguments, passed through unchanged.
      *
      * [--<field>=<value>]
-     * : Any Reprint option, passed through unchanged.
+     * : Any option, passed through unchanged.
      *
      * ## EXAMPLES
      *
-     *     wp migrator reprint keygen https://example.com
-     *     wp migrator reprint files-stats https://example.com --secret=s3cret
+     *     wp migrator remote keygen https://example.com
+     *     wp migrator remote files-stats https://example.com --secret=s3cret
      *
      * @param array<int, string>    $args       Positional args.
      * @param array<string, string> $assoc_args Flags.
      */
-    public function reprint(array $args, array $assoc_args): void
+    public function remote(array $args, array $assoc_args): void
     {
         $this->guardNetwork();
         $workspace = new Workspace();

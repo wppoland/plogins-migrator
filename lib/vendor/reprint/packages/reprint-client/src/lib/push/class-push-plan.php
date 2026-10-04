@@ -39,7 +39,7 @@ require_once __DIR__ . '/../index/class-file-sync-plan-runner.php';
  *
  * ctime is machine-local, so the local index must describe the same filesystem
  * root on the same local machine. The caller supplies the local index for its
- * remote Reprint API URL. File and symlink changes are determined by type,
+ * remote site address. File and symlink changes are determined by type,
  * ctime, and size. Directory changes use the indexer's empty-directory marker;
  * non-empty directories are represented by their descendants.
  *

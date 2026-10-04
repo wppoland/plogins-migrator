@@ -3,7 +3,7 @@
 namespace WordPress\Reprint\Server\Plugin;
 
 /**
- * UI-independent WordPress configuration integration for Reprint Server.
+ * UI-independent WordPress configuration integration for Pull and Push access.
  *
  * A project embedding lib.php can require this file to get the option-backed
  * connection token, its push-authorization revocation hooks, the option-backed
@@ -265,7 +265,7 @@ function revoke_push_authorization_after_connection_token_added(): void {
  * Returns the configuration state used by WordPress integrations.
  *
  * @return array {
- *     Current Reprint Server configuration state.
+ *     Current Pull and Push access configuration state.
  *
  *     @type string    $stored_connection_token Option-backed connection token.
  *     @type bool      $is_configured Whether a credential the host accepts exists: an effective connection token,

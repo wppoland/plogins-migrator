@@ -15,7 +15,7 @@ defined('ABSPATH') || exit;
  * what it last saw on the source. So the live wp-content is first copied over
  * that tree, then the client's files-push sends the difference. The database is
  * not sent here: Reprint pushes a database only to a host that runs its API on
- * a standalone route, which a plugin cannot set up. `wp migrator reprint
+ * a standalone route, which a plugin cannot set up. `wp migrator remote
  * db-push` covers that host.
  */
 final class Push
@@ -71,7 +71,7 @@ final class Push
         }
 
         if (0 !== $code) {
-            throw new \RuntimeException('The files push stopped (Reprint exit code ' . $code . '). The output above says why; run the same command again to continue.');
+            throw new \RuntimeException('The files push stopped (exit code ' . $code . '). The output above says why; run the same command again to continue.');
         }
 
         return $copied;

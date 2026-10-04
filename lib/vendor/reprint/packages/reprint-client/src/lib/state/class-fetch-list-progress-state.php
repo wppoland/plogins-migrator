@@ -41,7 +41,7 @@ class FetchListProgressState {
             ) {
                 throw new \UnexpectedValueException(
                     'The saved files-pull checkpoint has no completed-byte counts. '
-                    . 'Finish or abort this files-pull with the previous Reprint build before updating.'
+                    . 'Finish or abort this files-pull with the previous Migrator version before updating.'
                 );
             }
             $data['file_bytes_before_batch'] = 0;

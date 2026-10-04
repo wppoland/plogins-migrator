@@ -5,8 +5,8 @@
  * @package Migrator
  *
  * @var bool   $enabled    Whether the endpoint is switched on.
- * @var bool   $standalone Whether the standalone Reprint Server plugin owns the endpoint.
- * @var string $serverUrl  Credentials screen of the bundled Reprint Server.
+ * @var bool   $standalone Whether another plugin already owns the endpoint.
+ * @var string $serverUrl  Credentials screen.
  * @var string $siteUrl    This site's address.
  */
 
@@ -35,7 +35,7 @@ $migrator_updated = isset($_GET['updated']); // phpcs:ignore WordPress.Security.
 			<h2 class="migrator-card__heading"><?php esc_html_e('This site as the source', 'plogins-migrator'); ?></h2>
 
 			<?php if ($standalone) : ?>
-				<p><?php esc_html_e('The Reprint Server plugin is active on this site and already answers pull requests, so Migrator leaves the endpoint to it. Manage access under Tools > Reprint Server.', 'plogins-migrator'); ?></p>
+				<p><?php esc_html_e('Another plugin on this site already answers pull requests at the same address, so Migrator leaves them to that plugin and its own settings.', 'plogins-migrator'); ?></p>
 			<?php else : ?>
 				<label class="migrator-toggle">
 					<input type="checkbox" name="enabled" value="1" <?php checked($enabled); ?>>
@@ -63,7 +63,7 @@ $migrator_updated = isset($_GET['updated']); // phpcs:ignore WordPress.Security.
 			<p><?php esc_html_e('Run the same command again.', 'plogins-migrator'); ?></p>
 			<p><strong><?php esc_html_e('Send the destination\'s changes back here', 'plogins-migrator'); ?></strong></p>
 			<p><code>wp migrator push <?php echo esc_html($siteUrl); ?> --secret=&lt;token&gt;</code></p>
-			<p class="description"><?php esc_html_e('Pushing needs PHP 7.2 or newer here, display_errors switched off, and push access granted on the Reprint Server screen.', 'plogins-migrator'); ?></p>
+			<p class="description"><?php esc_html_e('Pushing needs PHP 7.2 or newer here, display_errors switched off, and push access granted under Set the token or enrol a key above.', 'plogins-migrator'); ?></p>
 		</div>
 	</div>
 </div>

@@ -19,7 +19,7 @@ use WordPress\Reprint\Server\MySQLDumpProducer;
  *
  * The dump producer marks INSERTs containing a nonzero SRID. Before such an
  * INSERT reaches the target, this guard checks whether source and target use the
- * same model. It stops a mismatched transfer because Reprint does not transform
+ * same model. It stops a mismatched transfer because Migrator does not transform
  * coordinates.
  */
 class SpatialSridGuard {
@@ -82,7 +82,7 @@ class SpatialSridGuard {
         }
 
         $message = implode("\n", [
-            '[SPATIAL_AXIS_ORDER_UNSAFE] Reprint cannot safely move this nonzero SRID between these databases.',
+            '[SPATIAL_AXIS_ORDER_UNSAFE] Migrator cannot safely move this nonzero SRID between these databases.',
             '',
             'Source: ' . $this->database_product($this->source_database_version) .
                 ' ' . $this->source_database_version,
@@ -92,7 +92,7 @@ class SpatialSridGuard {
             '',
             'One server uses registered spatial reference definitions and the other does not.',
             'They may assign different meanings to the first and second coordinates.',
-            'Reprint does not currently transform coordinates.',
+            'Migrator does not currently transform coordinates.',
             '',
             'The INSERT batch was not executed.',
             'Convert the source data to SRID 0, transform it for the target, or migrate this table separately.',

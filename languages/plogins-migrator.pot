@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-04T20:35:50+00:00\n"
+"POT-Creation-Date: 2026-10-04T21:23:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: plogins-migrator\n"
@@ -277,7 +277,7 @@ msgid "Scheduled Backups"
 msgstr ""
 
 #: src/Backup/Scheduler.php:114 src/Backup/Scheduler.php:217
-#: src/Reprint/Source.php:148
+#: src/Reprint/Source.php:156
 msgid "You are not allowed to do this."
 msgstr ""
 
@@ -542,7 +542,7 @@ msgid ""
 "PHP may not run here."
 msgstr ""
 
-#: src/Reprint/Source.php:116 src/Reprint/Source.php:117
+#: src/Reprint/Source.php:124 src/Reprint/Source.php:125
 #: templates/pull-push-page.php:20
 msgid "Pull and Push"
 msgstr ""
@@ -822,9 +822,8 @@ msgstr ""
 
 #: templates/pull-push-page.php:38
 msgid ""
-"The Reprint Server plugin is active on this site and already answers pull "
-"requests, so Migrator leaves the endpoint to it. Manage access under Tools > "
-"Reprint Server."
+"Another plugin on this site already answers pull requests at the same "
+"address, so Migrator leaves them to that plugin and its own settings."
 msgstr ""
 
 #: templates/pull-push-page.php:42
@@ -878,7 +877,7 @@ msgstr ""
 #: templates/pull-push-page.php:66
 msgid ""
 "Pushing needs PHP 7.2 or newer here, display_errors switched off, and push "
-"access granted on the Reprint Server screen."
+"access granted under Set the token or enrol a key above."
 msgstr ""
 
 #: templates/schedule-page.php:23
@@ -1056,14 +1055,14 @@ msgstr ""
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:55
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:56
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:69
-msgid "Reprint Server"
+msgid "Pull and Push access"
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:70
 msgid ""
 "This network token can pull any site in this network. Use the selected "
-"site’s home URL followed by ?reprint-api. Each pull creates a separate one-"
-"site network. Push is not supported."
+"site’s home URL. Each pull creates a separate one-site network. Push is not "
+"supported."
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:82
@@ -1109,7 +1108,7 @@ msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:195
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:253
-msgid "You are not allowed to manage Reprint Server."
+msgid "You are not allowed to manage Pull and Push access."
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:284
@@ -1125,15 +1124,15 @@ msgid "You do not need push access when moving this site to another host."
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:321
-msgid "Remote Reprint API URL"
+msgid "Address for the pulling site"
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:324
-msgid "Use this URL when another tool asks for the remote Reprint API URL."
+msgid "Use this URL when another tool asks for the address of this site."
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:337
-msgid "Remote Reprint API URL copied."
+msgid "Address for the pulling site copied."
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:338
@@ -1209,8 +1208,8 @@ msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:426
 msgid ""
-"Paste the public key printed by \"reprint keygen\" or by \"reprint pull\". A "
-"PEM block or the single line are both accepted."
+"Paste the public key printed by \"wp migrator remote keygen\" or by \"wp "
+"migrator pull\". A PEM block or the single line are both accepted."
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:432
@@ -1313,9 +1312,7 @@ msgstr ""
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:582
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:587
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:596
-msgid ""
-"The Reprint Server runtime is missing. Run composer install in the plugin "
-"directory or reinstall the release package."
+msgid "The Pull and Push runtime is missing. Reinstall Migrator."
 msgstr ""
 
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:583

@@ -11,10 +11,10 @@ use function WordPress\Filesystem\wp_join_unix_paths;
  * Drives one local-files push through bounded planning and streaming requests.
  *
  * PushFilesSender owns the only caller-visible push lifecycle. Its caller holds
- * the Reprint process lock while the sender creates and removes the target push
+ * the transfer process lock while the sender creates and removes the target push
  * session, drives its internal PushPlan, streams the selected paths, commits the
  * push, and saves the completed fresh local index as the local index for this
- * remote Reprint API URL. The target owns the
+ * remote site address. The target owns the
  * upload cursor for every path and for the deletion list. Durable sender state
  * retains the top-level phase, the selected path-list cursor, the planned
  * totals, the target-confirmed completed-path count and file bytes, learned
@@ -22,11 +22,11 @@ use function WordPress\Filesystem\wp_join_unix_paths;
  *
  * ## Usage
  *
- *  1. Acquire the Reprint process lock, then start a new sender with `start()`
+ *  1. Acquire the transfer process lock, then start a new sender with `start()`
  *     or continue an unfinished sender with `resume()`.
  *  2. Call `next_step()` while the current process has enough time and memory
  *     for another step.
- *  3. Call `close()` and release the Reprint process lock, even when more work
+ *  3. Call `close()` and release the transfer process lock, even when more work
  *     remains.
  *
  * Example:
@@ -61,7 +61,7 @@ use function WordPress\Filesystem\wp_join_unix_paths;
  * A new sender calls `push_create` to learn target-owned exclusions before
  * starting PushPlan. Caller exclusions are added to that policy, and the combined
  * list stays with the active plan across resume. The plan builds the fresh local
- * index and diffs it against the local index for this remote Reprint API URL,
+ * index and diffs it against the local index for this remote site address,
  * one bounded step at a time.
  * That index contains the most recent fresh scan the sender finished saving
  * after the target confirmed its corresponding files-push commit, and is also
@@ -70,7 +70,7 @@ use function WordPress\Filesystem\wp_join_unix_paths;
  * multipart requests. The raw deletion list follows, and repeated `push_commit`
  * calls let the target install the work in bounded steps. A target-confirmed
  * commit enters another phase which saves the fresh local index as the local
- * index for this remote Reprint API URL through a swap file. Index completion,
+ * index for this remote site address through a swap file. Index completion,
  * plan completion, local-index saving, and plan discard each have a separate
  * durable phase. A stopped process therefore repeats only an idempotent
  * boundary action rather than a group of unrelated transitions.
@@ -81,7 +81,7 @@ use function WordPress\Filesystem\wp_join_unix_paths;
  * PushPlan's raw progress snapshot. The sender creates the active plan directory
  * before planning and removes the whole directory only after success or
  * target-session removal. The local index for this remote
- * Reprint API URL remains in the remote state directory. Once the plan result
+ * site address remains in the remote state directory. Once the plan result
  * is saved or discarded, the sender clears its cursor before removing the plan
  * directory without reopening PushPlan.
  *
@@ -149,7 +149,7 @@ final class PushFilesSender
     /** @var string Sender-owned active plan directory. */
     private string $plan_directory;
 
-    /** @var string Local index file for this remote Reprint API URL. */
+    /** @var string Local index file for this remote site address. */
     private string $local_index_file;
 
     /** @var string Path where the serialized sender state is stored. */
@@ -243,7 +243,7 @@ final class PushFilesSender
     private array $push_stream_client_options;
 
     /**
-     * Starts a new sender while the caller holds the Reprint process lock.
+     * Starts a new sender while the caller holds the transfer process lock.
      *
      * The returned sender begins in `creating`. An existing active state is
      * rejected so unfinished work cannot be replaced.
@@ -254,7 +254,7 @@ final class PushFilesSender
      *     @type string                  $filesystem_root         Required filesystem root directory.
      *     @type string                  $document_root           Required remote absolute document root.
      *     @type string                  $push_state_directory    Required local push state directory.
-     *     @type string                  $remote_reprint_api_url  Required remote Reprint API URL.
+     *     @type string                  $remote_reprint_api_url  Required remote site address.
      *     @type array<string,string>    $request_context_headers Required header-name-to-value map selected by ImportClient.
      *     @type \WordPress\Reprint\Server\EnvelopeSigner $envelope_signer Required envelope signer.
      *     @type string[]                $excluded_paths          Additional document-root-relative paths this push must not change. Default empty.
@@ -370,7 +370,7 @@ final class PushFilesSender
             throw new InvalidArgumentException('PushFilesSender requires a push_state_directory.');
         }
         if (!$process_lock->is_held()) {
-            throw new InvalidArgumentException('PushFilesSender requires a held Reprint process lock.');
+            throw new InvalidArgumentException('PushFilesSender requires a held transfer process lock.');
         }
         $excluded_paths = array_key_exists('excluded_paths', $options) ? $options['excluded_paths'] : [];
         if (!is_array($excluded_paths)) {
@@ -414,7 +414,7 @@ final class PushFilesSender
     /**
      * Performs the next step for the current phase.
      *
-     * start() or resume() has received the Reprint process lock and loaded the
+     * start() or resume() has received the transfer process lock and loaded the
      * durable state, so this method only dispatches its current phase. Every
      * phase step is bounded except the deliberate completed-index copy described
      * in the class documentation. A caller stopping after this method returns
@@ -1389,7 +1389,7 @@ final class PushFilesSender
     }
 
     /**
-     * Saves the committed fresh local index for this remote Reprint API URL.
+     * Saves the committed fresh local index for this remote site address.
      *
      * If the process stops before the next phase is stored, repeating the
      * deliberate whole-index copy is safe and leaves readers on either the old
