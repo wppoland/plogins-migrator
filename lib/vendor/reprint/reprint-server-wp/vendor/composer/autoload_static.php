@@ -4,13 +4,15 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit1e4aa29ee1a30ebd2f4f4d078b2059fa
+class ComposerStaticInite3d27e3c08ca3f83831cf44082ae83c8
 {
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'Site_Export_HMAC_Client' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-hmac-client.php',
+        'WordPress\\Reprint\\Server\\DatabaseChangesPush' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-database-changes-push.php',
         'WordPress\\Reprint\\Server\\DatabasePush' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-database-push.php',
         'WordPress\\Reprint\\Server\\DatabasePushEndpoints' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-database-push-endpoints.php',
+        'WordPress\\Reprint\\Server\\DatabaseRowFormat' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-database-row-format.php',
         'WordPress\\Reprint\\Server\\DatabaseRowsReader' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-database-rows-reader.php',
         'WordPress\\Reprint\\Server\\EnvelopeSigner' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-envelope-signer.php',
         'WordPress\\Reprint\\Server\\FileIndexProcessor' => __DIR__ . '/..' . '/wp-php-toolkit/reprint-server/src/class-file-index-processor.php',
@@ -43,7 +45,7 @@ class ComposerStaticInit1e4aa29ee1a30ebd2f4f4d078b2059fa
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->classMap = ComposerStaticInit1e4aa29ee1a30ebd2f4f4d078b2059fa::$classMap;
+            $loader->classMap = ComposerStaticInite3d27e3c08ca3f83831cf44082ae83c8::$classMap;
 
         }, null, ClassLoader::class);
     }

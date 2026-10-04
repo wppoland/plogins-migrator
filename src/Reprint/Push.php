@@ -71,7 +71,7 @@ final class Push
         }
 
         if (0 !== $code) {
-            throw new \RuntimeException('The files push stopped (exit code ' . $code . '). The output above says why; run the same command again to continue.');
+            throw new \RuntimeException('The files push stopped (exit code ' . $code . '). The output above says why. Run the same command again to continue: if the source had started applying the changes, it shows visitors a maintenance page until the push finishes.');
         }
 
         return $copied;

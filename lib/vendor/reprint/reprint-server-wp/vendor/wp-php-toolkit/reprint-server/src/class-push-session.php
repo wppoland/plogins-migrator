@@ -712,13 +712,14 @@ final class PushSession {
                 throw new PushException(self::ERROR_LOCK_ACQUISITION_FAILURE, 'A foreign WordPress maintenance marker already exists. Retry after its owner removes it.');
             }
             $maintenance_contents = "<?php\n"
-                . "\$reprint_push_request = (isset(\$_GET['reprint-api']) || isset(\$_GET['site-export-api']))\n"
-                . "    && isset(\$_GET['endpoint']) && is_string(\$_GET['endpoint'])\n"
-                . "    && strpos(\$_GET['endpoint'], 'push_') === 0;\n"
+                . "\$reprint_push_endpoint = \$_GET['endpoint'] ?? \$_POST['endpoint'] ?? null;\n"
+                . "\$reprint_push_request = (isset(\$_GET['reprint-api']) || isset(\$_GET['migrator-api']) || isset(\$_GET['site-export-api']))\n"
+                . "    && is_string(\$reprint_push_endpoint)\n"
+                . "    && strpos(\$reprint_push_endpoint, 'push_') === 0;\n"
                 . "if (!\$reprint_push_request) {\n"
                 . "    \$upgrading = " . time() . ";\n"
                 . "}\n"
-                . "unset(\$reprint_push_request);\n"
+                . "unset(\$reprint_push_request, \$reprint_push_endpoint);\n"
                 . "// reprint-push-session:" . $this->push_session_id . "\n";
             $this->write_atomic_file($this->maintenance_copy_path, $maintenance_contents, 0600);
             $this->write_atomic_file($maintenance_docroot_path, $maintenance_contents, 0644);

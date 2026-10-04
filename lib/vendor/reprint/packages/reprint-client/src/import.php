@@ -25,6 +25,7 @@ use Reprint\Importer\ProgressReporter;
 use Reprint\Importer\Pull\PullFailureReportedException;
 use Reprint\Importer\RetryLaterException;
 use Reprint\Importer\SpatialSridGuard;
+use Reprint\Importer\SqliteSetValueStatementRewriter;
 use Reprint\Importer\MultisiteTarget;
 use Reprint\Importer\State\DatabaseApplyCommandState;
 use Reprint\Importer\State\DatabaseUrlRewriteCommandState;
@@ -105,6 +106,7 @@ require_once __DIR__ . '/lib/sort-index-file.php';
 require_once __DIR__ . '/lib/local-index-update-functions.php';
 require_once __DIR__ . '/lib/index/class-file-index-diff-processor.php';
 require_once __DIR__ . '/lib/class-reprint-process-lock.php';
+require_once __DIR__ . '/lib/class-saved-remote-config.php';
 
 // Terminal progress rendering (spinner, progress lines, lifecycle messages)
 require_once __DIR__ . '/lib/terminal-progress/class-terminal-progress.php';
@@ -178,6 +180,9 @@ class ImportClient
         "files-stats",
         "db-pull",
         "db-push",
+        "db-push-changes",
+        "db-baseline",
+        "db-diff",
         "db-index",
         "db-apply",
         "db-rewrite-urls",
@@ -226,6 +231,12 @@ class ImportClient
 
     /** Maximum response header bytes retained for failed request audit logging. */
     private const MAX_AUDIT_RESPONSE_HEADER_BYTES = 65536;
+
+    /**
+     * Longest Retry-After delay the importer will wait out before the next
+     * attempt.
+     */
+    private const MAX_SUPPORTED_RETRY_AFTER_SECONDS = 300;
 
     /**
      * cURL error numbers that can be temporary, often meaning the peer cut the transfer short.
@@ -470,6 +481,9 @@ class ImportClient
     /** @var bool Whether the last curl request timed out. */
     private $last_curl_timeout = false;
 
+    /** @var float|null Retry-After delay parsed from the last transient HTTP error, in seconds. */
+    private $pending_retry_after_seconds = null;
+
     /** @var string|null Machine-readable HTTP, cURL, or preflight error code for reporting. */
     public $last_error_code = null;
 
@@ -589,9 +603,10 @@ class ImportClient
             } elseif ($signal_handling_command === 'db-rewrite-urls') {
                 pcntl_signal(SIGINT, [$this, 'handle_database_url_rewrite_shutdown']);
                 pcntl_signal(SIGTERM, [$this, 'handle_database_url_rewrite_shutdown']);
-            } elseif (!in_array($signal_handling_command, ['files-diff', 'post-process', 'db-push'], true)) {
-                // files-diff, post-process, and db-push must not save the pull command's
-                // state from a shutdown handler; default signal behavior ends them.
+            } elseif (!in_array($signal_handling_command, ['files-diff', 'post-process', 'db-push', 'db-push-changes', 'db-baseline', 'db-diff'], true)) {
+                // Local inspection, post-processing, and push commands must not save
+                // the pull command's state from a shutdown handler; default
+                // signal behavior ends them.
                 pcntl_signal(SIGINT, [$this, "handle_shutdown"]);
                 pcntl_signal(SIGTERM, [$this, "handle_shutdown"]);
             }
@@ -786,6 +801,10 @@ class ImportClient
             $this->pull_excluded_files_with_path_prefixes =
                 $this->resolve_remote_paths($excluded_raw, "exclude");
         }
+        $this->pull_excluded_files_with_path_prefixes = array_values(array_unique(array_merge(
+            $this->pull_excluded_files_with_path_prefixes,
+            $this->get_excluded_reprint_paths()
+        )));
         $this->excluded_plugins = $this->get_excluded_plugins();
 
         if ($assert_remap) {
@@ -832,7 +851,7 @@ class ImportClient
         $masked = $argv;
         if (isset($masked[2]) && strpos($masked[2], '-') !== 0) {
             $masked[2] = preg_replace('/SECRET_KEY=[^&\s]+/', 'SECRET_KEY=***', $masked[2]);
-            if (in_array($command, ['files-push', 'db-push'], true)) {
+            if (in_array($command, ['files-push', 'db-push', 'db-push-changes'], true)) {
                 $masked[2] = self::mask_url_credentials($masked[2]);
             }
         }
@@ -1079,6 +1098,16 @@ class ImportClient
             $this->run_files_diff($options);
             return;
         }
+        if (in_array($command, ['db-baseline', 'db-diff'], true)) {
+            $this->state = $this->load_state();
+            $this->run_local_database_baseline($command, $options);
+            return;
+        }
+        if ($command === 'db-push-changes') {
+            $this->state = $this->load_state_with_request_context();
+            $this->run_db_push_changes($options);
+            return;
+        }
         if ($command === "db-push") {
             $this->state = $this->load_state_with_request_context();
             $this->run_db_push($options);
@@ -1102,6 +1131,12 @@ class ImportClient
             throw new InvalidArgumentException(
                 // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Reports a CLI/library option type, not HTML.
                 "include_host_plugins must be a boolean; received " . gettype($options["include_host_plugins"]) . "."
+            );
+        }
+        if (array_key_exists("exclude_reprint", $options) && !is_bool($options["exclude_reprint"])) {
+            throw new InvalidArgumentException(
+                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Reports a CLI/library option type, not HTML.
+                "exclude_reprint must be a boolean; received " . gettype($options["exclude_reprint"]) . "."
             );
         }
 
@@ -1203,6 +1238,24 @@ class ImportClient
                 );
             }
             $this->get_state()->include_host_plugins = $options["include_host_plugins"];
+            $this->save_state();
+        }
+
+        // SQL row filtering and file selection must keep the same choice across
+        // process boundaries, including the gap between two pipeline stages.
+        if (isset($options['exclude_reprint']) && $options['exclude_reprint'] !== $this->get_state()->exclude_reprint) {
+            $checkpoint = $this->get_state()->active_resumable_command;
+            $pipeline = $this->get_state()->pull_pipeline;
+            if (!$abort && (
+                ( $checkpoint->command_name !== null && $checkpoint->completion_state !== 'complete' )
+                || ( $pipeline->started_by_command !== null && $pipeline->stage_sequence !== []
+                    && $pipeline->last_completed_stage !== end($pipeline->stage_sequence) )
+            )) {
+                throw new RuntimeException(
+                    'Cannot change --exclude-reprint/--include-reprint while a pull is in progress. Finish the current pull or use --abort first.'
+                );
+            }
+            $this->get_state()->exclude_reprint = $options['exclude_reprint'];
             $this->save_state();
         }
 
@@ -1361,7 +1414,13 @@ class ImportClient
         }
 
         // MySQL connection parameters for --sql-output=mysql.
-        if (isset($options["mysql_host"])) {
+        if (isset($options["env_mysql_host"])) {
+            $env_var_name = $options["env_mysql_host"];
+            $this->mysql_host = getenv($env_var_name) ?: '';
+            if (!empty($this->mysql_host)) {
+                $this->get_state()->mysql_host = $this->mysql_host;
+            }
+        } elseif (isset($options["mysql_host"])) {
             $this->mysql_host = $options["mysql_host"];
             $this->get_state()->mysql_host = $this->mysql_host;
         } elseif (isset($this->get_state()->mysql_host)) {
@@ -1375,14 +1434,26 @@ class ImportClient
             $this->mysql_port = (int) $this->get_state()->mysql_port;
         }
 
-        if (isset($options["mysql_user"])) {
+        if (isset($options["env_mysql_user"])) {
+            $env_var_name = $options["env_mysql_user"];
+            $this->mysql_user = getenv($env_var_name) ?: '';
+            if (!empty($this->mysql_user)) {
+                $this->get_state()->mysql_user = $this->mysql_user;
+            }
+        } elseif (isset($options["mysql_user"])) {
             $this->mysql_user = $options["mysql_user"];
             $this->get_state()->mysql_user = $this->mysql_user;
         } elseif (isset($this->get_state()->mysql_user)) {
             $this->mysql_user = $this->get_state()->mysql_user;
         }
 
-        if (isset($options["mysql_database"])) {
+        if (isset($options["env_mysql_database"])) {
+            $env_var_name = $options["env_mysql_database"];
+            $this->mysql_database = getenv($env_var_name) ?: '';
+            if (!empty($this->mysql_database)) {
+                $this->get_state()->mysql_database = $this->mysql_database;
+            }
+        } elseif (isset($options["mysql_database"])) {
             $this->mysql_database = $options["mysql_database"];
             $this->get_state()->mysql_database = $this->mysql_database;
         } elseif (isset($this->get_state()->mysql_database)) {
@@ -1392,7 +1463,10 @@ class ImportClient
         $this->save_state();
 
         // Password is never persisted — must be supplied each run or via env.
-        if (isset($options["mysql_password"])) {
+        if (isset($options["env_mysql_password"])) {
+            $env_var_name = $options["env_mysql_password"];
+            $this->mysql_password = getenv($env_var_name) ?: '';
+        } elseif (isset($options["mysql_password"])) {
             $this->mysql_password = $options["mysql_password"];
         } elseif (getenv("MYSQL_PASSWORD") !== false) {
             $this->mysql_password = getenv("MYSQL_PASSWORD");
@@ -1615,7 +1689,8 @@ class ImportClient
             $this->remote_reprint_api_url,
             $this->state_dir,
             $this->filesystem_root,
-            'files-diff'
+            'files-diff',
+            dirname($this->pull_state_directory)
         );
         if (!is_string($push_state_directory)) {
             throw new InvalidArgumentException('files-diff requires its resolved local push state directory.');
@@ -1898,7 +1973,7 @@ class ImportClient
             $this->remote_reprint_api_url,
             $this->state_dir,
             $this->filesystem_root,
-            $options
+            $options + ['selected_remote_state_directory' => dirname($this->pull_state_directory)]
         );
         if (!is_array($context)) {
             throw new InvalidArgumentException('files-push requires its validated command context.');
@@ -2380,6 +2455,7 @@ class ImportClient
      *     @type string $secret     HMAC connection token.
      *     @type bool   $insecure   Allow HTTP and skip HTTPS certificate checks.
      *     @type bool   $allow_http Whether the operator allowed a plain-HTTP target.
+     *     @type string|null $selected_remote_state_directory Named remote state directory, or null for URL-selected state.
      * }
      * @phpstan-param array<string,mixed> $options
      * @return array {
@@ -2422,7 +2498,8 @@ class ImportClient
             $remote_reprint_api_url,
             $state_dir,
             $filesystem_root,
-            'files-push'
+            'files-push',
+            $options['selected_remote_state_directory'] ?? null
         );
         $masked_remote_reprint_api_url =
             self::mask_url_credentials($remote_reprint_api_url);
@@ -2453,12 +2530,14 @@ class ImportClient
      * identifies the pull source by URL but makes no network request.
      *
      * @param string $command Command name used in error messages.
+     * @param string|null $selected_remote_state_directory Named remote state directory, or null for URL-selected state.
      */
     public static function resolve_push_state_directory(
         string $remote_reprint_api_url,
         string $state_dir,
         string $filesystem_root,
-        string $command
+        string $command,
+        ?string $selected_remote_state_directory = null
     ): string {
         $masked_remote_reprint_api_url =
             self::mask_url_credentials($remote_reprint_api_url);
@@ -2490,7 +2569,7 @@ class ImportClient
         }
         $resolved_local_filesystem_root = Utils::trim_right_slash($resolved_local_filesystem_root, Utils::native_path_format());
         // Resolve an absolute physical path even when its final components do not exist.
-        $remote_state_directory = self::remote_state_directory_path(
+        $remote_state_directory = $selected_remote_state_directory ?? self::remote_state_directory_path(
             $remote_reprint_api_url,
             $state_dir
         );
@@ -2617,7 +2696,7 @@ class ImportClient
         if ($generated_by_pull) {
             $lines[] = 'then run the same command again:';
         } elseif ($stored_in_state) {
-            $lines[] = 'then run any reprint command against this site; the key is found automatically:';
+            $lines[] = 'then run the same wp migrator command again; the key is found automatically:';
         } else {
             $lines[] = 'then pass --private-key-path=' . escapeshellarg($generated['path']) . ' to every reprint command:';
         }
@@ -3167,6 +3246,37 @@ class ImportClient
                 : null,
         ];
 
+        $previous_preflight = $this->get_state()->preflight_record();
+        if (!empty($previous_preflight['ok']) && $previous_preflight['url'] !== $url) {
+            // A failed request at the new address must not erase the paths we still need to compare.
+            if (empty($entry['ok'])) {
+                $this->last_error_code = $entry['error_code'];
+                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The preflight error is CLI text, not HTML.
+                throw new RuntimeException('Preflight at the new address failed: ' . ( $entry['error'] ?? $payload['error'] ?? 'HTTP ' . $entry['http_code'] ) . ' Previous preflight is unchanged.');
+            }
+            foreach ([
+                ['runtime', 'document_root'],
+                ['path_format'],
+                ['database', 'wp', 'paths_urls', 'abspath'],
+                ['database', 'wp', 'paths_urls', 'content_dir'],
+                ['database', 'wp', 'paths_urls', 'plugins_dir'],
+                ['database', 'wp', 'paths_urls', 'mu_plugins_dir'],
+                ['database', 'wp', 'paths_urls', 'wp_admin_path'],
+                ['database', 'wp', 'paths_urls', 'wp_includes_path'],
+                ['database', 'wp', 'paths_urls', 'uploads', 'basedir'],
+            ] as $keys) {
+                $previous_value = $previous_preflight['data'];
+                $next_value = $payload;
+                foreach ($keys as $key) {
+                    $previous_value = $previous_value[$key] ?? null;
+                    $next_value = $next_value[$key] ?? null;
+                }
+                if ($previous_value !== $next_value) {
+                    throw new RuntimeException('The new remote site address reports different site paths. Use a separate config instead of reusing saved sync work.');
+                }
+            }
+        }
+
         $this->get_state()->set_preflight_record($entry);
 
         // Store WordPress version at the top level for easy access
@@ -3479,6 +3589,10 @@ class ImportClient
     private function require_preflight(): void
     {
         $entry = $this->get_state()->preflight_record();
+        if (isset($entry['url']) && $entry['url'] !== $this->remote_reprint_api_url) {
+            throw new RuntimeException('The remote site address changed. Run preflight at the saved address before transferring.');
+        }
+
         if (!is_array($entry) || empty($entry["data"])) {
             throw new RuntimeException(
                 "No preflight data found. Run 'preflight' or 'preflight-assert' first.",
@@ -3736,6 +3850,12 @@ class ImportClient
                     "value_base64" => base64_encode("_edit_lock"),
                 ],
             ];
+            if ($this->get_state()->exclude_reprint) {
+                // Check source support before downloading any SQL. The exporter
+                // omits credential rows and rewrites activation values in db.sql.
+                $this->get_excluded_reprint_paths();
+                $params['exclude_reprint'] = true;
+            }
 
             // Tell the server about the target max_allowed_packet so it can
             // cap SQL statements to a size the target can actually apply.
@@ -6858,6 +6978,156 @@ class ImportClient
 
     // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- CLI errors are never HTML.
     /**
+     * @param string $command db-baseline captures; db-diff compares without accepting edits.
+     * @param array $options {
+     *     Local database selection.
+     *     @type string $source_dsn Explicit mysql: DSN, otherwise the recorded db-apply target.
+     *     @type string $source_user Local MySQL username.
+     *     @type string $source_pass Local MySQL password.
+     *     @type list<string> $baseline_tables Exact table names for initial capture only.
+     * }
+     */
+    private function run_local_database_baseline(string $command, array $options): void {
+        require_once __DIR__ . '/lib/class-local-database-baseline.php';
+        $dsn = $options['source_dsn'] ?? '';
+        $user = $options['source_user'] ?? '';
+        $password = $options['source_pass'] ?? '';
+        if (!isset($options['source_dsn'])) {
+            $target = $this->get_local_site_database_target();
+            if ($target['engine'] !== 'mysql') {
+                throw new InvalidArgumentException($command . ' requires a recorded local MySQL database or --source-dsn=mysql:...');
+            }
+            $dsn = 'mysql:host=' . $target['host'] . ';port=' . $target['port'] . ';dbname=' . $target['db'] . ';charset=utf8mb4';
+            $user = $options['source_user'] ?? $target['user'];
+            $password = $options['source_pass'] ?? $target['pass'];
+        }
+        if (strpos($dsn, 'mysql:') !== 0) {
+            throw new InvalidArgumentException($command . ' currently supports only a mysql: source DSN.');
+        }
+        $database = \WordPress\Reprint\Server\Utils::connect_mysql($dsn, $user, $password);
+        $baseline = new LocalDatabaseBaseline($database, dirname($this->pull_state_directory) . '/database-baseline', hash('sha256', $dsn));
+        if ($command === 'db-baseline') {
+            $baseline->capture($options['baseline_tables'] ?? []);
+            return;
+        }
+        foreach ($baseline->changes() as $change) {
+            $line = json_encode($change, JSON_THROW_ON_ERROR) . "\n";
+            if (fwrite(STDOUT, $line) !== strlen($line)) {
+                throw new RuntimeException('Cannot write a complete local database diff record.');
+            }
+        }
+    }
+
+    /**
+     * @param array $options {
+     *     Explicit row selection and confirmation. No local database connection is opened.
+     *     @type string $changes Selected db-diff JSONL file.
+     *     @type string $commit Optional review hash; omitted means local review only.
+     *     @type string $secret HMAC token, required only for commit.
+     *     @type array $rewrite_url Local/hosted URL pairs.
+     *     @type string $table_prefix WordPress prefix used for URL rewriting.
+     *     @type bool $allow_http Permit HTTP for local test targets.
+     * }
+     */
+    private function run_db_push_changes(array $options): void {
+        require_once __DIR__ . '/lib/database-push/class-database-changes-source.php';
+        if (empty($options['changes'])) {
+            throw new InvalidArgumentException('db-push-changes requires --changes=FILE containing selected db-diff records.');
+        }
+        $url_mapping = [];
+        foreach ($options['rewrite_url'] ?? [] as [$local_url, $hosted_url]) {
+            $url_mapping[$local_url] = $hosted_url;
+        }
+        $source = new DatabaseChangesSource($options['changes'], dirname($this->pull_state_directory) . '/database-baseline', $url_mapping, $options['table_prefix'] ?? 'wp_');
+        $transport = null;
+        try {
+            $review = $source->review();
+            echo json_encode($review, JSON_UNESCAPED_SLASHES) . "\n";
+            if (!array_key_exists('commit', $options)) {
+                return;
+            }
+            if (!is_string($options['commit']) || !hash_equals($review['review'], $options['commit'])) {
+                throw new InvalidArgumentException('The --commit token does not match these selected changes and URL rewrites. Review again without --commit.');
+            }
+            if (strpos($this->remote_reprint_api_url, 'SECRET_KEY=') !== false
+                || parse_url($this->remote_reprint_api_url, PHP_URL_USER) !== null
+                || parse_url($this->remote_reprint_api_url, PHP_URL_PASS) !== null) {
+                throw new InvalidArgumentException('db-push-changes takes its credential from --secret or --private-key-path, never from the URL.');
+            }
+            $transport = new MultipartPushStreamClient([
+                'remote_reprint_api_url' => $this->remote_reprint_api_url,
+                'allow_http' => $options['allow_http'] ?? false,
+                'insecure' => $this->insecure,
+                'envelope_signer' => self::build_envelope_signer(
+                    $options,
+                    $this->remote_reprint_api_url,
+                    $this->state_dir,
+                    $this->remote_state_directory
+                ),
+                'request_context_headers' => $this->request_context_headers,
+            ]);
+            $push_session_id = substr($review['review'], 0, 32);
+            // The receipt is committed with the rows. Re-running this exact
+            // review resolves a lost response without applying its rows twice.
+            $status = $transport->send_push_request('GET', 'push_db_changes_status', ['push_session_id' => $push_session_id], ['accepted']);
+            if ($status['status'] !== 'complete') {
+                $this->last_error_code = $status['reason'] ?? 'database_push_failed';
+                throw new RuntimeException($status['detail'] ?? 'Cannot read the production database changes receipt.');
+            }
+            if ($status['response']['phase'] === 'complete') {
+                if ($status['response']['review'] !== $review['review']) {
+                    throw new RuntimeException('The target receipt describes a different review.');
+                }
+                echo json_encode($status['response']) . "\n";
+                return;
+            }
+            $transport->apply_reported_limits([$status['response']['post_max_bytes']]);
+            $transport->set_max_part_bytes($status['response']['max_part_bytes']);
+            if (!$transport->start_upload_request($push_session_id, 'push_db_changes')) {
+                throw new RuntimeException($transport->get_last_error() ?? 'Cannot open the database changes request.');
+            }
+            $records = ( static function () use ($source, $review): Generator {
+                yield json_encode(['type' => 'begin', 'review' => $review['review']]) . "\n";
+                yield from $source->records();
+            } )();
+            $record_number = 0;
+            // This non-resumable transaction deliberately uses one request.
+            // The CLI owns the loop; the transport sends one bounded part before
+            // returning. Never split a confirmed selection into smaller commits.
+            foreach ($records as $line) {
+                $offset = 0;
+                $total_bytes = strlen($line);
+                while ($offset < $total_bytes) {
+                    $length = $transport->next_database_body_bytes($record_number, $total_bytes, $offset);
+                    if ($length <= 0) {
+                        $this->last_error_code = 'request_too_large';
+                        throw new RuntimeException('The selected changes exceed one push request. No commit was sent. Select fewer rows and review again.');
+                    }
+                    $piece = substr($line, $offset, $length);
+                    if (!$transport->send_part(['type' => 'database', 'record_number' => $record_number, 'total_bytes' => $total_bytes, 'offset' => $offset, 'payload' => $piece])) {
+                        $result = $transport->finish_request();
+                        $this->last_error_code = $result['reason'] ?? 'database_push_failed';
+                        throw new RuntimeException($result['detail'] ?? 'The database changes upload stopped before its end record.');
+                    }
+                    $offset += strlen($piece);
+                }
+                ++$record_number;
+            }
+            $result = $transport->finish_request();
+            if ($result['status'] !== 'complete' || ( $result['response']['phase'] ?? null ) !== 'complete' || ( $result['response']['review'] ?? null ) !== $review['review']) {
+                $this->last_error_code = $result['reason'] ?? 'database_push_failed';
+                throw new RuntimeException( ( $result['detail'] ?? 'The target did not confirm commit.' ) . ' Re-run this same reviewed command to check its receipt before another attempt.');
+            }
+            echo json_encode($result['response']) . "\n";
+        } finally {
+            if ($transport !== null) {
+                $transport->close();
+            }
+            $source->close();
+        }
+    }
+
+    /**
      * Stages a complete local database, or explicitly commits/cleans a staged push.
      *
      * @param array<string,mixed> $options Parsed db-push command options.
@@ -6917,6 +7187,11 @@ class ImportClient
                     }
                     $response = $result['response'];
                 } while ($endpoint !== 'push_db_commit' && !in_array($response['phase'], ['complete', 'discarded'], true));
+                // Release the local session only after the target confirms cleanup or discard.
+                // Until then, remote set-url must keep this session at its original address.
+                if (in_array($response['phase'], ['complete', 'discarded'], true) && !unlink($state_dir . '/state.json')) {
+                    throw new RuntimeException('The target finished database push cleanup, but local state could not be removed: ' . $state_dir . '/state.json. Run the cleanup or abort command again.');
+                }
                 echo json_encode($response, $json_flags) . "\n";
                 return;
             }
@@ -8212,6 +8487,7 @@ class ImportClient
             return $statement_count;
         }
 
+        $set_value_rewriter = new SqliteSetValueStatementRewriter($connection);
         $connection->beginTransaction();
         try {
             // The fast parser falls back to the lexer-based parser if one
@@ -8225,12 +8501,14 @@ class ImportClient
                 $query = $nullable_spatial_column_rewriter->rewrite($query) ?? $query;
                 $executed_query = $query;
                 try {
-                    $this->execute_db_apply_query(
-                        $connection,
-                        $query,
-                        $stmt_rewriter,
-                        $executed_query,
-                    );
+                    foreach ($set_value_rewriter->rewrite_statements($query) as $row_query) {
+                        $this->execute_db_apply_query(
+                            $connection,
+                            $row_query,
+                            $stmt_rewriter,
+                            $executed_query,
+                        );
+                    }
                 } catch (PDOException $error) {
                     throw new RuntimeException(
                         "SQL execution error at statement " . ( $statement_count + 1 ) . ": " .
@@ -8390,6 +8668,42 @@ class ImportClient
             return [];
         }
         return excluded_plugins($this->get_state()->preflight_record()["data"] ?? []);
+    }
+
+    /**
+     * Read the source plugin's actual paths when Reprint exclusion is selected.
+     *
+     * @return string[] Remote absolute paths, or an empty list when Reprint is included or not installed.
+     */
+    private function get_excluded_reprint_paths(): array
+    {
+        if (!$this->get_state()->exclude_reprint) {
+            return [];
+        }
+        $preflight = $this->get_state()->preflight_record()['data'] ?? [];
+        if (!array_key_exists('reprint_plugin', $preflight)) {
+            throw new RuntimeException(
+                'The source did not report its Pull and Push path. Update the source Pull and Push and rerun preflight, or use --include-reprint.'
+            );
+        }
+        $plugin = $preflight['reprint_plugin'];
+        if ($plugin === null) {
+            return [];
+        }
+        if (!is_array($plugin) || !is_array($plugin['paths_b64'] ?? null) || empty($plugin['paths_b64'])) {
+            throw new RuntimeException('The source reprint_plugin must contain a non-empty paths_b64 array.');
+        }
+        $paths = [];
+        foreach ($plugin['paths_b64'] as $path_b64) {
+            $path = is_string($path_b64) ? base64_decode($path_b64, true) : false;
+            $path = $path === false ? null : $this->clean_preflight_path($path);
+            if ($path === null || $path === '/' || strpos($path, "\0") !== false
+                || !Utils::is_absolute_path($path, $this->get_state()->remote_path_format())) {
+                throw new RuntimeException('The source reprint_plugin.paths_b64 must contain base64 absolute plugin directories, not a filesystem root.');
+            }
+            $paths[] = $path;
+        }
+        return array_values(array_unique($paths));
     }
 
     /**
@@ -12591,10 +12905,9 @@ class ImportClient
         // Keep the source export protocol value accepted by existing servers.
         // It selects one source site; the target boots as single-site WordPress.
         $params["multisite_mode"] = "one-site-network-v1";
-        if ($endpoint === "sql_chunk" && $this->sql_output_mode === "mysql") {
-            // Portable dumps may later go into SQLite, which stores SET labels.
-            // Only direct MySQL output can import masks without a label converter.
-            // Older servers ignore this parameter and continue sending labels.
+        if ($endpoint === "sql_chunk") {
+            // The SQLite importer can decode masks; older servers ignore this
+            // parameter and return labels, which the importer also accepts.
             $params["set_value_format"] = "unsigned";
         }
         if ($cursor !== null) {
@@ -12765,6 +13078,7 @@ class ImportClient
         $this->last_http_code = null;
         $this->last_curl_timeout = false;
         $this->last_error_code = null;
+        $this->pending_retry_after_seconds = null;
     }
 
     /** Honest non-browser User-Agent used when no saved choice exists. */
@@ -12930,11 +13244,15 @@ class ImportClient
     /**
      * Check for cURL errors after curl_exec and record the error code and timeout state.
      *
+     * @param mixed $ch                      The completed cURL handle.
+     * @param int    $response_bytes_received Bytes fed to write callback so far.
+     * @param bool   $completion_seen         Whether a completion chunk was already parsed.
+     *
      * @throws CurlTimeoutException          When the request times out.
      * @throws TransientInterruptionException When the response ends early.
      * @throws RuntimeException              For every other cURL error.
      */
-    private function check_curl_error($ch): void
+    private function check_curl_error($ch, int $response_bytes_received = 0, bool $completion_seen = false): void
     {
         $error_number = curl_errno($ch);
         if (!$error_number) {
@@ -12953,15 +13271,27 @@ class ImportClient
         $this->last_curl_errno = $error_number;
         $this->last_curl_timeout = $error_number === $timeout_error_number;
 
+        $response_details = [
+            'response_bytes_received' => $response_bytes_received,
+            'http_code' => (int) curl_getinfo($ch, CURLINFO_HTTP_CODE),
+            'curl_errno' => $error_number,
+            'curl_error' => $error_message !== '' ? $error_message : null,
+            'protocol' => $protocol,
+            'request_seconds' => (float) curl_getinfo($ch, CURLINFO_TOTAL_TIME),
+            'completion_seen' => $completion_seen,
+        ];
+
         if ($this->last_curl_timeout) {
             throw new CurlTimeoutException(
                 "cURL error over {$protocol}: {$error_message}",
+                $response_details,
             );
         }
 
         if (in_array($error_number, self::TRANSIENT_CURL_ERROR_NUMBERS, true)) {
             throw new TransientInterruptionException(
                 "cURL error ({$error_number}) over {$protocol}: {$error_message}",
+                $response_details,
             );
         }
 
@@ -13018,6 +13348,11 @@ class ImportClient
      *
      * A durable cursor advance resets the no-progress count, even if the
      * response later failed. Different temporary errors share the count.
+     * A Retry-After delay parsed from the failing response is waited out here,
+     * after the failure limit check, so a final failure does not wait pointlessly.
+     *
+     * Logs exception's response details so an operator can tell a slow stall
+     * apart from a transport failure without reproducing it.
      *
      * @param string                         $phase         Endpoint whose request failed.
      * @param ?string                        $cursor_before Durable cursor at request start.
@@ -13037,15 +13372,29 @@ class ImportClient
         }
         $this->save_state();
         $count = $this->get_state()->consecutive_interrupted_responses;
+
+        $response_details = $exception->get_response_details();
         $this->audit_log(
             "TEMPORARY REQUEST FAILURE | {$phase} | " .
                 "consecutive_failures_without_progress={$count}/" .
                 self::MAX_CONSECUTIVE_INTERRUPTED_RESPONSES .
                 " | cursor_moved=" .
                 ($cursor_after !== $cursor_before ? "yes" : "no") .
+                " | response_bytes_received=" . ($response_details['response_bytes_received'] ?? 0) .
+                " | http_code=" . ($response_details['http_code'] ?? 0) .
+                " | curl_errno=" . ($response_details['curl_errno'] ?? 0) .
+                " | curl_error=" . ($response_details['curl_error'] ?? "none") .
+                " | protocol=" . ($response_details['protocol'] ?? "unknown") .
+                " | request_seconds=" . (isset($response_details['request_seconds'])
+                    ? round((float) $response_details['request_seconds'], 3)
+                    : "unknown") .
+                " | completion_seen=" . (!empty($response_details['completion_seen']) ? "yes" : "no") .
                 " | " . $exception->getMessage(),
             true,
         );
+
+        $retry_after_seconds = $this->pending_retry_after_seconds;
+        $this->pending_retry_after_seconds = null;
 
         if ($count >= self::MAX_CONSECUTIVE_INTERRUPTED_RESPONSES) {
             // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The remote failure is rendered only as CLI text.
@@ -13053,10 +13402,15 @@ class ImportClient
                 "The remote request failed {$count} consecutive times " .
                 "without cursor progress during {$phase}. Try the command again later. " .
                 "Last failure: " . $exception->getMessage(),
+                $response_details,
                 0,
                 $exception,
             );
             // phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
+        }
+
+        if ($retry_after_seconds !== null && $retry_after_seconds > 0.0) {
+            $this->wait_for_retry_after($retry_after_seconds, $phase);
         }
     }
 
@@ -13133,9 +13487,12 @@ class ImportClient
         }
 
         // ── Authentication / authorization ───────────────────────
-        // 503 not_configured is an auth answer too: the site is in a state
-        // where no credential of the kind we sent can succeed.
-        if ($http_code === 401 || $http_code === 403 || ( $http_code === 503 && $server_reason === 'not_configured' )) {
+        // 503 not_configured and no_keys_enrolled are auth answers too: the
+        // site is in a state where no credential of the kind we sent can succeed.
+        $is_auth_refusal = $http_code === 401 || $http_code === 403;
+        $is_unconfigured_site = $http_code === 503
+            && in_array($server_reason, ['not_configured', 'no_keys_enrolled'], true);
+        if ($is_auth_refusal || $is_unconfigured_site) {
             $using_key = $this->public_key_client !== null;
             $key_hint = '';
             if ($using_key) {
@@ -13150,7 +13507,8 @@ class ImportClient
                         "This site's host has OpenSSL, so it accepts key authentication only; " .
                         "connection tokens are not accepted there.\n\n" .
                         "Run `" . self::keygen_command($this->remote_reprint_api_url, $this->state_dir) . "` " .
-                        "(or `wp migrator pull` with no --secret) and enroll the printed key under Migrator > Pull and Push.",
+                        "(or `wp migrator pull` with no --secret) and enroll the printed key under Migrator > Pull and Push, " .
+                        "then run the command again without --secret.",
                 ];
             }
             if ($server_reason === 'requires_token_auth') {
@@ -13161,17 +13519,32 @@ class ImportClient
                         "Pass --secret=TOKEN using the connection token configured under Migrator > Pull and Push.",
                 ];
             }
-            if ($server_reason === 'not_configured') {
+            if ($server_reason === 'no_keys_enrolled') {
                 if ($using_key) {
                     $not_configured_message =
                         "This site requires key authentication but has no keys enrolled. " .
                         "Enroll this public key under Migrator > Pull and Push." . $key_hint;
                 } else {
+                    // A key host keeps a stored token but never accepts it, so
+                    // setting a token there would change nothing.
                     $not_configured_message =
-                        "This site has no connection token configured. " .
-                        "Set one under Migrator > Pull and Push, or enroll a key if the host supports it.";
+                        "This site's host requires key authentication and has no keys enrolled. " .
+                        "The connection token you passed is not accepted there.\n\n" .
+                        "Run `" . self::keygen_command($this->remote_reprint_api_url, $this->state_dir) . "` " .
+                        "(or `wp migrator pull` with no --secret) and enroll the printed key under Migrator > Pull and Push, " .
+                        "then run the command again without --secret.";
                 }
                 return ['code' => 'AUTH_NOT_CONFIGURED', 'message' => $not_configured_message];
+            }
+            if ($server_reason === 'not_configured') {
+                // A missing or broken token, a broken secret.php, or a host
+                // configuration error: only the site's message says which.
+                return [
+                    'code' => 'AUTH_NOT_CONFIGURED',
+                    'message' => is_string($server_msg)
+                        ? "The site is not set up to accept connections. The site reported: {$server_msg}"
+                        : "The site is not set up to accept connections. Set up the connection under Migrator > Pull and Push.",
+                ];
             }
             if ($server_reason === 'unknown_key') {
                 return [
@@ -13568,6 +13941,7 @@ class ImportClient
         $last_bytes_received = 0;
         $error_body = "";
         $response_headers = "";
+        $retry_after_header = null;
 
         // Build headers to look like a real browser
         $headers = [
@@ -13654,7 +14028,8 @@ class ImportClient
                 &$parser,
                 $context,
                 &$current_chunk,
-                &$response_headers
+                &$response_headers,
+                &$retry_after_header
             ) {
                 $len = strlen($header_line);
 
@@ -13679,6 +14054,10 @@ class ImportClient
                         0,
                         $remaining_header_bytes,
                     );
+                }
+
+                if (stripos($header_line, "Retry-After:") === 0) {
+                    $retry_after_header = trim(substr($header_line, strlen("Retry-After:")));
                 }
 
                 // Parse Content-Type to extract boundary
@@ -13838,18 +14217,19 @@ class ImportClient
         $this->audit_log("Executing curl request...", false);
         $this->output_progress(["debug" => "Waiting for server response..."]);
         $result = curl_exec($ch);
+        $response_protocol = self::describe_curl_http_version(
+            (int) curl_getinfo($ch, CURLINFO_HTTP_VERSION),
+        );
         $this->audit_log(
             "curl_exec completed, result=" .
                 ($result === false ? "false" : "true") .
                 " | protocol=" .
-                self::describe_curl_http_version(
-                    (int) curl_getinfo($ch, CURLINFO_HTTP_VERSION),
-                ),
+                $response_protocol,
             false,
         );
 
         try {
-            $this->check_curl_error($ch);
+            $this->check_curl_error($ch, $bytes_received, $context->saw_completion);
         } catch (RuntimeException $curl_error) {
             $this->last_http_code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             if ($endpoint !== null) {
@@ -13872,6 +14252,16 @@ class ImportClient
         }
         $context->response_stats["ttfb"] = $ttfb;
         $context->response_stats["total_time"] = $total_time;
+
+        $response_details = [
+            'response_bytes_received' => $bytes_received,
+            'http_code' => (int) $http_code,
+            'curl_errno' => 0,
+            'curl_error' => null,
+            'protocol' => $response_protocol,
+            'request_seconds' => $total_time,
+            'completion_seen' => $context->saw_completion,
+        ];
 
         if ($http_code !== 200) {
             $this->last_http_code = (int) $http_code;
@@ -13909,8 +14299,29 @@ class ImportClient
             }
 
             if ($this->is_potentially_transient_http_error($http_code, $error_body)) {
+                $retry_after_seconds = $this->parse_retry_after_seconds($retry_after_header);
+
+                if (
+                    $retry_after_seconds !== null &&
+                    $retry_after_seconds > self::MAX_SUPPORTED_RETRY_AFTER_SECONDS
+                ) {
+                    $message = sprintf(
+                        "The server sent Retry-After: %s (%.0fs) with HTTP %d, which exceeds " .
+                            "the %ds maximum Migrator waits for. Wait for that long, then rerun " .
+                            "the command to resume from the last durable cursor.",
+                        $retry_after_header,
+                        $retry_after_seconds,
+                        $http_code,
+                        self::MAX_SUPPORTED_RETRY_AFTER_SECONDS,
+                    );
+                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped - This exception is rendered only as CLI text.
+                    throw new RuntimeException($message);
+                }
+
+                $this->pending_retry_after_seconds = $retry_after_seconds;
+
                 // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- This exception is rendered only as CLI text.
-                throw new TransientInterruptionException($error_msg);
+                throw new TransientInterruptionException($error_msg, $response_details);
             }
 
             throw new RuntimeException($error_msg);
@@ -13922,6 +14333,7 @@ class ImportClient
             throw new TransientInterruptionException(
                 "Invalid response: missing multipart boundary. " .
                     ($snippet !== "" ? "Body: {$snippet}" : ""),
+                $response_details,
             );
         }
 
@@ -13929,8 +14341,71 @@ class ImportClient
             $this->last_http_code = (int) $http_code;
             throw new TransientInterruptionException(
                 "Invalid response: missing completion chunk from server.",
+                $response_details,
             );
         }
+    }
+
+    /**
+     * Parse a Retry-After header value into a wait duration in seconds.
+     */
+    private function parse_retry_after_seconds(?string $raw): ?float
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        $trimmed = trim($raw);
+        if ($trimmed === "") {
+            return null;
+        }
+
+        if (preg_match('/^\d+$/', $trimmed)) {
+            return (float) $trimmed;
+        }
+
+        $timestamp = strtotime($trimmed);
+        if ($timestamp === false) {
+            return null;
+        }
+
+        $delay = $timestamp - time();
+        return $delay > 0 ? (float) $delay : 0.0;
+    }
+
+    /**
+     * Wait out a server-requested Retry-After delay before the next attempt.
+     */
+    private function wait_for_retry_after(float $seconds, string $phase): void
+    {
+        $this->audit_log(
+            sprintf(
+                "RETRY-AFTER WAIT | %s | waiting %.1fs before the next attempt",
+                $phase,
+                $seconds,
+            ),
+            true,
+        );
+        $this->progress->show_progress_line(
+            sprintf("Waiting %.1fs before retrying %s", $seconds, $phase),
+        );
+
+        $deadline = microtime(true) + $seconds;
+        do {
+            $remaining = $deadline - microtime(true);
+            $this->output_progress([
+                "type" => "retry_after_wait",
+                "phase" => $phase,
+                "wait_seconds_remaining" => max(0.0, round($remaining, 1)),
+            ], true);
+            $this->progress->tick_spinner();
+
+            if ($this->shutdown_requested || $remaining <= 0) {
+                break;
+            }
+
+            usleep( (int) round(min(1.0, $remaining) * 1_000_000));
+        } while (microtime(true) < $deadline);
     }
 
     /** Decide whether a streaming HTTP error is potentially transient. */
@@ -13969,6 +14444,7 @@ class ImportClient
         $this->state->user_agent = $previous_state->user_agent;
         $this->state->follow_symlinks = $previous_state->follow_symlinks;
         $this->state->include_host_plugins = $previous_state->include_host_plugins;
+        $this->state->exclude_reprint = $previous_state->exclude_reprint;
         $this->state->apply->remote_paths_removed_from_local_site = $previous_state->apply->remote_paths_removed_from_local_site;
         $this->state->fs_root_nonempty_behavior = $previous_state->fs_root_nonempty_behavior;
         $this->state->max_allowed_packet = $previous_state->max_allowed_packet;
@@ -14717,11 +15193,15 @@ if (
     //   flag_value     What to store for flag types (default: true)
     //   valid_values   Array of allowed values (enforced at parse time)
     //   argument_labels Labels for two-argument type help, e.g. 'FROM TO'
+    //   config_scope   'local' or 'remote' for reusable settings; absent means invocation-only
+    //   config_path    Resolve a saved local path relative to the config directory
     // ================================================================
     $option_defs = [
         // ── Required options ─────────────────────────────────────
         [
             'name' => 'state-dir',
+            'config_scope' => 'local',
+            'config_path' => true,
             'type' => 'value',
             'target' => 'state_dir',
             'placeholder' => 'DIR',
@@ -14731,6 +15211,8 @@ if (
         ],
         [
             'name' => 'fs-root',
+            'config_scope' => 'local',
+            'config_path' => true,
             'type' => 'value',
             'target' => 'filesystem_root',
             'placeholder' => 'DIR',
@@ -14751,13 +15233,24 @@ if (
 
         // ── Global options ───────────────────────────────────────
         [
+            'name' => 'secret-file',
+            'config_scope' => 'remote',
+            'config_path' => true,
+            'type' => 'value',
+            'target' => 'secret_file',
+            'placeholder' => 'FILE',
+            'help' => 'Read the HMAC connection token from FILE',
+            'help_section' => 'global',
+            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'files-push', 'files-index', 'db-push', 'db-pull', 'db-index', 'preflight', 'preflight-assert'],
+        ],
+        [
             'name' => 'secret',
             'type' => 'value',
             'target' => 'secret',
             'placeholder' => 'TOKEN',
             'help' => 'HMAC connection token for export API authentication',
             'help_section' => 'global',
-            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'files-push', 'files-index', 'db-push', 'db-pull', 'db-index', 'preflight', 'preflight-assert'],
+            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'files-push', 'files-index', 'db-push', 'db-push-changes', 'db-pull', 'db-index', 'preflight', 'preflight-assert'],
         ],
         [
             'name' => 'insecure',
@@ -14774,7 +15267,7 @@ if (
             'placeholder' => 'PATH',
             'help' => 'RSA private key file for export API authentication; overrides the key stored in the state directory',
             'help_section' => 'global',
-            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'files-push', 'files-index', 'db-push', 'db-pull', 'db-index', 'preflight', 'preflight-assert'],
+            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'files-push', 'files-index', 'db-push', 'db-push-changes', 'db-pull', 'db-index', 'preflight', 'preflight-assert'],
         ],
         [
             'name' => 'out',
@@ -14824,10 +15317,11 @@ if (
             'short' => 'v',
             'help' => 'Show detailed request/response logs',
             'help_section' => 'global',
-            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'files-push', 'files-index', 'db-push', 'db-pull', 'db-index', 'db-apply', 'db-rewrite-urls', 'flat-docroot', 'merge-wp-content', 'apply-runtime'],
+            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'files-push', 'files-index', 'db-push', 'db-push-changes', 'db-pull', 'db-index', 'db-apply', 'db-rewrite-urls', 'flat-docroot', 'merge-wp-content', 'apply-runtime'],
         ],
         [
             'name' => 'exclude-host-plugins',
+            'config_scope' => 'remote',
             'type' => 'flag',
             'target' => 'include_host_plugins',
             'flag_value' => false,
@@ -14837,6 +15331,7 @@ if (
         ],
         [
             'name' => 'include-host-plugins',
+            'config_scope' => 'remote',
             'type' => 'flag',
             'target' => 'include_host_plugins',
             'help' => 'Keep host platform plugins during pull and db-apply (default for new state; saved in state). For apply-runtime only: skip local cleanup without changing the saved pull choice',
@@ -14844,7 +15339,25 @@ if (
             'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'db-apply', 'apply-runtime'],
         ],
         [
+            'name' => 'exclude-reprint',
+            'type' => 'flag',
+            'target' => 'exclude_reprint',
+            'help' => 'Omit the source Pull and Push files, credentials, and activation entries (default for new state; requires an updated source server)',
+            'help_section' => 'global',
+            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'db-pull'],
+        ],
+        [
+            'name' => 'include-reprint',
+            'type' => 'flag',
+            'target' => 'exclude_reprint',
+            'flag_value' => false,
+            'help' => 'Keep the source Pull and Push files and connection state (saved in state)',
+            'help_section' => 'global',
+            'commands' => ['pull', 'pull-files', 'pull-db', 'files-pull', 'db-pull'],
+        ],
+        [
             'name' => 'no-follow-symlinks',
+            'config_scope' => 'remote',
             'type' => 'flag',
             'target' => 'follow_symlinks',
             'flag_value' => false,
@@ -14854,6 +15367,7 @@ if (
         ],
         [
             'name' => 'follow-symlinks',
+            'config_scope' => 'remote',
             'type' => 'flag',
             'target' => 'follow_symlinks',
             'flag_value' => true,
@@ -14862,6 +15376,8 @@ if (
         ],
         [
             'name' => 'follow-symlinks',
+            'config_scope' => 'remote',
+            'config_path' => true,
             'type' => 'value',
             'target' => 'local_followed_symlinks_root',
             'placeholder' => 'DIR',
@@ -14872,6 +15388,7 @@ if (
         ],
         [
             'name' => 'mode',
+            'config_scope' => 'remote',
             'type' => 'value',
             'target' => 'files_pull_mode',
             'placeholder' => 'MODE',
@@ -14882,6 +15399,7 @@ if (
         ],
         [
             'name' => 'on-fs-root-nonempty',
+            'config_scope' => 'remote',
             'type' => 'value',
             'target' => 'fs_root_nonempty_behavior',
             'placeholder' => 'MODE',
@@ -14931,6 +15449,7 @@ if (
         // ── files-pull options ───────────────────────────────────
         [
             'name' => 'filter',
+            'config_scope' => 'remote',
             'type' => 'value',
             'target' => 'filter',
             'placeholder' => 'MODE',
@@ -14948,32 +15467,49 @@ if (
         ],
 
         [
+            'name' => 'changes',
+            'type' => 'value',
+            'target' => 'changes',
+            'placeholder' => 'FILE',
+            'help' => 'JSONL file containing only selected db-diff changes (required)',
+            'commands' => ['db-push-changes'],
+        ],
+        [
             'name' => 'source-dsn',
             'type' => 'value',
             'target' => 'source_dsn',
             'help' => 'Local mysql: or mysql-on-sqlite: DSN (otherwise uses the recorded db-apply target)',
-            'commands' => ['db-push'],
+            'commands' => ['db-push', 'db-baseline', 'db-diff'],
         ],
         [
             'name' => 'source-user',
             'type' => 'value',
             'target' => 'source_user',
             'help' => 'Local MySQL username',
-            'commands' => ['db-push'],
+            'commands' => ['db-push', 'db-baseline', 'db-diff'],
         ],
         [
             'name' => 'source-pass',
             'type' => 'value',
             'target' => 'source_pass',
             'help' => 'Local MySQL password',
-            'commands' => ['db-push'],
+            'commands' => ['db-push', 'db-baseline', 'db-diff'],
+        ],
+        [
+            'name' => 'table',
+            'type' => 'value-or-next',
+            'target' => 'baseline_tables',
+            'placeholder' => 'TABLE',
+            'repeatable' => true,
+            'help' => 'Capture this exact local table; repeat for several (required)',
+            'commands' => ['db-baseline'],
         ],
         [
             'name' => 'table-prefix',
             'type' => 'value',
             'target' => 'table_prefix',
             'help' => 'Identical local and hosted table prefix (default wp_)',
-            'commands' => ['db-push'],
+            'commands' => ['db-push', 'db-push-changes'],
         ],
         [
             'name' => 'include-table',
@@ -14988,8 +15524,8 @@ if (
             'name' => 'commit',
             'type' => 'value',
             'target' => 'commit',
-            'help' => 'Overwrite production using the staged review token; deletes production-only site rows and tables',
-            'commands' => ['db-push'],
+            'help' => 'Confirm the review token: full overwrite for db-push, selected row changes for db-push-changes',
+            'commands' => ['db-push', 'db-push-changes'],
         ],
         [
             'name' => 'writers-stopped',
@@ -15017,6 +15553,7 @@ if (
         ],
         [
             'name' => 'sql-output',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'sql_output',
             'placeholder' => 'MODE',
@@ -15025,6 +15562,7 @@ if (
         ],
         [
             'name' => 'mysql-host',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'mysql_host',
             'placeholder' => 'HOST',
@@ -15032,7 +15570,16 @@ if (
             'commands' => ['db-pull'],
         ],
         [
+            'name' => 'env-mysql-host',
+            'type' => 'value',
+            'target' => 'env_mysql_host',
+            'placeholder' => 'VAR_NAME',
+            'help' => 'Read MySQL host from environment variable (secure alternative to --mysql-host)',
+            'commands' => ['db-pull'],
+        ],
+        [
             'name' => 'mysql-port',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'mysql_port',
             'placeholder' => 'PORT',
@@ -15041,10 +15588,19 @@ if (
         ],
         [
             'name' => 'mysql-user',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'mysql_user',
             'placeholder' => 'USER',
             'help' => 'MySQL user (default: root, for --sql-output=mysql)',
+            'commands' => ['db-pull'],
+        ],
+        [
+            'name' => 'env-mysql-user',
+            'type' => 'value',
+            'target' => 'env_mysql_user',
+            'placeholder' => 'VAR_NAME',
+            'help' => 'Read MySQL user from environment variable (secure alternative to --mysql-user)',
             'commands' => ['db-pull'],
         ],
         [
@@ -15056,17 +15612,35 @@ if (
             'commands' => ['db-pull'],
         ],
         [
+            'name' => 'env-mysql-password',
+            'type' => 'value',
+            'target' => 'env_mysql_password',
+            'placeholder' => 'VAR_NAME',
+            'help' => 'Read MySQL password from environment variable (secure alternative to --mysql-password)',
+            'commands' => ['db-pull'],
+        ],
+        [
             'name' => 'mysql-database',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'mysql_database',
             'placeholder' => 'DB',
             'help' => 'MySQL database (required for --sql-output=mysql)',
             'commands' => ['db-pull'],
         ],
+        [
+            'name' => 'env-mysql-database',
+            'type' => 'value',
+            'target' => 'env_mysql_database',
+            'placeholder' => 'VAR_NAME',
+            'help' => 'Read MySQL database from environment variable (secure alternative to --mysql-database)',
+            'commands' => ['db-pull'],
+        ],
 
         // ── db-apply options ─────────────────────────────────────
         [
             'name' => 'target-engine',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'target_engine',
             'placeholder' => 'ENGINE',
@@ -15075,6 +15649,7 @@ if (
         ],
         [
             'name' => 'target-host',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'target_host',
             'placeholder' => 'HOST',
@@ -15083,6 +15658,7 @@ if (
         ],
         [
             'name' => 'target-port',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'target_port',
             'placeholder' => 'PORT',
@@ -15092,6 +15668,7 @@ if (
         ],
         [
             'name' => 'target-user',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'target_user',
             'placeholder' => 'USER',
@@ -15108,6 +15685,7 @@ if (
         ],
         [
             'name' => 'target-db',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'target_db',
             'placeholder' => 'NAME',
@@ -15116,6 +15694,8 @@ if (
         ],
         [
             'name' => 'target-sqlite-path',
+            'config_scope' => 'local',
+            'config_path' => true,
             'type' => 'value',
             'target' => 'target_sqlite_path',
             'placeholder' => 'PATH',
@@ -15124,11 +15704,12 @@ if (
         ],
         [
             'name' => 'rewrite-url',
+            'config_scope' => 'remote',
             'type' => 'two-arguments',
             'target' => 'rewrite_url',
             'argument_labels' => 'FROM TO',
             'help' => 'Rewrite FROM to TO (repeatable)',
-            'commands' => ['pull', 'pull-files', 'files-pull', 'pull-db', 'db-apply', 'db-rewrite-urls', 'db-push'],
+            'commands' => ['pull', 'pull-files', 'files-pull', 'pull-db', 'db-apply', 'db-rewrite-urls', 'db-push', 'db-push-changes'],
         ],
         [
             'name' => 'site-admin',
@@ -15148,33 +15729,36 @@ if (
         ],
         [
             'name' => 'remap',
+            'config_scope' => 'remote',
             'type' => 'two-arguments',
             'target' => 'remap',
             'argument_labels' => 'SOURCE TARGET',
             'help' => 'Place SOURCE (a :token: like :wp-uploads: or an absolute path) at TARGET ' .
                 '(a :fs-root: path or an absolute path within --fs-root); repeatable',
-            'commands' => ['pull-files', 'files-pull'],
+            'commands' => ['pull', 'pull-files', 'files-pull'],
         ],
         [
             'name' => 'include',
+            'config_scope' => 'remote',
             'type' => 'value-or-next',
             'target' => 'include',
             'placeholder' => 'SOURCE',
             'repeatable' => true,
             'help' => 'Restrict the file pull to SOURCE (a :token: like :wp-content: or :wp-uploads:, or an absolute ' .
                 'path to a directory or a single file); repeat for several. Default pulls everything',
-            'commands' => ['pull-files', 'files-pull'],
+            'commands' => ['pull', 'pull-files', 'files-pull'],
             'aliases' => ['only'],
         ],
         [
             'name' => 'exclude',
+            'config_scope' => 'remote',
             'type' => 'value-or-next',
             'target' => 'exclude',
             'placeholder' => 'SOURCE',
             'repeatable' => true,
             'help' => 'Omit SOURCE (a :token: like :wp-content: or :wp-uploads:, or an absolute path) from the file pull; ' .
                 'repeat for several',
-            'commands' => ['pull-files', 'files-pull'],
+            'commands' => ['pull', 'pull-files', 'files-pull'],
         ],
 
         // ── flat-docroot options ────────────────────────────────
@@ -15207,6 +15791,7 @@ if (
         // ── apply-runtime options ────────────────────────────────
         [
             'name' => 'runtime',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'runtime',
             'placeholder' => 'RUNTIME',
@@ -15216,6 +15801,7 @@ if (
         ],
         [
             'name' => 'start-runtime',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'start_runtime',
             'placeholder' => 'RUNTIME',
@@ -15225,6 +15811,8 @@ if (
         ],
         [
             'name' => 'output-dir',
+            'config_scope' => 'local',
+            'config_path' => true,
             'type' => 'value',
             'target' => 'output_dir',
             'placeholder' => 'DIR',
@@ -15242,6 +15830,7 @@ if (
         ],
         [
             'name' => 'host',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'host',
             'placeholder' => 'HOST',
@@ -15250,6 +15839,7 @@ if (
         ],
         [
             'name' => 'port',
+            'config_scope' => 'local',
             'type' => 'value',
             'target' => 'port',
             'placeholder' => 'PORT',
@@ -15290,6 +15880,12 @@ if (
     /**
      * Parse CLI options using the declarative option definitions.
      *
+     * @param string[] $argv Process arguments.
+     * @param int $argc Argument count.
+     * @param int $start First option index.
+     * @param array[] $option_defs Option definitions declared above.
+     * @param array $provided_options Output keyed by canonical option name, containing only explicitly supplied values.
+     *
      * @return array {
      *     Parsed CLI option tuple.
      *
@@ -15299,7 +15895,7 @@ if (
      * }
      * @phpstan-return array{0: ?string, 1: ?string, 2: array}
      */
-    function _cli_parse_options(array $argv, int $argc, int $start, array $option_defs): array
+    function _cli_parse_options(array $argv, int $argc, int $start, array $option_defs, array &$provided_options = []): array
     {
         $state_dir = null;
         $filesystem_root = null;
@@ -15328,6 +15924,10 @@ if (
                             $prefix = "--{$cli_name}=";
                             if (strpos($arg, $prefix) === 0) {
                                 $raw = substr($arg, strlen($prefix));
+                                if (isset($def['config_scope'], $def['cast']) && !is_numeric($raw)) {
+                                    fwrite(STDERR, "Invalid --{$def['name']} value: {$raw}. Expected a number.\n");
+                                    exit(1);
+                                }
                                 $value = _cli_cast($raw, $def['cast'] ?? null);
                                 if (isset($def['valid_values']) && !in_array($value, $def['valid_values'], true)) {
                                     fwrite(STDERR, "Invalid --{$def['name']} value: {$raw}. Valid values: " . implode(", ", $def['valid_values']) . "\n");
@@ -15341,6 +15941,11 @@ if (
 
                         case 'flag':
                             if ($arg === "--{$cli_name}" || (isset($def['short']) && $arg === "-{$def['short']}")) {
+                                if ($def['target'] === 'exclude_reprint' && array_key_exists('exclude_reprint', $options)
+                                    && $options['exclude_reprint'] !== ( $def['flag_value'] ?? true )) {
+                                    fwrite(STDERR, "--exclude-reprint and --include-reprint cannot be combined.\n");
+                                    exit(1);
+                                }
                                 if (
                                     $def['target'] === 'include_host_plugins'
                                     && array_key_exists('include_host_plugins', $options)
@@ -15395,12 +16000,31 @@ if (
                 }
             }
 
+            if ($matched) {
+                $target = $def['target'];
+                if ($target === 'state_dir') {
+                    $provided_options[$def['name']] = $state_dir;
+                } elseif ($target === 'filesystem_root') {
+                    $provided_options[$def['name']] = $filesystem_root;
+                } elseif (strpos($target, 'tuning_config.') === 0) {
+                    $provided_options[$def['name']] = $options['tuning_config'][substr($target, strlen('tuning_config.'))];
+                } else {
+                    $provided_options[$def['name']] = $options[$target];
+                }
+            }
+
             // Full overwrite must never silently ignore pull selections. Use
             // the same command declarations as help, not a second option list.
             if ($matched && ( $argv[1] ?? null ) === 'db-push'
                 && $def['name'] !== 'state-dir'
                 && !in_array('db-push', $def['commands'] ?? [], true)) {
                 fwrite(STDERR, "Error: db-push does not accept --{$def['name']}. Full overwrite includes every site table.\n");
+                exit(1);
+            }
+            if ($matched && in_array($argv[1] ?? '', ['db-baseline', 'db-diff', 'db-push-changes'], true)
+                && $def['name'] !== 'state-dir'
+                && !in_array($argv[1], $def['commands'] ?? [], true)) {
+                fwrite(STDERR, "Error: {$argv[1]} does not accept --{$def['name']}.\n");
                 exit(1);
             }
             if (!$matched) {
@@ -15464,7 +16088,8 @@ if (
         echo "Mirror any WordPress site over HTTP.\n";
         echo "Version " . get_importer_version() . "\n";
         echo "\n";
-        echo "Usage: wp migrator remote <command> <site-url> [options]\n";
+        echo "Usage: wp migrator remote <command> [<site-url>] [options]\n";
+        echo "Save repeated settings with reprint remote add; then omit the URL and saved options.\n";
         echo "\n";
 
         $high = array_filter($command_info, fn($i) => ($i['level'] ?? 'low') === 'high');
@@ -15493,8 +16118,12 @@ if (
 
         echo "Shared options (see command help for availability):\n";
         $global = array_filter($option_defs, fn($d) => ($d['help_section'] ?? null) === 'global');
-        // --version/-V is handled before option parsing, so inject it manually.
-        _cli_render_option_list($global, ['--version, -V' => 'Print version and exit']);
+        // --version/-V and config selection are handled before option parsing, so inject them manually.
+        _cli_render_option_list($global, [
+            '--version, -V' => 'Print version and exit',
+            '--config=FILE' => 'Use this config instead of .reprint/config.json in the current directory',
+            '--no-config' => 'Use only explicit command arguments',
+        ]);
         echo "\n";
 
         echo "Exit codes:\n";
@@ -15528,6 +16157,10 @@ if (
         echo "Usage: {$usage}\n";
         echo "\n";
         echo $info["description"];
+        if (in_array($command, ImportClient::COMMANDS, true)) {
+            echo "\nWith a saved remote, omit the URL and saved options. Use --config=FILE to select\n";
+            echo "another config, or --no-config to use only explicit arguments.\n";
+        }
 
         // Collect options tagged for this command. Required options are also
         // shown when the command usage names them, so command-specific help
@@ -16008,6 +16641,42 @@ if (
                 "Requires a prior files-index or files-pull run.\n",
             "extra" => null,
         ],
+        "db-baseline" => [
+            "level" => "low",
+            "short" => "Save selected local MySQL rows before editing",
+            "usage" => "wp migrator remote db-baseline <site-url> --state-dir=DIR --table=NAME [--table=NAME] [--source-dsn=mysql:...]",
+            "description" =>
+                "Save a local baseline after pull and local URL rewriting finish.\n" .
+                "Select exact tables with --table, including non-prefixed plugin tables.\n" .
+                "Every selected table must have a primary key. Existing baselines\n" .
+                "are never replaced. Uses the recorded MySQL db-apply target unless\n" .
+                "--source-dsn is supplied. No network requests or production writes.\n",
+            "extra" =>
+                "Holds local table read locks during capture; local writes wait.\n" .
+                "Requires SELECT and LOCK TABLES privileges. Interrupted scans restart.\n" .
+                "Keep state-dir private and outside the web root: it contains full rows.\n",
+        ],
+        "db-diff" => [
+            "level" => "low",
+            "short" => "Show local MySQL row and column changes since db-baseline",
+            "usage" => "wp migrator remote db-diff <site-url> --state-dir=DIR [--source-dsn=mysql:...]",
+            "description" =>
+                "Scan the baseline's selected tables and emit JSONL inserts, updates,\n" .
+                "and deletes. Updates contain only changed columns; values are base64\n" .
+                "text or null. The baseline never advances. This is a local diff, not\n" .
+                "a production conflict check or an executable push plan.\n",
+            "extra" =>
+                "Holds local table read locks during the scan. Every run starts over.\n" .
+                "Rejects missing tables and changed column layouts or primary keys.\n" .
+                "No network requests are made, and no secret is required.\n",
+        ],
+        "db-push-changes" => [
+            "level" => "low",
+            "short" => "Review selected database changes, then apply them in one transaction",
+            "usage" => "wp migrator remote db-push-changes <site-url> --state-dir=DIR --changes=FILE [--secret=TOKEN --commit=REVIEW]",
+            "description" => "Reads selected db-diff JSONL records and prints a review token without contacting production.\nPass that token with --commit to send explicit inserts, updates, and deletes in one transaction.\nAny conflict rolls back every selected row change. URL rewriting happens on the client.\n",
+            "extra" => "Requires the standalone push route, matching schemas and InnoDB target tables with primary keys.\nNeeds direct TRIGGER privileges and a global REFERENCES grant to inspect side effects.\nNo target triggers, cascading foreign keys, spatial writes, or schema changes.\nOne request only; an interrupted upload starts over. The local baseline does not advance.\n",
+        ],
         "db-push" => [
             "level" => "low",
             "short" => "Stage a full database overwrite for explicit confirmation",
@@ -16227,6 +16896,29 @@ if (
         ],
     ];
 
+    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Extend the existing CLI variables.
+    $command_info['remote'] = [
+        'level' => 'high',
+        'short' => 'Save a named remote and reusable migration settings',
+        'usage' => 'wp migrator remote remote add NAME URL --fs-root=DIR [settings] | remote set-url NAME URL [--same-remote]',
+        'description' => "remote add saves one remote in .reprint/config.json without contacting it.\n" .
+            "Save paths, --secret-file, --remap, --rewrite-url, and database settings once,\n" .
+            "then run commands without their URL and repeated options. A second remote is rejected.\n" .
+            "remote set-url changes only the saved address. Completed sync work requires\n" .
+            "--same-remote; unfinished transfers must be completed or explicitly aborted first.\n" .
+            "Redirects are never followed or saved. Use --config=FILE for another config.\n",
+    ];
+    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Extend the existing CLI variables.
+    $command_info['config'] = [
+        'level' => 'high',
+        'short' => 'Inspect effective saved settings without contacting the remote',
+        'usage' => 'wp migrator remote config show [--command=COMMAND] [--config=FILE] [options]',
+        'description' => "Prints resolved paths, applicable options, and their sources as JSON.\n" .
+            "Defaults to --command=pull. Does not read secret files. Passwords are redacted.\n" .
+            "Only the current directory's .reprint/config.json is discovered. No parent or global configs.\n" .
+            "Explicit URLs bypass discovery; --no-config disables it. CLI overrides are not saved.\n",
+    ];
+
     // Show main help when invoked with no arguments or just --help
     if ($argument_count < 2 || (isset($argv[1]) && in_array($argv[1], ["--help", "-h", "help"]))) {
         _cli_render_main_help($option_defs, $command_info);
@@ -16259,6 +16951,23 @@ if (
     if (in_array("--help", array_slice($argv, 2)) || in_array("-h", array_slice($argv, 2))) {
         _cli_render_command_help($command, $option_defs, $command_info);
         exit(0);
+    }
+
+    $reprint_saved_remote = new \Reprint\Importer\SavedRemoteConfig();
+    try {
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Extend the existing CLI variables.
+        $argv[1] = $command;
+        $reprint_configured_arguments = $reprint_saved_remote->prepare($argv, $option_defs);
+        if ($reprint_configured_arguments === null) {
+            exit(0);
+        }
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Extend the existing CLI variables.
+        $argv = $reprint_configured_arguments;
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Extend the existing CLI variables.
+        $argument_count = count($argv);
+    } catch (\Throwable $error) {
+        fwrite(STDERR, 'Error: ' . $error->getMessage() . "\n");
+        exit(1);
     }
 
     if ($command === 'post-process') {
@@ -16324,6 +17033,21 @@ if (
         $argv, $argument_count, $option_start_index, $option_defs
     );
     $options["command"] = $command;
+    if (isset($options['secret_file'])) {
+        if ($options['secret'] !== null) {
+            fwrite(STDERR, "Error: --secret and --secret-file cannot be combined.\n");
+            exit(1);
+        }
+        $reprint_secret = @file_get_contents($options['secret_file']);
+        if ($reprint_secret === false || trim($reprint_secret) === '') {
+            fwrite(STDERR, 'Error: Cannot read a non-empty secret from ' . $options['secret_file'] . ".\n");
+            exit(1);
+        }
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Extend the existing CLI variables.
+        $options['secret'] = trim($reprint_secret);
+        unset($reprint_secret);
+    }
+
 
     $reprint_files_command_arguments = array_slice($argv, $option_start_index);
     if ($command === 'files-push') {
@@ -16337,6 +17061,7 @@ if (
                 || strpos($reprint_files_push_command_argument, '--fs-root=') === 0
                 || strpos($reprint_files_push_command_argument, '--secret=') === 0
                 || strpos($reprint_files_push_command_argument, '--private-key-path=') === 0
+                || strpos($reprint_files_push_command_argument, '--secret-file=') === 0
                 || strpos($reprint_files_push_command_argument, '--progress=') === 0;
             if (!$reprint_files_push_option_allowed) {
                 $reprint_files_push_option_name = explode('=', $reprint_files_push_command_argument, 2)[0];
@@ -16371,7 +17096,7 @@ if (
 
     // apply-runtime accepts --flat-document-root as an alternative to --fs-root.
     $flat_document_root = $options["flat_document_root"] ?? null;
-    $reprint_selected_remote_state_directory = null;
+    $reprint_selected_remote_state_directory = $reprint_saved_remote->remote_state_directory;
     if ($command === 'db-rewrite-urls') {
         if ($filesystem_root || $flat_document_root) {
             fwrite(STDERR, "Error: db-rewrite-urls does not accept --fs-root or --flat-document-root.\n");
@@ -16419,7 +17144,7 @@ if (
         fwrite(STDERR, "Use --fs-root for the raw download directory, or --flat-document-root for a flattened layout.\n");
         exit(1);
     }
-    if (!$filesystem_root && !$flat_document_root && !in_array($command, ["pull-metadata", "keygen", "db-push"], true)) {
+    if (!$filesystem_root && !$flat_document_root && !in_array($command, ["pull-metadata", "keygen", "db-push", "db-push-changes", "db-baseline", "db-diff"], true)) {
         fwrite(STDERR, "Error: --fs-root=DIR is required\n");
         fwrite(STDERR, "Usage: wp migrator remote {$command} <site-url> --state-dir=DIR --fs-root=DIR [options]\n");
         exit(1);
@@ -16481,14 +17206,15 @@ if (
                 $remote_reprint_api_url,
                 $state_dir,
                 $filesystem_root,
-                $options
+                $options + ['selected_remote_state_directory' => $reprint_selected_remote_state_directory]
             );
         } elseif ($command === 'files-diff') {
             $reprint_files_diff_push_state_directory = ImportClient::resolve_push_state_directory(
                 $remote_reprint_api_url,
                 $state_dir,
                 $filesystem_root,
-                'files-diff'
+                'files-diff',
+                $reprint_selected_remote_state_directory
             );
         }
         $client = new ImportClient(

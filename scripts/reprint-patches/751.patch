@@ -1,0 +1,474 @@
+From 9c4c0081d2bdf94c1ae50ad11dadfa896d7f22c7 Mon Sep 17 00:00:00 2001
+From: Ashish Verma <ashishverma208004@gmail.com>
+Date: Thu, 3 Sep 2026 10:43:56 +0530
+Subject: [PATCH] PR #751: Log HTTP response details for interrupted streaming
+ requests
+
+---
+ packages/reprint-client/src/import.php        |  56 ++++-
+ .../class-interrupted-response-exception.php  |  44 +++-
+ tests/Import/CurlTimeoutRecoveryTest.php      | 208 +++++++++++++++++-
+ 3 files changed, 300 insertions(+), 8 deletions(-)
+
+diff --git a/packages/reprint-client/src/import.php b/packages/reprint-client/src/import.php
+index e32eb437..df8eecbc 100755
+--- a/packages/reprint-client/src/import.php
++++ b/packages/reprint-client/src/import.php
+@@ -12943,11 +12943,15 @@ class ImportClient
+     /**
+      * Check for cURL errors after curl_exec and record the error code and timeout state.
+      *
++     * @param mixed $ch                      The completed cURL handle.
++     * @param int    $response_bytes_received Bytes fed to write callback so far.
++     * @param bool   $completion_seen         Whether a completion chunk was already parsed.
++     *
+      * @throws CurlTimeoutException          When the request times out.
+      * @throws TransientInterruptionException When the response ends early.
+      * @throws RuntimeException              For every other cURL error.
+      */
+-    private function check_curl_error($ch): void
++    private function check_curl_error($ch, int $response_bytes_received = 0, bool $completion_seen = false): void
+     {
+         $error_number = curl_errno($ch);
+         if (!$error_number) {
+@@ -12966,15 +12970,27 @@ class ImportClient
+         $this->last_curl_errno = $error_number;
+         $this->last_curl_timeout = $error_number === $timeout_error_number;
+ 
++        $response_details = [
++            'response_bytes_received' => $response_bytes_received,
++            'http_code' => (int) curl_getinfo($ch, CURLINFO_HTTP_CODE),
++            'curl_errno' => $error_number,
++            'curl_error' => $error_message !== '' ? $error_message : null,
++            'protocol' => $protocol,
++            'request_seconds' => (float) curl_getinfo($ch, CURLINFO_TOTAL_TIME),
++            'completion_seen' => $completion_seen,
++        ];
++
+         if ($this->last_curl_timeout) {
+             throw new CurlTimeoutException(
+                 "cURL error over {$protocol}: {$error_message}",
++                $response_details,
+             );
+         }
+ 
+         if (in_array($error_number, self::TRANSIENT_CURL_ERROR_NUMBERS, true)) {
+             throw new TransientInterruptionException(
+                 "cURL error ({$error_number}) over {$protocol}: {$error_message}",
++                $response_details,
+             );
+         }
+ 
+@@ -13034,6 +13050,9 @@ class ImportClient
+      * A Retry-After delay parsed from the failing response is waited out here,
+      * after the failure limit check, so a final failure does not wait pointlessly.
+      *
++     * Logs exception's response details so an operator can tell a slow stall
++     * apart from a transport failure without reproducing it.
++     *
+      * @param string                         $phase         Endpoint whose request failed.
+      * @param ?string                        $cursor_before Durable cursor at request start.
+      * @param ?string                        $cursor_after  Last durable cursor after the request.
+@@ -13052,12 +13071,23 @@ class ImportClient
+         }
+         $this->save_state();
+         $count = $this->get_state()->consecutive_interrupted_responses;
++
++        $response_details = $exception->get_response_details();
+         $this->audit_log(
+             "TEMPORARY REQUEST FAILURE | {$phase} | " .
+                 "consecutive_failures_without_progress={$count}/" .
+                 self::MAX_CONSECUTIVE_INTERRUPTED_RESPONSES .
+                 " | cursor_moved=" .
+                 ($cursor_after !== $cursor_before ? "yes" : "no") .
++                " | response_bytes_received=" . ($response_details['response_bytes_received'] ?? 0) .
++                " | http_code=" . ($response_details['http_code'] ?? 0) .
++                " | curl_errno=" . ($response_details['curl_errno'] ?? 0) .
++                " | curl_error=" . ($response_details['curl_error'] ?? "none") .
++                " | protocol=" . ($response_details['protocol'] ?? "unknown") .
++                " | request_seconds=" . (isset($response_details['request_seconds'])
++                    ? round((float) $response_details['request_seconds'], 3)
++                    : "unknown") .
++                " | completion_seen=" . (!empty($response_details['completion_seen']) ? "yes" : "no") .
+                 " | " . $exception->getMessage(),
+             true,
+         );
+@@ -13071,6 +13101,7 @@ class ImportClient
+                 "The remote request failed {$count} consecutive times " .
+                 "without cursor progress during {$phase}. Try the command again later. " .
+                 "Last failure: " . $exception->getMessage(),
++                $response_details,
+                 0,
+                 $exception,
+             );
+@@ -13885,18 +13916,19 @@ class ImportClient
+         $this->audit_log("Executing curl request...", false);
+         $this->output_progress(["debug" => "Waiting for server response..."]);
+         $result = curl_exec($ch);
++        $response_protocol = self::describe_curl_http_version(
++            (int) curl_getinfo($ch, CURLINFO_HTTP_VERSION),
++        );
+         $this->audit_log(
+             "curl_exec completed, result=" .
+                 ($result === false ? "false" : "true") .
+                 " | protocol=" .
+-                self::describe_curl_http_version(
+-                    (int) curl_getinfo($ch, CURLINFO_HTTP_VERSION),
+-                ),
++                $response_protocol,
+             false,
+         );
+ 
+         try {
+-            $this->check_curl_error($ch);
++            $this->check_curl_error($ch, $bytes_received, $context->saw_completion);
+         } catch (RuntimeException $curl_error) {
+             $this->last_http_code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+             if ($endpoint !== null) {
+@@ -13920,6 +13952,16 @@ class ImportClient
+         $context->response_stats["ttfb"] = $ttfb;
+         $context->response_stats["total_time"] = $total_time;
+ 
++        $response_details = [
++            'response_bytes_received' => $bytes_received,
++            'http_code' => (int) $http_code,
++            'curl_errno' => 0,
++            'curl_error' => null,
++            'protocol' => $response_protocol,
++            'request_seconds' => $total_time,
++            'completion_seen' => $context->saw_completion,
++        ];
++
+         if ($http_code !== 200) {
+             $this->last_http_code = (int) $http_code;
+             if ($endpoint !== null) {
+@@ -13978,7 +14020,7 @@ class ImportClient
+                 $this->pending_retry_after_seconds = $retry_after_seconds;
+ 
+                 // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- This exception is rendered only as CLI text.
+-                throw new TransientInterruptionException($error_msg);
++                throw new TransientInterruptionException($error_msg, $response_details);
+             }
+ 
+             throw new RuntimeException($error_msg);
+@@ -13990,6 +14032,7 @@ class ImportClient
+             throw new TransientInterruptionException(
+                 "Invalid response: missing multipart boundary. " .
+                     ($snippet !== "" ? "Body: {$snippet}" : ""),
++                $response_details,
+             );
+         }
+ 
+@@ -13997,6 +14040,7 @@ class ImportClient
+             $this->last_http_code = (int) $http_code;
+             throw new TransientInterruptionException(
+                 "Invalid response: missing completion chunk from server.",
++                $response_details,
+             );
+         }
+     }
+diff --git a/packages/reprint-client/src/lib/import/class-interrupted-response-exception.php b/packages/reprint-client/src/lib/import/class-interrupted-response-exception.php
+index e945cdd0..b8a18108 100644
+--- a/packages/reprint-client/src/lib/import/class-interrupted-response-exception.php
++++ b/packages/reprint-client/src/lib/import/class-interrupted-response-exception.php
+@@ -8,4 +8,46 @@ use RuntimeException;
+  * Thrown when a streaming response loses its framing or ends before a valid
+  * completion part.
+  */
+-class InterruptedResponseException extends RuntimeException {}
++class InterruptedResponseException extends RuntimeException {
++
++    /** @var array */
++    private $response_details;
++
++    /** @var array Keys always present in get_response_details(), defaulted to null. */
++    private const DEFAULT_RESPONSE_DETAILS = [
++        'response_bytes_received' => null,
++        'http_code' => null,
++        'curl_errno' => null,
++        'curl_error' => null,
++        'protocol' => null,
++        'request_seconds' => null,
++        'completion_seen' => null,
++    ];
++
++    /**
++     * @param string $message          Exception message.
++     * @param array  $response_details {
++     *     Diagnostic details about last HTTP response seen before interrupt.
++     *     Every key defaults to null when caller does not supply it.
++     *
++     *     @type int|null    $response_bytes_received Bytes received before interruption.
++     *     @type int|null    $http_code               HTTP status code, or 0 when none.
++     *     @type int|null    $curl_errno              cURL error number, or 0 when none.
++     *     @type string|null $curl_error              cURL error message, or null when none.
++     *     @type string|null $protocol                Wire protocol name.
++     *     @type float|null  $request_seconds         Total time libcurl spent on request.
++     *     @type bool|null   $completion_seen         Whether a completion chunk was parsed.
++     * }
++     * @param int             $code     Exception code.
++     * @param \Throwable|null $previous Previous exception.
++     */
++    public function __construct(string $message = '', array $response_details = [], int $code = 0, ?\Throwable $previous = null) {
++        parent::__construct($message, $code, $previous);
++        $this->response_details = array_merge(self::DEFAULT_RESPONSE_DETAILS, $response_details);
++    }
++
++    /** @return array Diagnostic details about last HTTP response seen before interrupt. */
++    public function get_response_details(): array {
++        return $this->response_details;
++    }
++}
+diff --git a/tests/Import/CurlTimeoutRecoveryTest.php b/tests/Import/CurlTimeoutRecoveryTest.php
+index ba379a58..490f9c96 100644
+--- a/tests/Import/CurlTimeoutRecoveryTest.php
++++ b/tests/Import/CurlTimeoutRecoveryTest.php
+@@ -601,6 +601,49 @@ class CurlTimeoutRecoveryTest extends TestCase
+         $this->assertInstanceOf(TransientInterruptionException::class, $retry_later);
+     }
+ 
++    /**
++     * Without an explicit response-details array, every documented key must
++     * still be present.
++     */
++    public function testInterruptedResponseExceptionDefaultsResponseDetailsToNull()
++    {
++        $exception = new TransientInterruptionException("Response ended early");
++
++        $this->assertSame(
++            [
++                'response_bytes_received' => null,
++                'http_code' => null,
++                'curl_errno' => null,
++                'curl_error' => null,
++                'protocol' => null,
++                'request_seconds' => null,
++                'completion_seen' => null,
++            ],
++            $exception->get_response_details(),
++        );
++    }
++
++    /**
++     * An explicit response-details array is returned unchanged.
++     */
++    public function testInterruptedResponseExceptionReturnsSuppliedResponseDetails()
++    {
++        $exception = new TransientInterruptionException("Response ended early", [
++            'response_bytes_received' => 147526862,
++            'http_code' => 200,
++            'curl_errno' => 0,
++            'curl_error' => null,
++            'protocol' => 'HTTP/2',
++            'request_seconds' => 12.5,
++            'completion_seen' => false,
++        ]);
++
++        $this->assertSame(147526862, $exception->get_response_details()['response_bytes_received']);
++        $this->assertSame(200, $exception->get_response_details()['http_code']);
++        $this->assertSame('HTTP/2', $exception->get_response_details()['protocol']);
++        $this->assertFalse($exception->get_response_details()['completion_seen']);
++    }
++
+     // ---------------------------------------------------------------
+     // cURL error number classification
+     // ---------------------------------------------------------------
+@@ -636,10 +679,24 @@ class CurlTimeoutRecoveryTest extends TestCase
+             $checkCurlError = $reflection->getMethod('check_curl_error');
+ 
+             try {
+-                $checkCurlError->invoke($client, $curl);
++                $checkCurlError->invoke($client, $curl, 0, false);
+                 $this->fail('A transfer cut short by the peer should have thrown');
+             } catch (TransientInterruptionException $e) {
+                 $this->assertStringContainsString("({$errorNumber})", $e->getMessage());
++
++                $details = $e->get_response_details();
++                $this->assertSame(
++                    $errorNumber,
++                    $details['curl_errno'],
++                    'The exception should carry the real cURL error number for the audit log',
++                );
++                $this->assertNotEmpty(
++                    $details['curl_error'],
++                    'The exception should carry the real cURL error message',
++                );
++                $this->assertSame(0, $details['http_code'], 'No response was ever received');
++                $this->assertFalse($details['completion_seen']);
++                $this->assertIsFloat($details['request_seconds']);
+             }
+         } finally {
+             proc_close($server);
+@@ -716,6 +773,57 @@ PHP);
+         }
+     }
+ 
++    /**
++     * A response that stops after some multipart bytes but never sends a
++     * completion part must raise TransientInterruptionException carrying the
++     * real HTTP code, protocol, and bytes actually received.
++     */
++    public function testStreamingCutoffRecordsResponseDetails()
++    {
++        $boundary = 'cutoff-test-boundary';
++        $partial_body = "--{$boundary}\r\n"
++            . "Content-Type: application/octet-stream\r\n"
++            . "X-Chunk-Type: file\r\n"
++            . "Content-Length: 5\r\n"
++            . "\r\n"
++            . "hello\r\n";
++        // Deliberately never sends the closing boundary or a completion part.
++        $response = "HTTP/1.1 200 OK\r\n"
++            . "Content-Type: multipart/mixed; boundary={$boundary}\r\n"
++            . "Connection: close\r\n\r\n"
++            . $partial_body;
++
++        [$server, $url] = $this->startStreamingCutoffServer($response);
++
++        try {
++            [$client, $reflection] = $this->prepareClient();
++            $context = new StreamingContext();
++            $context->on_chunk = function ($chunk) {
++            };
++            $fetchStreaming = $reflection->getMethod('fetch_streaming');
++
++            try {
++                $fetchStreaming->invoke($client, $url, $context, null, 'file_fetch');
++                $this->fail('Expected a TransientInterruptionException for a response missing its completion chunk');
++            } catch (TransientInterruptionException $e) {
++                $details = $e->get_response_details();
++                $this->assertSame(200, $details['http_code']);
++                $this->assertSame(0, $details['curl_errno']);
++                $this->assertNull($details['curl_error']);
++                $this->assertSame('HTTP/1.1', $details['protocol']);
++                $this->assertGreaterThan(
++                    0,
++                    $details['response_bytes_received'],
++                    'Bytes fed to the write callback before the cutoff should be counted',
++                );
++                $this->assertFalse($details['completion_seen']);
++                $this->assertIsFloat($details['request_seconds']);
++            }
++        } finally {
++            proc_close($server);
++        }
++    }
++
+     /**
+      * A failure that will reproduce on the next request must stay fatal.
+      * Connecting to a closed port yields CURLE_COULDNT_CONNECT (7), which is
+@@ -784,6 +892,60 @@ PHP);
+         return [$process, "http://127.0.0.1:{$port}/"];
+     }
+ 
++    /**
++     * Start a server that sends the given raw HTTP response bytes and then
++     * closes the connection, regardless of framing. Returns the process
++     * handle and the URL to request.
++     */
++    private function startStreamingCutoffServer(string $response_bytes): array
++    {
++        $port = 8000 + (getmypid() % 20000);
++        $response_file = $this->tempDir . '/cutoff-response-' . uniqid() . '.bin';
++        file_put_contents($response_file, $response_bytes);
++
++        $script = $this->tempDir . '/cutoff-server.php';
++        file_put_contents($script, <<<'PHP'
++<?php
++$server = stream_socket_server("tcp://127.0.0.1:" . $argv[1], $errno, $errstr);
++if (!$server) {
++    exit(1);
++}
++echo "ready\n";
++$connection = stream_socket_accept($server, 10);
++if ($connection) {
++    $request = '';
++    while (strpos($request, "\r\n\r\n") === false) {
++        $piece = fread($connection, 8192);
++        if ($piece === false || $piece === '') {
++            break;
++        }
++        $request .= $piece;
++    }
++    fwrite($connection, file_get_contents($argv[2]));
++    fclose($connection);
++}
++fclose($server);
++PHP);
++
++        $process = proc_open(
++            sprintf(
++                '%s %s %d %s',
++                escapeshellarg(PHP_BINARY),
++                escapeshellarg($script),
++                $port,
++                escapeshellarg($response_file),
++            ),
++            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
++            $pipes,
++        );
++        $this->assertIsResource($process, 'The stub server should start');
++
++        // Block until the listener is bound so the request cannot race it.
++        $this->assertSame('ready', trim((string) fgets($pipes[1])));
++
++        return [$process, "http://127.0.0.1:{$port}/"];
++    }
++
+ 
+     // ---------------------------------------------------------------
+     // Consecutive interrupted-response counter
+@@ -890,6 +1052,50 @@ PHP);
+         );
+     }
+ 
++    /**
++     * The audit log line for a temporary request failure must name the last
++     * HTTP response's details so an operator can tell a stall apart from a
++     * transport failure without reproducing it.
++     */
++    public function testTrackInterruptedResponsesLogsResponseDetails()
++    {
++        $this->writeState([
++            "active_resumable_command" => [
++                "command_name" => "db-pull",
++                "completion_state" => "in_progress",
++            ],
++            "consecutive_interrupted_responses" => 0,
++        ]);
++
++        [$client, $reflection] = $this->prepareClient();
++
++        $method = $reflection->getMethod('assert_can_retry_after_interrupted_response');
++        $method->invoke(
++            $client,
++            "sql_chunk",
++            "abc",
++            "abc",
++            new TransientInterruptionException("Response ended early", [
++                'response_bytes_received' => 147526862,
++                'http_code' => 200,
++                'curl_errno' => 0,
++                'curl_error' => null,
++                'protocol' => 'HTTP/2',
++                'request_seconds' => 12.5,
++                'completion_seen' => false,
++            ]),
++        );
++
++        $auditLog = (string) file_get_contents($this->stateDir . '/audit.log');
++        $this->assertStringContainsString('response_bytes_received=147526862', $auditLog);
++        $this->assertStringContainsString('http_code=200', $auditLog);
++        $this->assertStringContainsString('curl_errno=0', $auditLog);
++        $this->assertStringContainsString('curl_error=none', $auditLog);
++        $this->assertStringContainsString('protocol=HTTP/2', $auditLog);
++        $this->assertStringContainsString('request_seconds=12.5', $auditLog);
++        $this->assertStringContainsString('completion_seen=no', $auditLog);
++    }
++
+     /**
+      * A saved failure count must retain the last timeout in the retry-later error.
+      */
+-- 
+2.50.0
+

@@ -63,6 +63,15 @@ final class Pull
         // bridges) rarely work anywhere else; leave them behind unless asked.
         $hostFlag = $hostPlugins ? '--include-host-plugins' : '--exclude-host-plugins';
 
+        // No token or key given: sign with a key of our own. A new one has to be
+        // enrolled on the source first (hosts with OpenSSL accept keys only).
+        if (! $this->hasCredential($auth)) {
+            $public = $this->client->keygen($url, $dirs, in_array('--insecure', $auth, true));
+            if (null !== $public) {
+                throw new EnrolKey($public);
+            }
+        }
+
         ($this->log)('Checking the source site…');
         $code = $this->client->run(array_merge(['preflight', $url], $base, $auth));
         $this->stopOn($code, 'preflight');
@@ -264,6 +273,20 @@ final class Pull
             ));
         }
         ($this->log)(sprintf('%s to download, %s free.', size_format($bytes), false === $free ? '?' : size_format((int) $free)));
+    }
+
+    /**
+     * @param list<string> $auth
+     */
+    private function hasCredential(array $auth): bool
+    {
+        foreach ($auth as $flag) {
+            if (str_starts_with($flag, '--secret=') || str_starts_with($flag, '--private-key-path=')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function stopOn(int $code, string $stage): void

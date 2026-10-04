@@ -1,15 +1,33 @@
 <?php return array(
     'root' => array(
         'name' => 'wp-php-toolkit/reprint-client',
-        'pretty_version' => 'v0.10.13',
-        'version' => '0.10.13.0',
-        'reference' => 'd24b69affeb5377c6efa1195c4f39644bef46a85',
+        'pretty_version' => '1.0.0+no-version-set',
+        'version' => '1.0.0.0',
+        'reference' => NULL,
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
         'dev' => false,
     ),
     'versions' => array(
+        'symfony/polyfill-intl-idn' => array(
+            'pretty_version' => 'v1.43.0',
+            'version' => '1.43.0.0',
+            'reference' => '533d68cf99c8f8ee2e8893c59ed59192e92cfd74',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../symfony/polyfill-intl-idn',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'symfony/polyfill-intl-normalizer' => array(
+            'pretty_version' => 'v1.43.0',
+            'version' => '1.43.0.0',
+            'reference' => 'ebd57ccc7edb93d632e184efbe7693d2517bab3b',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../symfony/polyfill-intl-normalizer',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'wp-php-toolkit/bytestream' => array(
             'pretty_version' => 'v0.10.1',
             'version' => '0.10.1.0',
@@ -65,9 +83,9 @@
             'dev_requirement' => false,
         ),
         'wp-php-toolkit/reprint-client' => array(
-            'pretty_version' => 'v0.10.13',
-            'version' => '0.10.13.0',
-            'reference' => 'd24b69affeb5377c6efa1195c4f39644bef46a85',
+            'pretty_version' => '1.0.0+no-version-set',
+            'version' => '1.0.0.0',
+            'reference' => NULL,
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -83,7 +101,7 @@
         'wp-php-toolkit/reprint-importer' => array(
             'dev_requirement' => false,
             'replaced' => array(
-                0 => 'v0.10.13',
+                0 => '1.0.0+no-version-set',
             ),
         ),
         'wp-php-toolkit/reprint-server' => array(

@@ -65,6 +65,34 @@ final class Client
     }
 
     /**
+     * Make a signing key for this remote unless one exists. Returns the public
+     * half to enrol on the source, or null when a key is already stored.
+     *
+     * @param array{state: string, files: string, site: string} $dirs
+     */
+    public function keygen(string $url, array $dirs, bool $insecure): ?string
+    {
+        // The state folder belongs to this one remote, so any stored key is its key.
+        if ([] !== (glob($dirs['state'] . '/remotes/*/key.pem') ?: [])) {
+            return null;
+        }
+
+        $args = ['keygen', self::apiUrl($url), '--state-dir=' . $dirs['state'], '--progress=jsonl'];
+        if ($insecure) {
+            $args[] = '--insecure';
+        }
+
+        foreach (explode("\n", $this->capture($args)) as $line) {
+            $record = json_decode($line, true);
+            if (is_array($record) && 'complete' === ($record['status'] ?? '') && ! empty($record['public_key'])) {
+                return (string) $record['public_key'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Run one client command with stdout and stderr passed straight through,
      * so the client's own progress output reaches the terminal.
      *

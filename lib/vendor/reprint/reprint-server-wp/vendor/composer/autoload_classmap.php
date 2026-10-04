@@ -8,8 +8,10 @@ $baseDir = dirname($vendorDir);
 return array(
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'Site_Export_HMAC_Client' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-hmac-client.php',
+    'WordPress\\Reprint\\Server\\DatabaseChangesPush' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-database-changes-push.php',
     'WordPress\\Reprint\\Server\\DatabasePush' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-database-push.php',
     'WordPress\\Reprint\\Server\\DatabasePushEndpoints' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-database-push-endpoints.php',
+    'WordPress\\Reprint\\Server\\DatabaseRowFormat' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-database-row-format.php',
     'WordPress\\Reprint\\Server\\DatabaseRowsReader' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-database-rows-reader.php',
     'WordPress\\Reprint\\Server\\EnvelopeSigner' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-envelope-signer.php',
     'WordPress\\Reprint\\Server\\FileIndexProcessor' => $vendorDir . '/wp-php-toolkit/reprint-server/src/class-file-index-processor.php',

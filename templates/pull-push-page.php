@@ -58,12 +58,13 @@ $migrator_updated = isset($_GET['updated']); // phpcs:ignore WordPress.Security.
 			<h2 class="migrator-card__heading"><?php esc_html_e('On the destination', 'plogins-migrator'); ?></h2>
 			<p><?php esc_html_e('Install Migrator on the destination site and run these from its WordPress folder with WP-CLI. A pull replaces the destination database and copies wp-content over it; Migrator keeps its own folder and a dump of the database it replaced.', 'plogins-migrator'); ?></p>
 			<p><strong><?php esc_html_e('Copy this site to the destination', 'plogins-migrator'); ?></strong></p>
-			<p><code>wp migrator pull <?php echo esc_html($siteUrl); ?> --secret=&lt;token&gt;</code></p>
+			<p><code>wp migrator pull <?php echo esc_html($siteUrl); ?></code></p>
+			<p class="description"><?php esc_html_e('The first run prints a key. Paste it here under Set the token or enrol a key, save, and run the command again. On a server without the OpenSSL extension, set a connection token instead and add --secret=<token> to the command.', 'plogins-migrator'); ?></p>
 			<p><strong><?php esc_html_e('Fetch only what changed since the last pull', 'plogins-migrator'); ?></strong></p>
 			<p><?php esc_html_e('Run the same command again.', 'plogins-migrator'); ?></p>
 			<p><strong><?php esc_html_e('Send the destination\'s changes back here', 'plogins-migrator'); ?></strong></p>
-			<p><code>wp migrator push <?php echo esc_html($siteUrl); ?> --secret=&lt;token&gt;</code></p>
-			<p class="description"><?php esc_html_e('Pushing needs PHP 7.2 or newer here, display_errors switched off, and push access granted under Set the token or enrol a key above.', 'plogins-migrator'); ?></p>
+			<p><code>wp migrator push <?php echo esc_html($siteUrl); ?></code></p>
+			<p class="description"><?php esc_html_e('Pushing needs push access granted for that key under Set the token or enrol a key above, display_errors switched off, and a writable folder beside the web root on the same disk. While a push applies its changes this site shows a maintenance page; if the push stops part way, run it again to finish.', 'plogins-migrator'); ?></p>
 		</div>
 	</div>
 </div>

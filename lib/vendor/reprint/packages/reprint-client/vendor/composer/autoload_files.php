@@ -11,4 +11,6 @@ return array(
     'c2c7ec202e84a85f19abab25dd38d82d' => $vendorDir . '/wp-php-toolkit/encoding/compat-utf8.php',
     '713ad46f1f515216614131421c1ab59c' => $vendorDir . '/wp-php-toolkit/encoding/utf8-encoder.php',
     '3ece6d8ef10b1c2fd398a0c341044be9' => $vendorDir . '/wp-php-toolkit/data-liberation/URL/functions.php',
+    'e69f7f6ee287b969198c3c9d6777bd38' => $vendorDir . '/symfony/polyfill-intl-normalizer/bootstrap.php',
+    'f598d06aa772fa33d905e87be6398fb1' => $vendorDir . '/symfony/polyfill-intl-idn/bootstrap.php',
 );

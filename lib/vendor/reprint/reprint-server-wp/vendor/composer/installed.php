@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'wp-php-toolkit/reprint-server-plugin',
-        'pretty_version' => 'v0.10.13',
-        'version' => '0.10.13.0',
-        'reference' => 'd24b69affeb5377c6efa1195c4f39644bef46a85',
+        'pretty_version' => '1.0.0+no-version-set',
+        'version' => '1.0.0.0',
+        'reference' => NULL,
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -26,9 +26,9 @@
             'dev_requirement' => false,
         ),
         'wp-php-toolkit/reprint-server-plugin' => array(
-            'pretty_version' => 'v0.10.13',
-            'version' => '0.10.13.0',
-            'reference' => 'd24b69affeb5377c6efa1195c4f39644bef46a85',
+            'pretty_version' => '1.0.0+no-version-set',
+            'version' => '1.0.0.0',
+            'reference' => NULL,
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

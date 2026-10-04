@@ -30,7 +30,7 @@ Back up daily or weekly and keep as many copies as you choose. Each scheduled ba
 
 **Pull and push between live sites**
 
-Copy a whole site to another server over HTTP, with no archive to download or upload and no SSH or FTP. On the site you are copying, switch on Migrator > Pull and Push and set a connection token. On the destination, run `wp migrator pull https://your-old-site.example --secret=<token>`. The files and the database travel in small pieces, an interrupted pull carries on where it stopped when you run it again, and the next run fetches only what changed. Addresses are rewritten while the database streams in, the database keeps its exact bytes so accented text survives, and the old host's own platform plugins and server-bound drop-ins are left behind. `wp migrator push` sends the destination's file changes back.
+Copy a whole site to another server over HTTP, with no archive to download or upload and no SSH or FTP. On the site you are copying, switch on Migrator > Pull and Push. On the destination, run `wp migrator pull https://your-old-site.example`: the first run prints a key, which you paste on the source's Pull and Push screen, then you run the same command again (a source without the OpenSSL extension takes a connection token instead). The files and the database travel in small pieces, an interrupted pull carries on where it stopped when you run it again, and the next run fetches only what changed. Addresses are rewritten while the database streams in, the database keeps its exact bytes so accented text survives, and the old host's own platform plugins and server-bound drop-ins are left behind. `wp migrator push` sends the destination's file changes back.
 
 **A few things worth knowing**
 
@@ -184,11 +184,11 @@ If you switch on Pull and Push, a site holding your connection token or an enrol
 
 = How do I copy a live site to another server without downloading a backup? =
 
-Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push and set a connection token there. On the new one, run `wp migrator pull https://old-site.example --secret=<token>` with WP-CLI. The new site keeps its own WordPress core, wp-config.php and table prefix (the prefixes must match), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
+Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push. On the new one, run `wp migrator pull https://old-site.example` with WP-CLI. The first run prints a key: paste it on the old site's Pull and Push screen and run the command again. A server without the OpenSSL extension cannot check keys, so there you set a connection token and add `--secret=<token>`. The new site keeps its own WordPress core, wp-config.php and table prefix (the prefixes must match), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
 
 = Can I send changes back to the original site? =
 
-Files, yes: `wp migrator push https://old-site.example --secret=<token>` sends what changed since the pull. The old site must grant push access on its Pull and Push screen, and its server needs a writable folder beside the web root on the same disk, where the upload is staged before it is swapped in. The database is pushed only to hosts that serve the transfer API on a standalone route; `wp migrator remote db-push --help` explains it.
+Files, yes: `wp migrator push https://old-site.example` sends what changed since the pull. The old site must grant push access to your key on its Pull and Push screen, and its server needs a writable folder beside the web root on the same disk, where the upload is staged before it is swapped in. The database is pushed only to hosts that serve the transfer API on a standalone route; `wp migrator remote db-push --help` explains it. While a push applies its changes the old site shows a maintenance page; if the push stops part way, run it again to finish.
 
 = Where are my backups stored? =
 
