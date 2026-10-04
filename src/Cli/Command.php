@@ -255,8 +255,9 @@ final class Command
      * : The source site's address.
      *
      * [--secret=<token>]
-     * : The connection token set on the source. Without it a key is generated
-     * and printed for enrolment on the source.
+     * : Only for a source server without the OpenSSL extension: the connection
+     * token set there. Otherwise leave it out; the first run makes a key and
+     * prints it for enrolment on the source.
      *
      * [--private-key-path=<file>]
      * : A private key enrolled on the source, instead of the stored one.
@@ -279,7 +280,7 @@ final class Command
      *
      * ## EXAMPLES
      *
-     *     wp migrator pull https://example.com --secret=s3cret
+     *     wp migrator pull https://example.com
      *     wp migrator pull https://example.com --skip-database
      *
      * @param array<int, string>    $args       Positional args: the source URL.
@@ -339,7 +340,8 @@ final class Command
      * : The source site's address, as used for the pull.
      *
      * [--secret=<token>]
-     * : The connection token set on the source.
+     * : Only for a source server without the OpenSSL extension: the connection
+     * token set there. Otherwise the key made by the pull is used.
      *
      * [--private-key-path=<file>]
      * : A private key enrolled on the source, instead of the stored one.
@@ -352,7 +354,7 @@ final class Command
      *
      * ## EXAMPLES
      *
-     *     wp migrator push https://example.com --secret=s3cret
+     *     wp migrator push https://example.com
      *
      * @param array<int, string>    $args       Positional args: the source URL.
      * @param array<string, string> $assoc_args Flags.
@@ -398,7 +400,7 @@ final class Command
      * ## EXAMPLES
      *
      *     wp migrator remote keygen https://example.com
-     *     wp migrator remote files-stats https://example.com --secret=s3cret
+     *     wp migrator remote files-stats https://example.com
      *
      * @param array<int, string>    $args       Positional args.
      * @param array<string, string> $assoc_args Flags.
