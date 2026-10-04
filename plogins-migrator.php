@@ -48,6 +48,10 @@ if (version_compare(PHP_VERSION, MIN_PHP_VERSION, '<')) {
 
 require_once __DIR__ . '/autoload.php';
 
+// Pull and push endpoint for other sites (?reprint-api). Off unless switched on
+// under Migrator > Pull and Push; it has to load now, before plugins_loaded.
+Reprint\Source::load();
+
 // Declare WooCommerce HPOS compatibility, only fires when WooCommerce is
 // present. Migrator backs up custom order tables, so it is HPOS-safe.
 add_action('before_woocommerce_init', static function (): void {

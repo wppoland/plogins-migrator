@@ -29,6 +29,7 @@ return static function (Container $c): void {
     });
 
     $c->singleton(Page::class, static fn (): Page => new Page());
+    $c->singleton(\Migrator\Reprint\Source::class, static fn (): \Migrator\Reprint\Source => new \Migrator\Reprint\Source());
 
     $c->singleton(Ajax::class, static fn (Container $c): Ajax => new Ajax(
         $c->get(ExportPipeline::class),

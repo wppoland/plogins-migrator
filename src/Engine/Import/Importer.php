@@ -373,7 +373,7 @@ final class Importer
     /**
      * Dump the current database to a rollback file before the import touches it.
      */
-    private function backupDatabase(callable $log): string
+    public function backupDatabase(callable $log): string
     {
         $path   = $this->workspace->path('rollback-' . gmdate('Ymd-His') . '-' . wp_generate_password(6, false) . '.sql');
         $handle = fopen($path, 'wb');
@@ -398,7 +398,7 @@ final class Importer
      * merchant the first when the second is true sends them away from a site
      * that needs them.
      */
-    private function restoreDatabase(string $path): bool
+    public function restoreDatabase(string $path): bool
     {
         if (! is_readable($path)) {
             return false;
