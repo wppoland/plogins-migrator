@@ -73,6 +73,7 @@ final class Source implements HasHooks
         }
         $options['excluded_paths'] = array_values(array_unique($excluded));
 
+
         return $options;
     }
 

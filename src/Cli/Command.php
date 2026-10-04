@@ -12,6 +12,7 @@ use Migrator\Engine\Import\Importer;
 use Migrator\Engine\Transform\SerializedReplacer;
 use Migrator\Reprint\Client;
 use Migrator\Reprint\Pull;
+use Migrator\Reprint\Push;
 use Migrator\Support\Access;
 use Migrator\Support\Workspace;
 
@@ -309,6 +310,57 @@ final class Command
             $result['database'] ? 'the database and ' : '',
             sprintf('%d changed files', $result['files']),
         ));
+    }
+
+    /**
+     * Send this site's wp-content changes back to the site it was pulled from.
+     *
+     * Only files that differ from the last pull travel. The source must grant
+     * push access on its Reprint Server screen and needs a writable folder
+     * beside its web root on the same disk. The database is not pushed here;
+     * see `wp migrator reprint db-push --help` for hosts that support it.
+     *
+     * ## OPTIONS
+     *
+     * <url>
+     * : The source site's address, as used for the pull.
+     *
+     * [--secret=<token>]
+     * : The connection token set on the source.
+     *
+     * [--private-key-path=<file>]
+     * : A private key enrolled on the source, instead of the stored one.
+     *
+     * [--insecure]
+     * : Allow a plain http:// source.
+     *
+     * [--yes]
+     * : Do not ask for confirmation.
+     *
+     * ## EXAMPLES
+     *
+     *     wp migrator push https://example.com --secret=s3cret
+     *
+     * @param array<int, string>    $args       Positional args: the source URL.
+     * @param array<string, string> $assoc_args Flags.
+     */
+    public function push(array $args, array $assoc_args): void
+    {
+        $this->guardNetwork();
+        $url = $this->remoteUrl($args);
+        \WP_CLI::confirm('This overwrites files on ' . $url . ' with the ones changed here. Continue?', $assoc_args);
+
+        $push = new Push(new Client(new Workspace()), static function (string $message): void {
+            \WP_CLI::log($message);
+        });
+
+        try {
+            $copied = $push->run($url, $this->authFlags($assoc_args));
+        } catch (\Throwable $e) {
+            \WP_CLI::error($e->getMessage());
+        }
+
+        \WP_CLI::success(sprintf('Pushed the files changed here (%d) to %s.', $copied, $url));
     }
 
     /**
