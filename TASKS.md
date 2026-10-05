@@ -16,7 +16,7 @@ Decided with the user 2026-10-04: Reprint via its packages, all of it in FREE (p
 - [x] e2e: wp-env 8901 to 8902 pull + delta; host php -S site 8931 for push (wp-env cannot: push dir must be outside docroot on the same disk); diacritics intact
 - [x] Package: Plugin Check sev5 PASS, zip 2.0 MB
 - [x] readme (Pull and Push, grid, FAQ, third-party, 1.5.0 changelog)
-- [~] store registry + docs en/pl/de/es: done, key-first flow update running; no Reprint name anywhere (user, 2026-10-04)
+- [x] store registry + docs en/pl/de/es, key-first flow; no Reprint name anywhere (user, 2026-10-04)
 - [ ] PRO overlap: migrator-pro Transfer (wp-admin pull by key) now overlaps FREE; copy reworded, product decision is the user's
 - [x] Bump 1.5.0, pot via scripts/make-pot.sh, catalogues merged empty
-- [ ] PR, zip to ~/Downloads (no wp.org release)
+- [x] PR 16 merged, 1.5.0 released on wp.org (user asked); 1.5.1 fixed the PRO card that still sold transfer as PRO-only; store deployed
