@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -224,6 +224,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.5.1 =
+* Fixed: the PRO card on the settings screen no longer presents moving a site between servers as PRO-only; the free plugin does it with `wp migrator pull`, PRO adds the wp-admin screen.
 
 = 1.5.0 =
 * Added: Pull and Push. Copy a live site to another server over HTTP with `wp migrator pull`, resume an interrupted pull, fetch only the changes on the next run, and send file changes back with `wp migrator push`. Off until you switch it on.
