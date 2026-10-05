@@ -33,8 +33,8 @@ return [
             'pl' => ['title' => 'Kopie w chmurze', 'desc' => 'Storage zgodny z S3 z presetami (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), SFTP i WebDAV (Nextcloud, ownCloud), obok kopii na FTP/FTPS i do folderu z darmowej wtyczki.'],
         ],
         [
-            'en' => ['title' => 'Server-to-server transfer', 'desc' => 'Pull a site from one server to another with no manual download.'],
-            'pl' => ['title' => 'Transfer serwer-serwer', 'desc' => 'Przeciągnij witrynę z jednego serwera na drugi bez ręcznego pobierania pliku.'],
+            'en' => ['title' => 'Server-to-server transfer from wp-admin', 'desc' => 'Pull a site from one server to another from the Site Transfer screen in wp-admin, with a key generated on the old site and no manual download. The free Migrator moves a site between servers from WP-CLI; PRO adds a button in the admin for it.'],
+            'pl' => ['title' => 'Transfer serwer-serwer z panelu', 'desc' => 'Przeciągnij witrynę z jednego serwera na drugi z ekranu Site Transfer w wp-admin, kluczem wygenerowanym na starej witrynie, bez ręcznego pobierania pliku. Darmowy Migrator przenosi witrynę między serwerami z WP-CLI; PRO dodaje do tego przycisk w panelu.'],
         ],
         [
             'en' => ['title' => 'Deploy to a new server', 'desc' => 'A standalone installer downloads WordPress core, extracts the files, imports the database, rewrites URLs and writes wp-config.php. It can also fetch the backup itself from a link, including a presigned S3, R2 or Dropbox URL.'],
