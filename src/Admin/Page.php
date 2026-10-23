@@ -95,6 +95,7 @@ final class Page implements HasHooks
             'nonce'   => wp_create_nonce('migrator'),
             'i18n'    => [
                 'preparing'     => __('Preparing…', 'plogins-migrator'),
+                'dumping'       => __('Exporting the database…', 'plogins-migrator'),
                 'archiving'     => __('Archiving files…', 'plogins-migrator'),
                 'done'          => __('Backup ready.', 'plogins-migrator'),
                 'failed'        => __('Export failed.', 'plogins-migrator'),

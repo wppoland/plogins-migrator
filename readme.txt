@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -224,6 +224,10 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.6.0 =
+* Changed: a backup from wp-admin now exports the database in steps, a slice of rows per request, so a large database no longer runs into a 504 Gateway Timeout on shared hosting. An interrupted step resumes where the last one stopped, and the progress bar moves while the database is exported.
+* Added: the `migrator_step_seconds` filter sets how long one export step may work, for hosts whose proxy cuts requests short.
 
 = 1.5.1 =
 * Fixed: the PRO card on the settings screen no longer presents moving a site between servers as PRO-only; the free plugin does it with `wp migrator pull`, PRO adds the wp-admin screen.

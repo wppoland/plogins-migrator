@@ -86,7 +86,7 @@
 				return;
 			}
 			var job = res.data;
-			setProgress( job.percent, i18n.archiving || 'Archiving files…' );
+			setProgress( job.percent, 'db' === job.phase ? ( i18n.dumping || 'Exporting the database…' ) : ( i18n.archiving || 'Archiving files…' ) );
 			if ( job.done ) {
 				finish( job );
 			} else {
