@@ -90,16 +90,35 @@ $ro = unserialize($out);
 ok('serialized object re-unserializes with property replaced',
     $ro instanceof stdClass && $ro->home === 'https://new-site.example.com' && $ro->n === 42);
 
-// 7. Unknown-class object (incomplete on unserialize) is left BYTE-IDENTICAL.
-$incomplete = 'O:7:"Unknown":1:{s:3:"url";s:19:"https://old.example";}';
-[$out, $n] = run($incomplete);
-ok('unknown-class serialized object left untouched (no corruption)',
-    $out === $incomplete && $n === 0);
+// 7. Custom / unknown-class object is safely traversed and replaced without instantiating classes.
+$custom = 'O:7:"Unknown":1:{s:3:"url";s:19:"https://old.example";}';
+[$out, $n] = run($custom);
+$expected = 'O:7:"Unknown":1:{s:3:"url";s:28:"https://new-site.example.com";}';
+ok('custom-class serialized object is replaced with correct byte lengths',
+    $out === $expected && 1 === $n);
+ok('custom-class output re-unserializes with replaced property',
+    @unserialize($out) !== false);
 
-// 7b. A serialized array CONTAINING an unknown-class object is skipped wholesale.
-$mixed = 'a:2:{s:4:"safe";s:19:"https://old.example";s:3:"obj";O:7:"Unknown":0:{}}';
+// 7b. A serialized array containing a custom-class object has its URLs replaced throughout.
+$mixed = 'a:2:{s:4:"safe";s:19:"https://old.example";s:3:"obj";O:7:"Unknown":1:{s:4:"link";s:19:"https://old.example";}}';
 [$out, $n] = run($mixed);
-ok('array containing unknown-class object left untouched', $out === $mixed && $n === 0);
+$expectedMixed = 'a:2:{s:4:"safe";s:28:"https://new-site.example.com";s:3:"obj";O:7:"Unknown":1:{s:4:"link";s:28:"https://new-site.example.com";}}';
+ok('array containing custom-class object has all URLs replaced',
+    $out === $expectedMixed && 2 === $n);
+
+// 7c. Custom object with protected and private properties retains null-byte names and updates values.
+$withNullBytes = "O:10:\"WooProduct\":2:{s:6:\"\0*\0url\";s:19:\"https://old.example\";s:15:\"\0WooProduct\0sku\";s:6:\"SKU123\";}";
+[$out, $n] = run($withNullBytes);
+$expectedNullBytes = "O:10:\"WooProduct\":2:{s:6:\"\0*\0url\";s:28:\"https://new-site.example.com\";s:15:\"\0WooProduct\0sku\";s:6:\"SKU123\";}";
+ok('custom object with protected and private properties replaced correctly',
+    $out === $expectedNullBytes && 1 === $n);
+ok('protected/private property output is valid serialized', @unserialize($out) !== false);
+
+// 7d. Malformed serialized data falls back to plain string replacement without throwing.
+$malformed = 'a:2:{s:4:"safe";s:19:"https://old.example";broken';
+[$out, $n] = run($malformed);
+ok('malformed serialized string safely falls back to string replacement',
+    str_contains($out, 'https://new-site.example.com') && $n === 1);
 
 // 8. JSON value containing a URL (WooCommerce-style meta), plain JSON.
 $json = '{"shipping":{"url":"https://old.example/x"},"id":5}';

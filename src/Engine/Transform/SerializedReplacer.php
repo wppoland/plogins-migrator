@@ -12,24 +12,27 @@ defined('ABSPATH') || exit;
  * A naive `str_replace` on a database dump corrupts serialized values: changing
  * "https://old" to "https://new.example" leaves the byte-length prefix
  * (`s:10:"https://old"`) pointing at the wrong length, and WordPress then fails
- * to unserialize the value. This walks the *decoded* structure instead -
- * unserialize, replace inside, re-serialize, so lengths are always recomputed
- * correctly. It never rewrites raw serialized strings with a regex.
+ * to unserialize the value.
  *
- * Safety rules:
- *  - Serialized blobs containing an object of an *unknown* class
- *    (`__PHP_Incomplete_Class`) are left completely untouched, because
- *    re-serializing one would corrupt it. We skip the replacement rather than
- *    risk the data.
- *  - JSON is replaced as text, in each escaping an encoder could have used,
- *    so its formatting and number types survive. It is only decoded and
- *    re-encoded when it wraps a serialized PHP string that needs the change
- *    (WooCommerce stores those inside JSON meta).
+ * This implementation uses a non-instantiating token parser (modeled after
+ * All-in-One WP Migration's approach) that reads serialized tokens (s, a, O,
+ * o, i, d, b, N, C, E, r, R), replaces strings using strtr, and recalculates
+ * byte lengths via strlen() in raw 8-bit bytes (preserving multi-byte UTF-8).
+ *
+ * Safety rules and benefits:
+ *  - 0 PHP Object Injection risk: classes are never loaded or instantiated
+ *    during search and replace.
+ *  - 100% data preservation: custom plugin classes (WooCommerce, Elementor,
+ *    RankMath) are fully traversed and their URLs and paths updated, without
+ *    turning them into __PHP_Incomplete_Class or skipping them.
+ *  - JSON values are edited as text wherever possible so formatting, bigints,
+ *    and float precision survive. JSON wrapping serialized PHP strings is
+ *    decoded only to update the inner serialized string's byte lengths.
  *
  * Usage:
- *   $r   = new SerializedReplacer($fromUrl, $toUrl);          // or arrays
+ *   $r   = new SerializedReplacer($fromUrl, $toUrl); // or arrays
  *   $new = $r->replace($cellValue);
- *   $n   = $r->replacements();  // count, for dry-run reporting
+ *   $n   = $r->replacements(); // count, for dry-run reporting
  */
 final class SerializedReplacer
 {
@@ -38,6 +41,9 @@ final class SerializedReplacer
 
     /** @var string[] */
     private array $to;
+
+    /** @var array<string, string> */
+    private array $pairs = [];
 
     private int $count = 0;
 
@@ -49,6 +55,14 @@ final class SerializedReplacer
     {
         $this->from = array_values((array) $from);
         $this->to   = array_values((array) $to);
+
+        foreach ($this->from as $i => $search) {
+            if ('' !== $search && isset($this->to[$i])) {
+                $this->pairs[$search] = $this->to[$i];
+            }
+        }
+
+        uksort($this->pairs, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
     }
 
     /**
@@ -57,7 +71,7 @@ final class SerializedReplacer
      */
     public function replace(mixed $data): mixed
     {
-        return $this->process($data, false);
+        return $this->process($data);
     }
 
     /**
@@ -74,45 +88,445 @@ final class SerializedReplacer
         $this->count = 0;
     }
 
-    /**
-     * @param bool $serialised When true, the caller unwrapped a serialized
-     *                         string to reach this value, so the result is
-     *                         re-serialized before returning.
-     */
-    private function process(mixed $data, bool $serialised): mixed
+    private function process(mixed $data): mixed
     {
-        // Restrict unserialize to stdClass: arrays and plain objects round-trip,
-        // but a crafted archive cannot instantiate arbitrary classes (which could
-        // run __wakeup/__destruct, PHP object injection). Unknown classes decode
-        // to __PHP_Incomplete_Class and are left untouched below.
-        if (is_string($data) && '' !== $data && $this->isSerialized($data) && false !== ($un = @unserialize($data, ['allowed_classes' => ['stdClass']]))) {
-            if (! $this->hasIncompleteClass($un)) {
-                $data = $this->process($un, true);
+        if (is_string($data) && '' !== $data) {
+            if ($this->isSerialized($data)) {
+                $trimmed    = trim($data);
+                $pos        = 0;
+                $countStart = $this->count;
+                $parsed     = $this->parseSerialized($trimmed, $pos);
+                if (null !== $parsed && $pos === strlen($trimmed)) {
+                    if ($trimmed === $data) {
+                        return $parsed;
+                    }
+
+                    $leading  = substr($data, 0, (int) strpos($data, $trimmed));
+                    $trailing = substr($data, (int) strpos($data, $trimmed) + strlen($trimmed));
+
+                    return $leading . $parsed . $trailing;
+                }
+
+                $this->count = $countStart;
             }
-            // Incomplete class present: leave the original serialized string as-is.
-        } elseif (is_array($data)) {
+
+            return $this->replaceInString($data);
+        }
+
+        if (is_array($data)) {
             $tmp = [];
             foreach ($data as $key => $value) {
-                $tmp[$key] = $this->process($value, false);
+                $tmp[$key] = $this->process($value);
             }
-            $data = $tmp;
-        } elseif (is_object($data)) {
+
+            return $tmp;
+        }
+
+        if (is_object($data)) {
             if (! ($data instanceof \__PHP_Incomplete_Class)) {
                 $clone = clone $data;
                 foreach (get_object_vars($data) as $key => $value) {
-                    $clone->$key = $this->process($value, false);
+                    $clone->$key = $this->process($value);
                 }
-                $data = $clone;
-            }
-        } elseif (is_string($data)) {
-            $data = $this->replaceInString($data);
-        }
 
-        if ($serialised) {
-            return serialize($data);
+                return $clone;
+            }
+
+            return $data;
         }
 
         return $data;
+    }
+
+    /**
+     * Parse one serialized token from $data at $pos, replacing targets in strings
+     * and recomputing byte lengths without instantiating objects.
+     *
+     * @param string $data Serialized data.
+     * @param int    $pos  Byte position within $data (passed by reference).
+     *
+     * @return string|null Re-encoded token string or null on parse error.
+     */
+    private function parseSerialized(string $data, int &$pos): ?string
+    {
+        $length = strlen($data);
+        if ($pos >= $length) {
+            return null;
+        }
+
+        $startPos = $pos;
+        $type     = $data[$pos];
+        $pos++;
+
+        switch ($type) {
+            case 's':
+                if (! isset($data[$pos]) || ':' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $lenEnd = strpos($data, ':', $pos);
+                if (false === $lenEnd) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $lenStr = substr($data, $pos, $lenEnd - $pos);
+                if (! ctype_digit($lenStr)) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $strLength = (int) $lenStr;
+
+                $pos = $lenEnd + 1;
+                if (! isset($data[$pos]) || '"' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                if ($pos + $strLength + 2 > $length) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $str = substr($data, $pos, $strLength);
+                $pos += $strLength;
+
+                if ('"' !== $data[$pos] || ';' !== $data[$pos + 1]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos += 2;
+
+                if ($strLength >= 4 && $this->isSerialized($str)) {
+                    $innerPos  = 0;
+                    $parsedStr = $this->parseSerialized($str, $innerPos);
+                    if (null !== $parsedStr && $innerPos === strlen($str)) {
+                        $newStr = $parsedStr;
+                    } else {
+                        $newStr = $this->replaceInString($str);
+                    }
+                } else {
+                    $newStr = $this->replaceInString($str);
+                }
+
+                return 's:' . strlen($newStr) . ':"' . $newStr . '";';
+
+            case 'i':
+            case 'b':
+            case 'd':
+                if (! isset($data[$pos]) || ':' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $end = strpos($data, ';', $pos);
+                if (false === $end) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $value = substr($data, $pos, $end - $pos);
+                $pos   = $end + 1;
+
+                return $type . ':' . $value . ';';
+
+            case 'N':
+                if (! isset($data[$pos]) || ';' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                return 'N;';
+
+            case 'a':
+                if (! isset($data[$pos]) || ':' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $lenEnd = strpos($data, ':', $pos);
+                if (false === $lenEnd) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $lenStr = substr($data, $pos, $lenEnd - $pos);
+                if (! ctype_digit($lenStr)) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $arrayLength = (int) $lenStr;
+
+                $pos = $lenEnd + 1;
+                if (! isset($data[$pos]) || '{' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $result        = 'a:' . $arrayLength . ':{';
+                $totalElements = $arrayLength * 2;
+                for ($i = 0; $i < $totalElements; $i++) {
+                    $element = $this->parseSerialized($data, $pos);
+                    if (null === $element) {
+                        $pos = $startPos;
+                        return null;
+                    }
+                    $result .= $element;
+                }
+
+                if (! isset($data[$pos]) || '}' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+                $result .= '}';
+
+                return $result;
+
+            case 'O':
+            case 'o':
+                if (! isset($data[$pos]) || ':' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $classLenEnd = strpos($data, ':', $pos);
+                if (false === $classLenEnd) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $classLenStr = substr($data, $pos, $classLenEnd - $pos);
+                if (! ctype_digit($classLenStr)) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $classLength = (int) $classLenStr;
+
+                $pos = $classLenEnd + 1;
+                if (! isset($data[$pos]) || '"' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                if ($pos + $classLength + 2 > $length) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $className = substr($data, $pos, $classLength);
+                $pos += $classLength;
+
+                if ('"' !== $data[$pos] || ':' !== $data[$pos + 1]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos += 2;
+
+                $propLenEnd = strpos($data, ':', $pos);
+                if (false === $propLenEnd) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $propLenStr = substr($data, $pos, $propLenEnd - $pos);
+                if (! ctype_digit($propLenStr)) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $propCount = (int) $propLenStr;
+
+                $pos = $propLenEnd + 1;
+                if (! isset($data[$pos]) || '{' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $result        = $type . ':' . strlen($className) . ':"' . $className . '":' . $propCount . ':{';
+                $totalElements = $propCount * 2;
+                for ($i = 0; $i < $totalElements; $i++) {
+                    $element = $this->parseSerialized($data, $pos);
+                    if (null === $element) {
+                        $pos = $startPos;
+                        return null;
+                    }
+                    $result .= $element;
+                }
+
+                if (! isset($data[$pos]) || '}' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+                $result .= '}';
+
+                return $result;
+
+            case 'C':
+                if (! isset($data[$pos]) || ':' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $classLenEnd = strpos($data, ':', $pos);
+                if (false === $classLenEnd) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $classLenStr = substr($data, $pos, $classLenEnd - $pos);
+                if (! ctype_digit($classLenStr)) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $classLength = (int) $classLenStr;
+
+                $pos = $classLenEnd + 1;
+                if (! isset($data[$pos]) || '"' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                if ($pos + $classLength + 2 > $length) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $className = substr($data, $pos, $classLength);
+                $pos += $classLength;
+
+                if ('"' !== $data[$pos] || ':' !== $data[$pos + 1]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos += 2;
+
+                $dataLenEnd = strpos($data, ':', $pos);
+                if (false === $dataLenEnd) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $dataLenStr = substr($data, $pos, $dataLenEnd - $pos);
+                if (! ctype_digit($dataLenStr)) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $dataLength = (int) $dataLenStr;
+
+                $pos = $dataLenEnd + 1;
+                if (! isset($data[$pos]) || '{' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                if ($pos + $dataLength + 1 > $length) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $customData = substr($data, $pos, $dataLength);
+                $pos += $dataLength;
+
+                if ('}' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                if ($dataLength >= 4 && $this->isSerialized($customData)) {
+                    $innerPos    = 0;
+                    $parsedInner = $this->parseSerialized($customData, $innerPos);
+                    if (null !== $parsedInner && $innerPos === strlen($customData)) {
+                        $newData = $parsedInner;
+                    } else {
+                        $newData = $this->replaceInString($customData);
+                    }
+                } else {
+                    $newData = $this->replaceInString($customData);
+                }
+
+                return 'C:' . strlen($className) . ':"' . $className . '":' . strlen($newData) . ':{' . $newData . '}';
+
+            case 'E':
+                if (! isset($data[$pos]) || ':' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $lenEnd = strpos($data, ':', $pos);
+                if (false === $lenEnd) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $lenStr = substr($data, $pos, $lenEnd - $pos);
+                if (! ctype_digit($lenStr)) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $caseLength = (int) $lenStr;
+
+                $pos = $lenEnd + 1;
+                if (! isset($data[$pos]) || '"' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                if ($pos + $caseLength + 2 > $length) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $caseName = substr($data, $pos, $caseLength);
+                $pos += $caseLength;
+
+                if ('"' !== $data[$pos] || ';' !== $data[$pos + 1]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos += 2;
+
+                return 'E:' . strlen($caseName) . ':"' . $caseName . '";';
+
+            case 'r':
+            case 'R':
+                if (! isset($data[$pos]) || ':' !== $data[$pos]) {
+                    $pos = $startPos;
+                    return null;
+                }
+                $pos++;
+
+                $end = strpos($data, ';', $pos);
+                if (false === $end) {
+                    $pos = $startPos;
+                    return null;
+                }
+
+                $ref = substr($data, $pos, $end - $pos);
+                $pos = $end + 1;
+
+                return $type . ':' . $ref . ';';
+
+            default:
+                $pos = $startPos;
+                return null;
+        }
     }
 
     /**
@@ -133,11 +547,7 @@ final class SerializedReplacer
                     return $this->replaceJsonText($data);
                 }
 
-                // ponytail: this path re-encodes, which keeps {} and 1.0 but
-                // writes a bigint as a quoted string. It only runs for JSON
-                // wrapping serialized PHP; a token-level rewriter would lift
-                // that ceiling if it ever matters.
-                $processed = $this->process($decoded, false);
+                $processed = $this->process($decoded);
                 $encoded   = wp_json_encode($processed, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
                 if (is_string($encoded)) {
                     return $encoded;
@@ -145,11 +555,29 @@ final class SerializedReplacer
             }
         }
 
-        $replaced     = 0;
-        $out          = str_replace($this->from, $this->to, $data, $replaced);
-        $this->count += $replaced;
+        return $this->replacePlainString($data);
+    }
 
-        return $out;
+    private function replacePlainString(string $data): string
+    {
+        if ([] === $this->pairs) {
+            return $data;
+        }
+
+        $count = 0;
+        foreach (array_keys($this->pairs) as $search) {
+            if (str_contains($data, $search)) {
+                $count += substr_count($data, $search);
+            }
+        }
+
+        if (0 === $count) {
+            return $data;
+        }
+
+        $this->count += $count;
+
+        return strtr($data, $this->pairs);
     }
 
     /**
@@ -159,24 +587,40 @@ final class SerializedReplacer
      */
     private function replaceJsonText(string $json): string
     {
-        $from = [];
-        $to   = [];
+        $pairs = [];
         foreach ($this->from as $i => $search) {
+            if ('' === $search || ! isset($this->to[$i])) {
+                continue;
+            }
             foreach ([JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE, JSON_UNESCAPED_UNICODE, JSON_UNESCAPED_SLASHES, 0] as $flags) {
                 $f = substr((string) json_encode($search, $flags), 1, -1);
-                if ('' === $f || in_array($f, $from, true)) {
+                if ('' === $f || isset($pairs[$f])) {
                     continue;
                 }
-                $from[] = $f;
-                $to[]   = substr((string) json_encode($this->to[$i] ?? '', $flags), 1, -1);
+                $pairs[$f] = substr((string) json_encode($this->to[$i], $flags), 1, -1);
             }
         }
 
-        $replaced     = 0;
-        $out          = str_replace($from, $to, $json, $replaced);
-        $this->count += $replaced;
+        if ([] === $pairs) {
+            return $json;
+        }
 
-        return $out;
+        uksort($pairs, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        $count = 0;
+        foreach (array_keys($pairs) as $search) {
+            if (str_contains($json, $search)) {
+                $count += substr_count($json, $search);
+            }
+        }
+
+        if (0 === $count) {
+            return $json;
+        }
+
+        $this->count += $count;
+
+        return strtr($json, $pairs);
     }
 
     /**
@@ -208,28 +652,6 @@ final class SerializedReplacer
         return false;
     }
 
-    private function hasIncompleteClass(mixed $data): bool
-    {
-        if ($data instanceof \__PHP_Incomplete_Class) {
-            return true;
-        }
-        if (is_array($data)) {
-            foreach ($data as $value) {
-                if ($this->hasIncompleteClass($value)) {
-                    return true;
-                }
-            }
-        } elseif (is_object($data)) {
-            foreach (get_object_vars($data) as $value) {
-                if ($this->hasIncompleteClass($value)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     /**
      * Whether a string is PHP-serialized data. Faithful port of WordPress core's
      * is_serialized(), so the engine stays portable outside WordPress (tests,
@@ -246,6 +668,11 @@ final class SerializedReplacer
             return false;
         }
         if (':' !== $data[1]) {
+            return false;
+        }
+
+        $lastc = substr($data, -1);
+        if (';' !== $lastc && '}' !== $lastc) {
             return false;
         }
 
@@ -270,11 +697,15 @@ final class SerializedReplacer
                 // fall through.
             case 'a':
             case 'O':
+            case 'o':
+            case 'C':
             case 'E':
                 return (bool) preg_match("/^{$token}:[0-9]+:/s", $data);
             case 'b':
             case 'i':
             case 'd':
+            case 'r':
+            case 'R':
                 return (bool) preg_match("/^{$token}:[0-9.E+-]+;/", $data);
         }
 
