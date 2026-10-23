@@ -604,6 +604,33 @@ final class Ajax implements HasHooks
     }
 
     /**
+     * Share of the database dump done, 0 to 1: estimated rows of the finished
+     * tables plus the rows the current table's cursor has passed.
+     *
+     * @param array<string, mixed> $job
+     */
+    private function dbProgress(array $job): float
+    {
+        $tables = array_values((array) ($job['db_tables'] ?? []));
+        $est    = (array) ($job['db_rows'] ?? []);
+        $at     = (int) ($job['db_table_index'] ?? 0);
+        $total  = 0;
+        $done   = 0;
+        foreach ($tables as $i => $table) {
+            // +1 so an empty table still counts as a unit of work.
+            $rows   = 1 + (int) ($est[$table] ?? 0);
+            $total += $rows;
+            if ($i < $at) {
+                $done += $rows;
+            } elseif ($i === $at) {
+                $done += min($rows - 1, (int) ($job['db_cursor']['rows'] ?? 0));
+            }
+        }
+
+        return $total > 0 ? min(0.99, $done / $total) : 0.0;
+    }
+
+    /**
      * Shape a job for the client: progress + a download URL once finished.
      *
      * @param array<string, mixed> $job
@@ -615,15 +642,28 @@ final class Ajax implements HasHooks
         $total   = max(1, (int) ($job['total'] ?? 0));
         $index   = (int) ($job['index'] ?? 0);
         $done    = 'done' === ($job['status'] ?? '');
-        $percent = $done ? 100 : (int) floor($index / $total * 100);
+        $phase   = (string) ($job['phase'] ?? 'files');
+
+        // The database is the first half of the bar when there are files after
+        // it, and moves by rows dumped (against SHOW TABLE STATUS estimates), so
+        // one large table still advances the bar on every step.
+        $dbShare = ! empty($job['has_db']) ? 50 : 0;
+        if ($done) {
+            $percent = 100;
+        } elseif ('db' === $phase) {
+            $percent = (int) floor($this->dbProgress($job) * ((int) ($job['total'] ?? 0) > 0 ? 50 : 99));
+        } else {
+            $percent = min(99, $dbShare + (int) floor($index / $total * (100 - $dbShare)));
+        }
 
         $shaped = [
             'warnings' => array_values(array_map('strval', (array) ($job['warnings'] ?? []))),
-            'status'  => (string) ($job['status'] ?? ''),
-            'index'   => $index,
-            'total'   => (int) ($job['total'] ?? 0),
-            'percent' => $percent,
-            'done'    => $done,
+            'status'   => (string) ($job['status'] ?? ''),
+            'phase'    => $phase,
+            'index'    => $index,
+            'total'    => (int) ($job['total'] ?? 0),
+            'percent'  => $percent,
+            'done'     => $done,
         ];
 
         if ($done) {

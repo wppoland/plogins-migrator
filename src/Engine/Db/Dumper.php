@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Migrator\Engine\Db;
 
+use Migrator\Engine\Pipeline\TimeBudget;
+
 defined('ABSPATH') || exit;
 
 // Migrator streams large backup archives (often gigabytes) in chunks. WP_Filesystem
@@ -120,6 +122,26 @@ final class Dumper
         return $out;
     }
 
+    /**
+     * Approximate row count per table of this site, from SHOW TABLE STATUS (no
+     * table scan). Only used to draw the progress bar.
+     *
+     * @return array<string, int>
+     */
+    public function rowEstimates(): array
+    {
+        $like = $this->db->esc_like($this->db->prefix) . '%';
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+        $rows = $this->db->get_results($this->db->prepare('SHOW TABLE STATUS LIKE %s', $like), ARRAY_A);
+
+        $out = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $out[(string) ($row['Name'] ?? '')] = (int) ($row['Rows'] ?? 0);
+        }
+
+        return $out;
+    }
+
     private function backtick(string $identifier): string
     {
         return '`' . str_replace('`', '``', $identifier) . '`';
@@ -144,6 +166,47 @@ final class Dumper
     }
 
     /**
+     * Dump the SQL preamble (settings, charset, foreign key check disable).
+     *
+     * @param resource $handle
+     */
+    public function dumpHeader($handle): void
+    {
+        $this->write($handle, "-- Migrator SQL dump\n");
+        $this->write($handle, "SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n");
+        // Pin the connection charset so multibyte data (for example Polish or any
+        // UTF-8 content) imports correctly on a server with a different default.
+        $this->write($handle, "SET NAMES {$this->charset()};\n");
+        $this->write($handle, "SET FOREIGN_KEY_CHECKS=0;\n\n");
+    }
+
+    /**
+     * Dump the SQL postamble (re-enable foreign key checks).
+     *
+     * @param resource $handle
+     */
+    public function dumpFooter($handle): void
+    {
+        $this->write($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
+    }
+
+    /**
+     * Dump all view definitions to a stream.
+     *
+     * @param resource $handle
+     * @param string[] $skip
+     */
+    public function dumpViews($handle, array $skip = []): void
+    {
+        foreach ($this->views() as $view) {
+            if (in_array($view, $skip, true)) {
+                continue;
+            }
+            $this->dumpView($view, $handle);
+        }
+    }
+
+    /**
      * Dump tables (structure + data) followed by views, to a writable stream.
      *
      * @param string[]               $tables Tables to dump.
@@ -154,12 +217,7 @@ final class Dumper
      */
     public function dumpAll(array $tables, $handle, array $where = [], array $skip = []): void
     {
-        $this->write($handle, "-- Migrator SQL dump\n");
-        $this->write($handle, "SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n");
-        // Pin the connection charset so multibyte data (for example Polish or any
-        // UTF-8 content) imports correctly on a server with a different default.
-        $this->write($handle, "SET NAMES {$this->charset()};\n");
-        $this->write($handle, "SET FOREIGN_KEY_CHECKS=0;\n\n");
+        $this->dumpHeader($handle);
 
         foreach ($tables as $table) {
             $table = (string) $table;
@@ -169,18 +227,9 @@ final class Dumper
             $this->dumpTable($table, $handle, $where[$table] ?? null);
         }
 
-        // Views are created after every base table, since they reference them.
-        // The exclusion list is built from SHOW TABLES, which lists views next to
-        // base tables, so a merchant could tick a view and still find its
-        // definition in the archive. The skip list applies here too.
-        foreach ($this->views() as $view) {
-            if (in_array($view, $skip, true)) {
-                continue;
-            }
-            $this->dumpView($view, $handle);
-        }
+        $this->dumpViews($handle, $skip);
 
-        $this->write($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
+        $this->dumpFooter($handle);
     }
 
     /**
@@ -265,89 +314,83 @@ final class Dumper
      */
     public function dumpTable(string $table, $handle, ?string $where = null, ?string $outputTable = null): void
     {
+        $cursor = null;
+        do {
+            $cursor = $this->dumpTableChunk($table, $handle, $where, $cursor, null, $outputTable);
+        } while (null !== $cursor);
+    }
+
+    /**
+     * Dump a slice of a table's structure and rows within the given time budget.
+     *
+     * If $cursor is null, writes DROP and CREATE statements before the first batch of rows.
+     * Returns null when the table has been completely dumped, or an updated cursor array
+     * to resume from in the next step.
+     *
+     * @param resource                  $handle
+     * @param array<string, mixed>|null $cursor
+     *
+     * @return array<string, mixed>|null
+     */
+    public function dumpTableChunk(
+        string $table,
+        $handle,
+        ?string $where = null,
+        ?array $cursor = null,
+        ?TimeBudget $budget = null,
+        ?string $outputTable = null
+    ): ?array {
         $safe = '`' . str_replace('`', '``', $table) . '`';
         $out  = null === $outputTable ? $safe : '`' . str_replace('`', '``', $outputTable) . '`';
 
-        $this->write($handle, "DROP TABLE IF EXISTS {$out};\n");
+        if (null === $cursor) {
+            $this->write($handle, "DROP TABLE IF EXISTS {$out};\n");
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
-        $create = $this->db->get_row("SHOW CREATE TABLE {$safe}", ARRAY_N);
-        if (is_array($create) && isset($create[1])) {
-            $createSql = (string) $create[1];
-            if (null !== $outputTable) {
-                // Rename the table in its own CREATE statement (the exact
-                // back-ticked name only appears as the table identifier).
-                $createSql = str_replace($safe, $out, $createSql);
-            }
-            $this->write($handle, $createSql . ";\n\n");
-        }
-
-        $this->dumpRows($safe, $handle, $where, $out);
-        $this->write($handle, "\n");
-    }
-
-    /**
-     * Stream a table's rows as batched INSERT statements.
-     *
-     * @param resource $handle
-     */
-    private function dumpRows(string $safe, $handle, ?string $where = null, ?string $outSafe = null): void
-    {
-        $outSafe ??= $safe;
-        $insert  = '';
-        $started = false;
-
-        foreach ($this->readRows($safe, $where) as $row) {
-            $values = '(' . $this->rowValues($row) . ')';
-
-            if (! $started) {
-                $insert  = $this->insertPrefix($outSafe, array_keys($row)) . $values;
-                $started = true;
-            } else {
-                $insert .= ',' . $values;
-            }
-
-            if (strlen($insert) >= $this->maxInsertBytes) {
-                $this->write($handle, $insert . ";\n");
-                $insert  = '';
-                $started = false;
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+            $create = $this->db->get_row("SHOW CREATE TABLE {$safe}", ARRAY_N);
+            if (is_array($create) && isset($create[1])) {
+                $createSql = (string) $create[1];
+                if (null !== $outputTable) {
+                    // Rename the table in its own CREATE statement (the exact
+                    // back-ticked name only appears as the table identifier).
+                    $createSql = str_replace($safe, $out, $createSql);
+                }
+                $this->write($handle, $createSql . ";\n\n");
             }
         }
 
-        if ($started && '' !== $insert) {
-            $this->write($handle, $insert . ";\n");
-        }
-    }
-
-    /**
-     * Read a table in bounded batches.
-     *
-     * Paging by OFFSET over a live site skips rows: delete a row the walk has
-     * already passed and every later row shifts one place towards the start, so
-     * the row that lands on the next offset boundary is never read and never
-     * reaches the backup. Nothing reports it. Expiring transients, WooCommerce
-     * sessions and abandoned carts delete rows constantly, so this is ordinary
-     * traffic and not a rare race.
-     *
-     * So batches are cut by primary key instead: each one asks for the rows
-     * AFTER the last key already read, which no concurrent delete can move. An
-     * insert during the walk either lands after the cursor (and is included) or
-     * before it (and is not), but nothing existing is ever skipped.
-     *
-     * @return \Generator<array<string, scalar|null>>
-     */
-    private function readRows(string $safe, ?string $where): \Generator
-    {
         $keys = $this->primaryKeyColumns($safe);
 
-        if ([] === $keys) {
-            yield from $this->readRowsByOffset($safe, $where);
-
-            return;
+        if ([] !== $keys) {
+            return $this->dumpRowsPkChunk($safe, $out, $handle, $keys, $where, $cursor, $budget);
         }
 
-        $columns = implode(',', array_map([$this, 'backtick'], $keys));
-        $cursor  = null;
+        return $this->dumpRowsOffsetChunk($safe, $out, $handle, $where, $cursor, $budget);
+    }
+
+    /**
+     * @param resource                  $handle
+     * @param string[]                  $keys
+     * @param array<string, mixed>|null $cursor
+     *
+     * @return array<string, mixed>|null
+     */
+    private function dumpRowsPkChunk(
+        string $safe,
+        string $outSafe,
+        $handle,
+        array $keys,
+        ?string $where,
+        ?array $cursor,
+        ?TimeBudget $budget
+    ): ?array {
+        $columns  = implode(',', array_map([$this, 'backtick'], $keys));
+        $pkCursor = isset($cursor['last']) && is_array($cursor['last']) ? $this->decodeKey($cursor['last']) : null;
+        $rowsDone = (int) ($cursor['rows'] ?? 0);
+
+        $insert  = '';
+        $started = false;
+        $done    = false;
 
         do {
             $clauses = [];
@@ -356,11 +399,11 @@ final class Dumper
             if (null !== $where && '' !== $where) {
                 $clauses[] = "({$where})";
             }
-            if (null !== $cursor) {
+            if (null !== $pkCursor) {
                 // Row-constructor comparison, so a composite key is paged as one
                 // ordered tuple rather than column by column.
                 $clauses[] = "({$columns}) > (" . implode(',', array_fill(0, count($keys), '%s')) . ')';
-                $args      = $cursor;
+                $args      = $pkCursor;
             }
 
             $sql = "SELECT * FROM {$safe}"
@@ -373,36 +416,88 @@ final class Dumper
             $rows = $this->db->get_results($this->db->prepare($sql, $args), ARRAY_A);
 
             if (! is_array($rows) || [] === $rows) {
-                return;
+                $done = true;
+                break;
             }
 
             foreach ($rows as $row) {
                 /** @var array<string, scalar|null> $row */
-                yield $row;
+                $values = '(' . $this->rowValues($row) . ')';
+
+                if (! $started) {
+                    $insert  = $this->insertPrefix($outSafe, array_keys($row)) . $values;
+                    $started = true;
+                } else {
+                    $insert .= ',' . $values;
+                }
+
+                if (strlen($insert) >= $this->maxInsertBytes) {
+                    $this->write($handle, $insert . ";\n");
+                    $insert  = '';
+                    $started = false;
+                }
             }
 
-            $last   = (array) end($rows);
-            $cursor = [];
+            $rowsDone += count($rows);
+            $last      = (array) end($rows);
+            $pkCursor  = [];
             foreach ($keys as $key) {
-                $cursor[] = (string) ($last[$key] ?? '');
+                $pkCursor[] = (string) ($last[$key] ?? '');
             }
-        } while (count($rows) === $this->batchSize);
+
+            if (count($rows) < $this->batchSize) {
+                $done = true;
+                break;
+            }
+
+            if (null !== $budget && $budget->expired()) {
+                break;
+            }
+        } while (true);
+
+        if ($started && '' !== $insert) {
+            $this->write($handle, $insert . ";\n");
+        }
+
+        if ($done) {
+            $this->write($handle, "\n");
+
+            return null;
+        }
+
+        return [
+            'last' => $this->encodeKey($pkCursor),
+            'rows' => $rowsDone,
+        ];
     }
 
     /**
-     * The fallback for a table with no primary key, where there is no column the
-     * batches can be cut on. It pages by offset, which is only safe while no row
-     * is deleted underneath it, so the row count is taken before and after: a
-     * table that shrank during the walk may have skipped rows, and the dump
-     * stops rather than writing an archive that quietly lacks them.
+     * @param resource                  $handle
+     * @param array<string, mixed>|null $cursor
      *
-     * @return \Generator<array<string, scalar|null>>
+     * @return array<string, mixed>|null
      */
-    private function readRowsByOffset(string $safe, ?string $where): \Generator
-    {
+    private function dumpRowsOffsetChunk(
+        string $safe,
+        string $outSafe,
+        $handle,
+        ?string $where,
+        ?array $cursor,
+        ?TimeBudget $budget
+    ): ?array {
         $filter = (null !== $where && '' !== $where) ? " WHERE {$where}" : '';
-        $before = $this->countRows($safe, $filter);
-        $offset = 0;
+
+        if (null === $cursor) {
+            $before = $this->countRows($safe, $filter);
+            $offset = 0;
+        } else {
+            $before = (int) ($cursor['before'] ?? $this->countRows($safe, $filter));
+            $offset = (int) ($cursor['offset'] ?? 0);
+        }
+
+        $insert  = '';
+        $started = false;
+        $done    = false;
 
         do {
             // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
@@ -412,23 +507,86 @@ final class Dumper
             );
 
             if (! is_array($rows) || [] === $rows) {
+                $done = true;
                 break;
             }
 
             foreach ($rows as $row) {
                 /** @var array<string, scalar|null> $row */
-                yield $row;
+                $values = '(' . $this->rowValues($row) . ')';
+
+                if (! $started) {
+                    $insert  = $this->insertPrefix($outSafe, array_keys($row)) . $values;
+                    $started = true;
+                } else {
+                    $insert .= ',' . $values;
+                }
+
+                if (strlen($insert) >= $this->maxInsertBytes) {
+                    $this->write($handle, $insert . ";\n");
+                    $insert  = '';
+                    $started = false;
+                }
             }
 
-            $offset += $this->batchSize;
-        } while (count($rows) === $this->batchSize);
+            $offset += count($rows);
 
-        if ($this->countRows($safe, $filter) < $before) {
-            throw new \RuntimeException(esc_html(sprintf(
-                'Migrator: rows were deleted from %s while it was being dumped, and it has no primary key to page on, so the dump may be missing rows. The backup was stopped.',
-                $safe
-            )));
+            if (count($rows) < $this->batchSize) {
+                $done = true;
+                break;
+            }
+
+            if (null !== $budget && $budget->expired()) {
+                break;
+            }
+        } while (true);
+
+        if ($started && '' !== $insert) {
+            $this->write($handle, $insert . ";\n");
         }
+
+        if ($done) {
+            if ($this->countRows($safe, $filter) < $before) {
+                throw new \RuntimeException(esc_html(sprintf(
+                    'Migrator: rows were deleted from %s while it was being dumped, and it has no primary key to page on, so the dump may be missing rows. The backup was stopped.',
+                    $safe
+                )));
+            }
+
+            $this->write($handle, "\n");
+
+            return null;
+        }
+
+        return [
+            'offset' => $offset,
+            'before' => $before,
+            'rows'   => $offset,
+        ];
+    }
+
+    /**
+     * The cursor is saved in a wp_options row, a utf8mb4 column. A binary key
+     * value is not valid UTF-8 there, and wpdb refuses or mangles it, so key
+     * values travel base64-encoded.
+     *
+     * @param string[] $key
+     *
+     * @return string[]
+     */
+    private function encodeKey(array $key): array
+    {
+        return array_map('base64_encode', $key);
+    }
+
+    /**
+     * @param array<mixed> $key
+     *
+     * @return string[]
+     */
+    private function decodeKey(array $key): array
+    {
+        return array_values(array_map(static fn ($v): string => (string) base64_decode((string) $v, true), $key));
     }
 
     private function countRows(string $safe, string $filter): int
