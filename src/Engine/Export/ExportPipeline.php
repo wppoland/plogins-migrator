@@ -24,13 +24,16 @@ defined('ABSPATH') || exit;
  * this runs in time-boxed slices so it survives the request timeout on large
  * sites:
  *
- *   start()  > write signature, manifest and the database dump; enumerate the
- *              files to a list; leave the archive open-ended (no end marker).
- *   step()   > append a time-boxed batch of files; when the list is exhausted,
- *              write the end marker and finish.
+ *   start()  > write signature and manifest; create file list; initialize
+ *              the stepped database dump.
+ *   step()   > during the 'db' phase, dump table rows within time budget;
+ *              once all tables are dumped, append the database entry to the
+ *              archive and transition to 'files';
+ *              during the 'files' phase, append a time-boxed batch of files;
+ *              when the list is exhausted, write the end marker and finish.
  *
- * Each appended file is a complete, checksummed entry, so an interrupted export
- * simply resumes at the next file. Job state lives in one option.
+ * Each appended entry is complete and checksummed, so an interrupted export
+ * simply resumes at the next chunk or file. Job state lives in one option.
  */
 final class ExportPipeline
 {
@@ -62,8 +65,8 @@ final class ExportPipeline
     }
 
     /**
-     * Begin an export. Writes the manifest + database immediately and enumerates
-     * the files to copy. Returns the initial job state.
+     * Begin an export. Writes the manifest, prepares the database dump, and
+     * enumerates the files to copy. Returns the initial job state.
      *
      * @return array<string, mixed>
      */
@@ -87,6 +90,7 @@ final class ExportPipeline
         ]);
         $writer->addString(Manifest::NAME, $manifest->toJson(), Entry::TYPE_MANIFEST);
 
+        $sqlTmp = null;
         if (! $options->excludeDatabase()) {
             $sqlTmp = $this->workspace->path('tmp-' . wp_generate_password(8, false) . '.sql');
             $handle = fopen($sqlTmp, 'wb');
@@ -95,16 +99,9 @@ final class ExportPipeline
                 throw new \RuntimeException('Migrator: cannot open temp file for SQL dump.');
             }
             try {
-                $this->dumper->dumpAll($tables, $handle, $options->whereFilters($prefix), $skip);
+                $this->dumper->dumpHeader($handle);
             } finally {
                 fclose($handle);
-            }
-            $writer->addFile(Exporter::DB_ENTRY, $sqlTmp);
-            wp_delete_file($sqlTmp);
-
-            $routines = $this->dumper->routines();
-            if ([] !== $routines) {
-                $writer->addString(Exporter::ROUTINES_ENTRY, (string) wp_json_encode($routines));
             }
         }
 
@@ -113,6 +110,9 @@ final class ExportPipeline
         $list     = fopen($listPath, 'wb');
         if (false === $list) {
             $writer->close();
+            if (null !== $sqlTmp && is_file($sqlTmp)) {
+                wp_delete_file($sqlTmp);
+            }
             throw new \RuntimeException('Migrator: cannot open file list.');
         }
         $total = 0;
@@ -125,6 +125,9 @@ final class ExportPipeline
             if (fwrite($list, $line) !== strlen($line)) {
                 fclose($list);
                 $writer->close();
+                if (null !== $sqlTmp && is_file($sqlTmp)) {
+                    wp_delete_file($sqlTmp);
+                }
 
                 throw new \RuntimeException('Migrator: could not write the file list, the disk is most likely full.');
             }
@@ -134,26 +137,40 @@ final class ExportPipeline
 
         $writer->close(); // Leave open-ended; steps append and finish.
 
+        $phase = $options->excludeDatabase() ? 'files' : 'db';
+
         $job = [
-            'id'         => wp_generate_password(12, false),
-            'dest'       => $destination,
-            'final'      => $final,
-            'warnings'   => array_merge($this->uploadsWarning($options), $writer->warnings()),
-            'list'       => $listPath,
-            'index'      => 0,
-            'total'      => $total,
-            'bytes'      => (int) filesize($destination), // clean archive size after the last completed step
-            'listOffset' => 0,                            // byte offset into the file list
-            'status'     => 'running',
-            'startedAt'  => time(),
+            'id'             => wp_generate_password(12, false),
+            'dest'           => $destination,
+            'final'          => $final,
+            'warnings'       => array_merge($this->uploadsWarning($options), $writer->warnings()),
+            'list'           => $listPath,
+            'index'          => 0,
+            'total'          => $total,
+            'bytes'          => (int) filesize($destination), // clean archive size after the last completed step
+            'listOffset'     => 0,                            // byte offset into the file list
+            'status'         => 'running',
+            'startedAt'      => time(),
+            'phase'          => $phase,
+            'db_table_index' => 0,
+            'db_cursor'      => null,
+            'db_tmp'         => $sqlTmp,
+            'db_tables'      => $tables,
+            'db_skip'        => $skip,
+            'db_where'       => $options->whereFilters($prefix),
+            'db_rows'        => array_intersect_key($this->dumper->rowEstimates(), array_flip($tables)),
+            'has_db'         => ! $options->excludeDatabase(),
         ];
+        if (null !== $sqlTmp && is_file($sqlTmp)) {
+            $job['db_bytes'] = (int) filesize($sqlTmp);
+        }
         $this->save($job);
 
         return $job;
     }
 
     /**
-     * Append the next time-boxed batch of files. Returns the updated job.
+     * Run the next time-boxed slice of the export.
      *
      * @return array<string, mixed>
      */
@@ -164,13 +181,134 @@ final class ExportPipeline
             throw new \RuntimeException('Migrator: no export in progress.');
         }
 
+        $budget = TimeBudget::forRequest();
+        $phase  = (string) ($job['phase'] ?? 'files');
+
+        if ('db' === $phase) {
+            return $this->stepDb($job, $budget);
+        }
+
+        return $this->stepFiles($job, $budget);
+    }
+
+    /**
+     * Dump database table rows within the request time budget.
+     *
+     * @param array<string, mixed> $job
+     * @return array<string, mixed>
+     */
+    private function stepDb(array $job, TimeBudget $budget): array
+    {
+        $dest        = (string) $job['dest'];
+        $clean       = (int) ($job['bytes'] ?? filesize($dest));
+        $sqlTmp      = (string) ($job['db_tmp'] ?? '');
+        $tables      = (array) ($job['db_tables'] ?? []);
+        $totalTables = count($tables);
+        $skip        = (array) ($job['db_skip'] ?? []);
+        $where       = (array) ($job['db_where'] ?? []);
+        $tableIndex  = (int) ($job['db_table_index'] ?? 0);
+        $cursor      = isset($job['db_cursor']) && is_array($job['db_cursor']) ? $job['db_cursor'] : null;
+
+        // If a previous step died mid-file, the archive has a partial entry past
+        // its last clean size. Truncate it away before appending more.
+        clearstatcache(true, $dest);
+        if ((int) filesize($dest) > $clean) {
+            $trunc = fopen($dest, 'r+b');
+            if (false === $trunc || ! ftruncate($trunc, $clean)) {
+                if (false !== $trunc) {
+                    fclose($trunc);
+                }
+                throw new \RuntimeException('Migrator: could not cut a half-written entry off the archive, so the export cannot continue. Start a new backup.');
+            }
+            fclose($trunc);
+        }
+
+        if ('' === $sqlTmp || ! is_file($sqlTmp)) {
+            throw new \RuntimeException('Migrator: the export\'s temporary SQL dump is gone, so it cannot continue. Start a new backup.');
+        }
+
+        // Same for the SQL dump: rows past the last saved cursor were written
+        // by a step that died before saving it, and would be dumped twice.
+        clearstatcache(true, $sqlTmp);
+        $cleanDb = (int) ($job['db_bytes'] ?? filesize($sqlTmp));
+        if ((int) filesize($sqlTmp) > $cleanDb) {
+            $trunc = fopen($sqlTmp, 'r+b');
+            if (false === $trunc || ! ftruncate($trunc, $cleanDb)) {
+                if (false !== $trunc) {
+                    fclose($trunc);
+                }
+                throw new \RuntimeException('Migrator: could not cut half-written rows off the database dump, so the export cannot continue. Start a new backup.');
+            }
+            fclose($trunc);
+        }
+
+        $handle = fopen($sqlTmp, 'c+b');
+        if (false === $handle) {
+            throw new \RuntimeException('Migrator: cannot open temp file for SQL dump.');
+        }
+        fseek($handle, 0, SEEK_END);
+
+        // At least one chunk per step, so even a budget that is already spent
+        // moves the dump forward instead of looping forever.
+        while ($tableIndex < $totalTables) {
+            $table  = (string) $tables[$tableIndex];
+            $cursor = $this->dumper->dumpTableChunk($table, $handle, $where[$table] ?? null, $cursor, $budget);
+            if (null === $cursor) {
+                $tableIndex++;
+            }
+            if ($budget->expired()) {
+                break;
+            }
+        }
+
+        if ($tableIndex >= $totalTables) {
+            $this->dumper->dumpViews($handle, $skip);
+            $this->dumper->dumpFooter($handle);
+            fclose($handle);
+
+            $writer = new Writer($dest, true);
+            $writer->addFile(Exporter::DB_ENTRY, $sqlTmp);
+            wp_delete_file($sqlTmp);
+
+            $routines = $this->dumper->routines();
+            if ([] !== $routines) {
+                $writer->addString(Exporter::ROUTINES_ENTRY, (string) wp_json_encode($routines));
+            }
+            $writer->close();
+
+            clearstatcache(true, $dest);
+            $job['bytes']          = (int) filesize($dest);
+            $job['phase']          = 'files';
+            $job['db_table_index'] = $tableIndex;
+            $job['db_cursor']      = null;
+            unset($job['db_tmp'], $job['db_tables'], $job['db_skip'], $job['db_where'], $job['db_bytes'], $job['db_rows']);
+        } else {
+            fclose($handle);
+            clearstatcache(true, $sqlTmp);
+            $job['db_bytes']       = (int) filesize($sqlTmp);
+            $job['db_table_index'] = $tableIndex;
+            $job['db_cursor']      = $cursor;
+        }
+
+        $this->save($job);
+
+        return $job;
+    }
+
+    /**
+     * Append the next time-boxed batch of files.
+     *
+     * @param array<string, mixed> $job
+     * @return array<string, mixed>
+     */
+    private function stepFiles(array $job, TimeBudget $budget): array
+    {
         $dest    = (string) $job['dest'];
         $index   = (int) $job['index'];
         $total   = (int) $job['total'];
         $clean   = (int) ($job['bytes'] ?? filesize($dest));
         $offset  = (int) ($job['listOffset'] ?? 0);
         $base    = $this->contentDir();
-        $budget  = TimeBudget::forRequest();
 
         // If a previous step died mid-file, the archive has a partial entry past
         // its last clean size. Truncate it away before appending more. Failing
@@ -201,8 +339,9 @@ final class ExportPipeline
         $start = $index;
         // Stop on the time budget (slow hosts) or after a batch of files
         // (fast hosts), whichever comes first, so the browser gets frequent
-        // progress updates instead of one long step that looks frozen.
-        while ($index < $total && ! $budget->expired() && ($index - $start) < self::FILES_PER_STEP) {
+        // progress updates instead of one long step that looks frozen. The
+        // first file always goes, so a tiny budget still makes progress.
+        while ($index < $total && ($index === $start || ! $budget->expired()) && ($index - $start) < self::FILES_PER_STEP) {
             $line = fgets($list);
             if (false === $line) {
                 break;
@@ -282,6 +421,9 @@ final class ExportPipeline
         $job = $this->current();
         if (isset($job['list']) && is_readable((string) $job['list'])) {
             wp_delete_file((string) $job['list']);
+        }
+        if (isset($job['db_tmp']) && is_file((string) $job['db_tmp'])) {
+            wp_delete_file((string) $job['db_tmp']);
         }
         $dest = (string) ($job['dest'] ?? '');
         if ('done' !== ($job['status'] ?? '') && str_ends_with($dest, self::PART) && is_file($dest)) {

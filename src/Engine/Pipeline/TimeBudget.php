@@ -31,7 +31,15 @@ final class TimeBudget
         $max = (float) ini_get('max_execution_time');
         $seconds = $max > 0 ? $max * $fraction : $ceil;
 
-        return new self(max($floor, min($ceil, $seconds)));
+        /**
+         * Seconds one browser step may work before it hands back to the next
+         * request. Lower it on a host whose proxy cuts requests short.
+         *
+         * @param float $seconds Derived from max_execution_time, 8 to 20.
+         */
+        $seconds = (float) apply_filters('migrator_step_seconds', max($floor, min($ceil, $seconds)));
+
+        return new self(max(0.0, $seconds));
     }
 
     public function expired(): bool
