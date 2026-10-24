@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Migrator 0.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-10-04T23:54:29+00:00\n"
+"POT-Creation-Date: 2026-10-23T18:28:22+00:00\n"
 "PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
 "Last-Translator: motylanogha <szatkowski.mariusz@gmail.com>\n"
 "Language-Team: German <de@li.org>\n"
@@ -94,7 +94,7 @@ msgstr "Datei nicht gefunden."
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:558 src/Admin/Page.php:116
+#: src/Admin/Ajax.php:558 src/Admin/Page.php:117
 msgid "Enter the text to search for."
 msgstr "Gib den zu suchenden Text ein."
 
@@ -125,34 +125,38 @@ msgid "Preparing…"
 msgstr "Vorbereiten…"
 
 #: src/Admin/Page.php:98
+msgid "Exporting the database…"
+msgstr ""
+
+#: src/Admin/Page.php:99
 msgid "Archiving files…"
 msgstr "Dateien archivieren…"
 
-#: src/Admin/Page.php:99
+#: src/Admin/Page.php:100
 msgid "Backup ready."
 msgstr "Backup bereit."
 
-#: src/Admin/Page.php:100
+#: src/Admin/Page.php:101
 msgid "Export failed."
 msgstr "Der Export ist fehlgeschlagen."
 
-#: src/Admin/Page.php:101
+#: src/Admin/Page.php:102
 msgid "Uploading…"
 msgstr "Hochladen…"
 
-#: src/Admin/Page.php:102
+#: src/Admin/Page.php:103
 msgid "Restoring… do not close this tab."
 msgstr "Wiederherstellung... Schließe diese Registerkarte nicht."
 
-#: src/Admin/Page.php:103
+#: src/Admin/Page.php:104
 msgid "Restore complete."
 msgstr "Wiederherstellung abgeschlossen."
 
-#: src/Admin/Page.php:104
+#: src/Admin/Page.php:105
 msgid "Restore failed."
 msgstr "Wiederherstellung fehlgeschlagen."
 
-#: src/Admin/Page.php:105
+#: src/Admin/Page.php:106
 msgid ""
 "This overwrites the current site with the backup. A safety copy of the "
 "database is taken first. Continue?"
@@ -160,69 +164,69 @@ msgstr ""
 "Dadurch wird die aktuelle Site mit der Sicherung überschrieben. Zunächst "
 "wird eine Sicherheitskopie der Datenbank erstellt. Weitermachen?"
 
-#: src/Admin/Page.php:106
+#: src/Admin/Page.php:107
 msgid "Scanning…"
 msgstr "Scannen…"
 
-#: src/Admin/Page.php:107
+#: src/Admin/Page.php:108
 msgid "Scan failed."
 msgstr "Der Scan ist fehlgeschlagen."
 
-#: src/Admin/Page.php:108
+#: src/Admin/Page.php:109
 msgid "files"
 msgstr "Dateien"
 
-#: src/Admin/Page.php:109
+#: src/Admin/Page.php:110
 msgid "No backups stored on this site yet."
 msgstr "Auf dieser Website sind noch keine Backups gespeichert."
 
-#: src/Admin/Page.php:110
+#: src/Admin/Page.php:111
 msgid "Download"
 msgstr "Herunterladen"
 
-#: src/Admin/Page.php:111
+#: src/Admin/Page.php:112
 msgid "Restore"
 msgstr "Wiederherstellen"
 
-#: src/Admin/Page.php:112
+#: src/Admin/Page.php:113
 msgid "Delete"
 msgstr "Löschen"
 
-#: src/Admin/Page.php:113
+#: src/Admin/Page.php:114
 msgid "Delete this backup? This cannot be undone."
 msgstr "Dieses Backup löschen? Dies kann nicht rückgängig gemacht werden."
 
-#: src/Admin/Page.php:114
+#: src/Admin/Page.php:115
 msgid "Details"
 msgstr "Details"
 
-#: src/Admin/Page.php:115
+#: src/Admin/Page.php:116
 msgid "Could not read this backup."
 msgstr "Dieses Backup konnte nicht gelesen werden."
 
-#: src/Admin/Page.php:117
+#: src/Admin/Page.php:118
 msgid "This changes your database now. Make a backup first. Continue?"
 msgstr ""
 "Dadurch ändert sich nun deine Datenbank. Erstelle zunächst ein Backup. "
 "Weitermachen?"
 
-#: src/Admin/Page.php:118
+#: src/Admin/Page.php:119
 msgid "Working…"
 msgstr "Arbeiten…"
 
-#: src/Admin/Page.php:119
+#: src/Admin/Page.php:120
 msgid "Search and replace failed."
 msgstr "Suchen und Ersetzen ist fehlgeschlagen."
 
-#: src/Admin/Page.php:120
+#: src/Admin/Page.php:121
 msgid "Would change"
 msgstr "Würde sich ändern"
 
-#: src/Admin/Page.php:121
+#: src/Admin/Page.php:122
 msgid "Changed"
 msgstr "Geändert"
 
-#: src/Admin/Page.php:122
+#: src/Admin/Page.php:123
 msgid "Skipped (no primary key):"
 msgstr "Übersprungen (kein Primärschlüssel):"
 

@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
 "Stable (latest release)\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-10-04T23:54:29+00:00\n"
+"POT-Creation-Date: 2026-10-23T18:28:22+00:00\n"
 "PO-Revision-Date: 2026-07-21 05:32:32+0000\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
@@ -93,7 +93,7 @@ msgstr "Nie znaleziono pliku."
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:558 src/Admin/Page.php:116
+#: src/Admin/Ajax.php:558 src/Admin/Page.php:117
 msgid "Enter the text to search for."
 msgstr "Wpisz tekst, który chcesz wyszukać."
 
@@ -124,34 +124,38 @@ msgid "Preparing…"
 msgstr "Przygotowanie…"
 
 #: src/Admin/Page.php:98
+msgid "Exporting the database…"
+msgstr ""
+
+#: src/Admin/Page.php:99
 msgid "Archiving files…"
 msgstr "Archiwizuję pliki…"
 
-#: src/Admin/Page.php:99
+#: src/Admin/Page.php:100
 msgid "Backup ready."
 msgstr "Kopia zapasowa gotowa."
 
-#: src/Admin/Page.php:100
+#: src/Admin/Page.php:101
 msgid "Export failed."
 msgstr "Eksport nie powiódł się."
 
-#: src/Admin/Page.php:101
+#: src/Admin/Page.php:102
 msgid "Uploading…"
 msgstr "Przesyłanie…"
 
-#: src/Admin/Page.php:102
+#: src/Admin/Page.php:103
 msgid "Restoring… do not close this tab."
 msgstr "Przywracanie… nie zamykaj tej zakładki."
 
-#: src/Admin/Page.php:103
+#: src/Admin/Page.php:104
 msgid "Restore complete."
 msgstr "Przywracanie zakończone."
 
-#: src/Admin/Page.php:104
+#: src/Admin/Page.php:105
 msgid "Restore failed."
 msgstr "Przywracanie nie powiodło się."
 
-#: src/Admin/Page.php:105
+#: src/Admin/Page.php:106
 msgid ""
 "This overwrites the current site with the backup. A safety copy of the "
 "database is taken first. Continue?"
@@ -159,69 +163,69 @@ msgstr ""
 "Spowoduje to zastąpienie bieżącej witryny kopią zapasową. Najpierw "
 "wykonywana jest kopia bezpieczeństwa bazy danych. Kontynuować?"
 
-#: src/Admin/Page.php:106
+#: src/Admin/Page.php:107
 msgid "Scanning…"
 msgstr "Skanowanie…"
 
-#: src/Admin/Page.php:107
+#: src/Admin/Page.php:108
 msgid "Scan failed."
 msgstr "Skanowanie nie powiodło się."
 
-#: src/Admin/Page.php:108
+#: src/Admin/Page.php:109
 msgid "files"
 msgstr "pliki"
 
-#: src/Admin/Page.php:109
+#: src/Admin/Page.php:110
 msgid "No backups stored on this site yet."
 msgstr "Na tej stronie nie znajdują się jeszcze żadne kopie zapasowe."
 
-#: src/Admin/Page.php:110
+#: src/Admin/Page.php:111
 msgid "Download"
 msgstr "Pobierz"
 
-#: src/Admin/Page.php:111
+#: src/Admin/Page.php:112
 msgid "Restore"
 msgstr "Przywróć"
 
-#: src/Admin/Page.php:112
+#: src/Admin/Page.php:113
 msgid "Delete"
 msgstr "Usuń"
 
-#: src/Admin/Page.php:113
+#: src/Admin/Page.php:114
 msgid "Delete this backup? This cannot be undone."
 msgstr "Usunąć tę kopię zapasową? Tego nie można cofnąć."
 
-#: src/Admin/Page.php:114
+#: src/Admin/Page.php:115
 msgid "Details"
 msgstr "Szczegóły"
 
-#: src/Admin/Page.php:115
+#: src/Admin/Page.php:116
 msgid "Could not read this backup."
 msgstr "Nie można odczytać tej kopii zapasowej."
 
-#: src/Admin/Page.php:117
+#: src/Admin/Page.php:118
 msgid "This changes your database now. Make a backup first. Continue?"
 msgstr ""
 "To zmienia teraz twoją bazę danych. Najpierw wykonaj kopię zapasową. "
 "Kontynuować?"
 
-#: src/Admin/Page.php:118
+#: src/Admin/Page.php:119
 msgid "Working…"
 msgstr "Pracuję…"
 
-#: src/Admin/Page.php:119
+#: src/Admin/Page.php:120
 msgid "Search and replace failed."
 msgstr "Wyszukaj i zamień nie powiodło się."
 
-#: src/Admin/Page.php:120
+#: src/Admin/Page.php:121
 msgid "Would change"
 msgstr "Zmieniłoby się"
 
-#: src/Admin/Page.php:121
+#: src/Admin/Page.php:122
 msgid "Changed"
 msgstr "Zmieniono"
 
-#: src/Admin/Page.php:122
+#: src/Admin/Page.php:123
 msgid "Skipped (no primary key):"
 msgstr "Pominięte (brak klucza podstawowego):"
 

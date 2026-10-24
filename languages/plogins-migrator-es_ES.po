@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
 "Stable (latest release)\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-10-04T23:54:29+00:00\n"
+"POT-Creation-Date: 2026-10-23T18:28:22+00:00\n"
 "PO-Revision-Date: 2026-07-15 09:54:08+0000\n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
@@ -92,7 +92,7 @@ msgstr "Archivo no encontrado."
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:558 src/Admin/Page.php:116
+#: src/Admin/Ajax.php:558 src/Admin/Page.php:117
 msgid "Enter the text to search for."
 msgstr "Introduce el texto a buscar."
 
@@ -123,34 +123,38 @@ msgid "Preparing…"
 msgstr "Preparando…"
 
 #: src/Admin/Page.php:98
+msgid "Exporting the database…"
+msgstr ""
+
+#: src/Admin/Page.php:99
 msgid "Archiving files…"
 msgstr "Archivando archivos…"
 
-#: src/Admin/Page.php:99
+#: src/Admin/Page.php:100
 msgid "Backup ready."
 msgstr "Copia de seguridad lista."
 
-#: src/Admin/Page.php:100
+#: src/Admin/Page.php:101
 msgid "Export failed."
 msgstr "La exportación falló."
 
-#: src/Admin/Page.php:101
+#: src/Admin/Page.php:102
 msgid "Uploading…"
 msgstr "Subiendo…"
 
-#: src/Admin/Page.php:102
+#: src/Admin/Page.php:103
 msgid "Restoring… do not close this tab."
 msgstr "Restaurando… no cierres esta pestaña."
 
-#: src/Admin/Page.php:103
+#: src/Admin/Page.php:104
 msgid "Restore complete."
 msgstr "Restauración completa."
 
-#: src/Admin/Page.php:104
+#: src/Admin/Page.php:105
 msgid "Restore failed."
 msgstr "La restauración falló."
 
-#: src/Admin/Page.php:105
+#: src/Admin/Page.php:106
 msgid ""
 "This overwrites the current site with the backup. A safety copy of the "
 "database is taken first. Continue?"
@@ -158,69 +162,69 @@ msgstr ""
 "Esto sobrescribe el sitio actual con la copia de seguridad. Primero se toma "
 "una copia de seguridad de la base de datos. ¿Continuar?"
 
-#: src/Admin/Page.php:106
+#: src/Admin/Page.php:107
 msgid "Scanning…"
 msgstr "Explorando…"
 
-#: src/Admin/Page.php:107
+#: src/Admin/Page.php:108
 msgid "Scan failed."
 msgstr "La exploración ha fallado."
 
-#: src/Admin/Page.php:108
+#: src/Admin/Page.php:109
 msgid "files"
 msgstr "archivos"
 
-#: src/Admin/Page.php:109
+#: src/Admin/Page.php:110
 msgid "No backups stored on this site yet."
 msgstr "Aún no hay copias de seguridad almacenadas en este sitio."
 
-#: src/Admin/Page.php:110
+#: src/Admin/Page.php:111
 msgid "Download"
 msgstr "Descargar"
 
-#: src/Admin/Page.php:111
+#: src/Admin/Page.php:112
 msgid "Restore"
 msgstr "Restaurar"
 
-#: src/Admin/Page.php:112
+#: src/Admin/Page.php:113
 msgid "Delete"
 msgstr "Borrar"
 
-#: src/Admin/Page.php:113
+#: src/Admin/Page.php:114
 msgid "Delete this backup? This cannot be undone."
 msgstr "¿Eliminar esta copia de seguridad? Esto no se puede deshacer."
 
-#: src/Admin/Page.php:114
+#: src/Admin/Page.php:115
 msgid "Details"
 msgstr "Detalles"
 
-#: src/Admin/Page.php:115
+#: src/Admin/Page.php:116
 msgid "Could not read this backup."
 msgstr "No se pudo leer esta copia de seguridad."
 
-#: src/Admin/Page.php:117
+#: src/Admin/Page.php:118
 msgid "This changes your database now. Make a backup first. Continue?"
 msgstr ""
 "Esto cambia tu base de datos ahora. Haz una copia de seguridad primero. "
 "¿Continuar?"
 
-#: src/Admin/Page.php:118
+#: src/Admin/Page.php:119
 msgid "Working…"
 msgstr "Trabajando…"
 
-#: src/Admin/Page.php:119
+#: src/Admin/Page.php:120
 msgid "Search and replace failed."
 msgstr "La búsqueda y reemplazo falló."
 
-#: src/Admin/Page.php:120
+#: src/Admin/Page.php:121
 msgid "Would change"
 msgstr "Cambiaría"
 
-#: src/Admin/Page.php:121
+#: src/Admin/Page.php:122
 msgid "Changed"
 msgstr "Cambiado"
 
-#: src/Admin/Page.php:122
+#: src/Admin/Page.php:123
 msgid "Skipped (no primary key):"
 msgstr "Omitido (sin clave primaria):"
 
