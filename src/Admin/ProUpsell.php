@@ -57,9 +57,34 @@ final class ProUpsell
         return (bool) apply_filters('migrator/show_pro_cta', true) && $this->features() !== [];
     }
 
+    /**
+     * The pricing page in the admin's language when plogins.com publishes one,
+     * tagged so the store can tell a visit came from this settings screen.
+     */
+    private function trackedUrl(string $url): string
+    {
+        $d    = $this->data();
+        $lang = substr((string) get_user_locale(), 0, 2);
+        if (in_array($lang, (array) ($d['locales'] ?? []), true)) {
+            $url = (string) preg_replace('#^https://plogins\.com/#', 'https://plogins.com/' . $lang . '/', $url);
+        }
+        if (empty($d['campaign'])) {
+            return $url;
+        }
+        return add_query_arg(
+            [
+                'utm_source'   => 'wp-admin',
+                'utm_medium'   => 'plugin',
+                'utm_campaign' => (string) $d['campaign'],
+            ],
+            $url
+        );
+    }
+
     private function url(): string
     {
         $default = (string) ($this->data()['url'] ?? 'https://plogins.com/migrator-pro/pricing/');
+        $default = $this->trackedUrl($default);
         /**
          * Filters the URL the "Upgrade to PRO" buttons point at.
          *
@@ -70,7 +95,7 @@ final class ProUpsell
 
     private function isPolish(): bool
     {
-        return str_starts_with((string) get_locale(), 'pl');
+        return str_starts_with((string) get_user_locale(), 'pl');
     }
 
     private function priceLabel(): string

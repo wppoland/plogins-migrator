@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.6.2
+Stable tag: 1.6.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -116,21 +116,24 @@ Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion i
 
 == Migrator Pro ==
 
-Migrator Pro is a separate paid plugin that extends Migrator:
+Migrator Pro is a separate paid plugin that extends Migrator.
 
-| Feature | Free | Pro |
-|:--- |:---:|:---:|
-| Single-file backup | Yes | Yes |
-| In-place restore | Yes | Yes |
-| Move to a new host | Yes | Yes |
-| Exclusions | Yes | Yes |
-| Size explorer | Yes | Yes |
-| Incremental backups | - | Yes |
-| Recovery points | - | Yes |
-| Cloud destinations | - | Yes |
-| Server-to-server transfer from wp-admin | - | Yes |
-| Deploy to a new server | - | Yes |
-| Table sync | - | Yes |
+Included in Migrator:
+
+* Single-file backup
+* In-place restore
+* Move to a new host
+* Exclusions
+* Size explorer
+
+Migrator Pro adds:
+
+* Incremental backups
+* Recovery points
+* Cloud destinations
+* Server-to-server transfer from wp-admin
+* Deploy to a new server
+* Table sync
 
 The free edition is not a trial and its features stay available without a time limit.
 
@@ -230,6 +233,10 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.6.3 =
+* The Upgrade to PRO links open the pricing page in the admin's language where plogins.com has one, and tell plogins.com which plugin the visit came from (utm_source, utm_medium and utm_campaign in the link). Nothing is sent from your site.
+* Readme: the PRO section lists what the free plugin includes and what the paid edition adds as two lists, which WordPress.org can display (it does not display tables).
 
 = 1.6.2 =
 * Readme only: a PRO section with links to the paid edition.
