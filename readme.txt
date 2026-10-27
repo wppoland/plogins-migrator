@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.6.1
+Stable tag: 1.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -114,23 +114,22 @@ Lite exports a ZIP and does not import at all. Moving files between live sites, 
 
 Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion is implied. List prices and tier limits change without notice, so confirm on the vendor's own page before you buy. Migrator itself is free under GPLv2 with no account to create; PRO is 49 to 149 EUR per year.
 
-== Plogins Migrator PRO ==
+== Migrator Pro ==
 
-The free edition backs up on a schedule and copies each backup off the server. **Plogins Migrator PRO** is for putting those copies further away, keeping more of them, and getting back faster:
+Migrator Pro is a separate paid plugin that works on top of Migrator. It adds:
 
-* **Cloud destinations**: S3, R2, Backblaze B2, Wasabi, SFTP and WebDAV, on top of the FTP and folder destinations the free edition ships
-* **Incremental backups**: store only the files that changed between fulls, with retention that keeps whole chains so a base is never orphaned
-* **Recovery points**: one-click rollback to a known-good backup
-* **Encrypted backups**: password-protected archives, decrypted on restore
-* **Table sync**: import chosen database tables from a backup into a live site and leave the rest alone
-* **Email notifications and activity log**: a silent failure never slips by
-* **Multisite, network to network**: back up and migrate a whole network with correct URL rewriting; pulling a single subsite out is a WP-CLI job
-* **Reset a site to a clean install**: take a staging site back to fresh WordPress without reinstalling: a safety backup first, then the tables dropped, a clean install, and the address, title and administrator password put back. Single sites only, not networks
-* **White label**: replace the menu name with your own, point the upgrade link elsewhere and hide the purchase prompt, so a client sees the tool under your brand
+* Incremental backups
+* Recovery points
+* Cloud destinations
+* Server-to-server transfer from wp-admin
+* Deploy to a new server
+* Table sync
 
-Everything in the free edition stays free and open. Plogins Migrator PRO starts at 49 EUR per year, billed in EUR.
+The free edition is not a trial and its features stay available without a time limit.
 
-Compare editions and pricing: [plogins.com/plogins-migrator-pro/pricing/](https://plogins.com/plogins-migrator-pro/pricing/)
+* **Migrator Pro** - [plogins.com/plogins-migrator-pro/](https://plogins.com/plogins-migrator-pro/)
+* **Compare editions and pricing** - [plogins.com/plogins-migrator-pro/pricing/](https://plogins.com/plogins-migrator-pro/pricing/)
+* **PRO documentation** - [plogins.com/plogins-migrator-pro/docs/](https://plogins.com/plogins-migrator-pro/docs/)
 
 == Installation ==
 
@@ -224,6 +223,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.6.2 =
+* Readme only: a PRO section with links to the paid edition.
 
 = 1.6.1 =
 * Readme only: the comparison with Duplicator now matches what the vendor states today: encrypted archives, backups of any size and its own Duplicator Cloud are in its free plugin, and its paid plans start at a $79 list price.
