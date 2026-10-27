@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,22 +71,22 @@ Reporting a security issue: email hello@wppoland.com, and under our [coordinated
 
 == How Migrator compares ==
 
-All six plugins named here back up and migrate WordPress. What separates them is what you get without paying, so the grid reads the free edition of each. Every entry was checked against vendor pricing pages and vendor documentation on 29 July 2026.
+All six plugins named here back up and migrate WordPress. What separates them is what you get without paying, so the grid reads the free edition of each. Every entry was checked against vendor pricing pages and vendor documentation on 29 July 2026; the All-in-One WP Migration and Duplicator columns were checked again on 27 October 2026.
 
 The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **Dupl** is Duplicator, **WPvivid**, **Updraft** is UpdraftPlus, **WPMigr** is WP Migrate. A cell reads **yes** if the free edition does it, **paid** if that vendor sells it in a paid tier or add-on, **no** if the vendor does not offer it at any price, **part** if only partly, and **?** if the vendor does not say. A row of **paid** is a paywall, not a missing feature; **no** is the one that means the thing does not exist.
 
                                Migrator   AIO   Dupl  WPvivid  Updraft  WPMigr
     --------------------------------------------------------------------------
     Full backup + migration         yes   yes    yes      yes      yes    part
-    No size cap, free tier          yes    no     no      yes      yes       ?
+    No size cap, free tier          yes    no    yes      yes      yes       ?
     Scheduled backups               yes  paid   paid      yes      yes      no
-    Cloud or FTP destination        yes  paid   paid      yes      yes      no
+    Cloud or FTP destination        yes  paid   part      yes      yes      no
     Incremental backups            paid  paid     no     paid     paid      no
-    Encrypted archives             paid   yes   paid     part     part       ?
+    Encrypted archives             paid   yes    yes     part     part       ?
     Server to server transfer       yes  paid   paid      yes     paid    paid
     Multisite net. restore         paid  paid   paid     part     paid    paid
     Imports chosen tables          paid     ?     no     paid     paid    paid
-    Paid plan, from               EUR49   $69    $99      $49      $70     $49
+    Paid plan, from               EUR49   $69    $79      $49      $70     $49
 
 **Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and put back automatically if the database import fails. No other free tier here documents that rollback. Automation is not the paid tier here: a site that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
 
@@ -98,7 +98,7 @@ Exports to a single `.wpress` file, and its AES-256 password-protected export is
 
 = Duplicator =
 
-Builds a package plus an installer. The vendor publishes a 4 GB ceiling for the free edition, and 500 MB on the DupArchive engine. Scheduling, recovery points and importing start at $99/yr.
+Builds a package plus an installer. The vendor's readme states that the free plugin makes backups of any size, encrypts archives with AES-256 and a password, and stores backups locally or on its own Duplicator Cloud. Scheduling, other cloud destinations, recovery points, multisite and server-to-server import are in the paid plans, from a $79 list price.
 
 = WPvivid =
 
@@ -224,6 +224,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.6.1 =
+* Readme only: the comparison with Duplicator now matches what the vendor states today: encrypted archives, backups of any size and its own Duplicator Cloud are in its free plugin, and its paid plans start at a $79 list price.
 
 = 1.6.0 =
 * Changed: a backup from wp-admin now exports the database in steps, a slice of rows per request, so a large database no longer runs into a 504 Gateway Timeout on shared hosting. An interrupted step resumes where the last one stopped, and the progress bar moves while the database is exported.
