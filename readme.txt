@@ -116,14 +116,21 @@ Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion i
 
 == Migrator Pro ==
 
-Migrator Pro is a separate paid plugin that works on top of Migrator. It adds:
+Migrator Pro is a separate paid plugin that extends Migrator:
 
-* Incremental backups
-* Recovery points
-* Cloud destinations
-* Server-to-server transfer from wp-admin
-* Deploy to a new server
-* Table sync
+| Feature | Free | Pro |
+|:--- |:---:|:---:|
+| Single-file backup | Yes | Yes |
+| In-place restore | Yes | Yes |
+| Move to a new host | Yes | Yes |
+| Exclusions | Yes | Yes |
+| Size explorer | Yes | Yes |
+| Incremental backups | - | Yes |
+| Recovery points | - | Yes |
+| Cloud destinations | - | Yes |
+| Server-to-server transfer from wp-admin | - | Yes |
+| Deploy to a new server | - | Yes |
+| Table sync | - | Yes |
 
 The free edition is not a trial and its features stay available without a time limit.
 
