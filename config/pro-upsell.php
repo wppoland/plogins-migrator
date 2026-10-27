@@ -12,6 +12,8 @@ defined('ABSPATH') || exit;
 return [
     'name'       => 'Migrator Pro',
     'url'        => 'https://plogins.com/plogins-migrator-pro/pricing/',
+    'campaign'   => 'plogins-migrator',
+    'locales'    => ['pl', 'de', 'es'],
     'sellable'   => true,
     'price_from' => 49,
     'currency'   => 'EUR',
