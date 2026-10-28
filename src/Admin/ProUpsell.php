@@ -83,7 +83,7 @@ final class ProUpsell
 
     private function url(): string
     {
-        $default = (string) ($this->data()['url'] ?? 'https://plogins.com/migrator-pro/pricing/');
+        $default = (string) ($this->data()['url'] ?? 'https://plogins.com/plogins-migrator-pro/pricing/');
         $default = $this->trackedUrl($default);
         /**
          * Filters the URL the "Upgrade to PRO" buttons point at.
