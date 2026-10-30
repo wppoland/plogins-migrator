@@ -10,8 +10,9 @@
  * schedule options the paid add-on still reads while that add-on was on disk.
  *
  * Runs uninstall.php against a fake $wpdb three times: alone, with a
- * reprint-* plugin folder (server tables must stay), and with the paid add-on
- * installed (legacy options must stay), plus a bulk delete of both editions
+ * reprint-* plugin folder (its tables, pull cursors included, must stay;
+ * until 1.6.6 the cursors went and an in-progress pull of that plugin died),
+ * and with the paid add-on installed (legacy options must stay), plus a bulk delete of both editions
  * where get_plugins() still holds the add-on in its request cache though it
  * is gone from disk (legacy options must go).
  *
@@ -179,11 +180,8 @@ $ok('deletes the legacy options', [] === array_diff($legacy, $deleted));
 echo "With a standalone Reprint Server on disk:\n";
 mkdir(WP_PLUGIN_DIR . '/reprint-server-wp');
 [$dropped] = $run();
-foreach ($server as $table) {
+foreach (array_merge($server, $pull) as $table) {
     $ok("keeps {$table}", ! in_array($table, $dropped, true));
-}
-foreach ($pull as $table) {
-    $ok("still drops {$table}", in_array($table, $dropped, true));
 }
 rmdir(WP_PLUGIN_DIR . '/reprint-server-wp');
 

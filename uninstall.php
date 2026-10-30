@@ -108,7 +108,8 @@ if ($migrator_reprint_ours) {
 // Reprint keeps its working tables under a fixed name, outside the WordPress
 // prefix: the cursor of an interrupted pull, and on the pushed-to side the
 // receipts of applied database changes and the staging tables of an unfinished
-// push. A site with Migrator gone has nothing to resume them with.
+// push. A standalone Reprint plugin writes the same names, the pull cursors
+// included, so all of them stay while one is on disk to resume its own work.
 // ponytail: the names carry no site prefix, so a second WordPress sharing this
 // database and running its own Reprint would lose these too.
 $migrator_drop_like = static function (string $like) use ($wpdb): void {
@@ -118,7 +119,7 @@ $migrator_drop_like = static function (string $like) use ($wpdb): void {
         $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', (string) $migrator_table));
     }
 };
-$migrator_drop_like($wpdb->esc_like('__reprint_db_pull_progress_') . '%');
+// __reprint_db_% covers the __reprint_db_pull_progress_% cursors too.
 if ($migrator_reprint_ours) {
     $migrator_drop_like($wpdb->esc_like('__reprint_db_') . '%');
 }
