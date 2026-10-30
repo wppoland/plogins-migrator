@@ -11,7 +11,9 @@
  *
  * Runs uninstall.php against a fake $wpdb three times: alone, with a
  * reprint-* plugin folder (server tables must stay), and with the paid add-on
- * installed (legacy options must stay).
+ * installed (legacy options must stay), plus a bulk delete of both editions
+ * where get_plugins() still holds the add-on in its request cache though it
+ * is gone from disk (legacy options must go).
  *
  * @package Migrator
  */
@@ -28,15 +30,29 @@ define('WP_PLUGIN_DIR', $tmp . '/wp-content/plugins');
 
 $GLOBALS['paid']    = false;
 $GLOBALS['deleted'] = [];
+$GLOBALS['cache']   = null;
 
+// Like core, the list is cached for the request and only wp_cache_delete()
+// makes get_plugins() read the disk again.
+function wp_cache_delete($key, $group = ''): bool
+{
+    if ('plugins' === $key && 'plugins' === $group) {
+        $GLOBALS['cache'] = null;
+    }
+
+    return true;
+}
 function get_plugins(): array
 {
+    if (null !== $GLOBALS['cache']) {
+        return $GLOBALS['cache'];
+    }
     $plugins = ['plogins-migrator/plogins-migrator.php' => ['TextDomain' => 'plogins-migrator']];
     if ($GLOBALS['paid']) {
         $plugins['renamed/plogins-migrator-pro.php'] = ['TextDomain' => 'plogins-migrator-pro'];
     }
 
-    return $plugins;
+    return $GLOBALS['cache'] = $plugins;
 }
 function is_multisite(): bool
 {
@@ -131,7 +147,8 @@ $ok       = static function (string $label, bool $cond) use (&$failures): void {
     $cond || $failures++;
 };
 
-$run = static function () use ($uninstall): array {
+$run = static function (?array $cached = null) use ($uninstall): array {
+    $GLOBALS['cache']   = $cached;
     $GLOBALS['wpdb']    = new FakeWpdb();
     $GLOBALS['deleted'] = [];
     (static function () use ($uninstall): void {
@@ -175,6 +192,14 @@ $GLOBALS['paid'] = true;
 [, $deleted] = $run();
 $ok('keeps the legacy options', [] === array_intersect($legacy, $deleted));
 $ok('still deletes its own options', in_array('migrator_schedule', $deleted, true));
+
+echo "Bulk delete, the add-on removed earlier in the same request:\n";
+$GLOBALS['paid'] = false;
+[, $deleted] = $run([
+    'plogins-migrator/plogins-migrator.php'         => ['TextDomain' => 'plogins-migrator'],
+    'plogins-migrator-pro/plogins-migrator-pro.php' => ['TextDomain' => 'plogins-migrator-pro'],
+]);
+$ok('deletes the legacy options despite the stale plugin list', [] === array_diff($legacy, $deleted));
 
 rmdir(WP_PLUGIN_DIR);
 rmdir(WP_CONTENT_DIR);

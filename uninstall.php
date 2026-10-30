@@ -21,13 +21,17 @@ global $wpdb;
 if (! function_exists('get_plugins')) {
     require_once ABSPATH . 'wp-admin/includes/plugin.php';
 }
+// A bulk delete of both editions uninstalls them in one request, and
+// get_plugins() caches its list for the request: the add-on deleted a moment
+// ago would still be listed.
+wp_cache_delete('plugins', 'plugins');
 
 // Settings from before scheduling moved here from the paid add-on. Both
 // editions still read them as a fallback, so while the add-on is on disk,
 // active or not, they stay and its own uninstall removes them. Matched on the
 // text domain, so a renamed folder still counts.
 $migrator_legacy_options = ['migrator_pro_schedule', 'migrator_pro_offsite', 'migrator_pro_last_backup'];
-$migrator_paid_installed =  in_array('plogins-migrator-pro', array_column(get_plugins(), 'TextDomain'), true);
+$migrator_paid_installed = in_array('plogins-migrator-pro', array_column(get_plugins(), 'TextDomain'), true);
 
 // The bundled Reprint Server shares its options and its tables with the
 // standalone Reprint Server plugin, so they stay while that plugin is on disk.
