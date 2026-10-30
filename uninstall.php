@@ -1,8 +1,8 @@
 <?php
 /**
- * Uninstall cleanup. Removes every option Migrator writes, its cron events and
- * its private working directory (archives and any in-progress job state).
- * Nothing is left behind.
+ * Uninstall cleanup. Removes every option Migrator writes, the working tables
+ * of the bundled Reprint code, its cron events and its private working
+ * directory (archives and any in-progress job state). Nothing is left behind.
  *
  * @package Migrator
  */
@@ -16,12 +16,30 @@ defined('WP_UNINSTALL_PLUGIN') || exit;
 // uses direct stream functions by necessity.
 // phpcs:disable WordPress.WP.AlternativeFunctions
 
+global $wpdb;
+
+if (! function_exists('get_plugins')) {
+    require_once ABSPATH . 'wp-admin/includes/plugin.php';
+}
+
+// Settings from before scheduling moved here from the paid add-on. Both
+// editions still read them as a fallback, so while the add-on is on disk,
+// active or not, they stay and its own uninstall removes them. Matched on the
+// text domain, so a renamed folder still counts.
+$migrator_legacy_options = ['migrator_pro_schedule', 'migrator_pro_offsite', 'migrator_pro_last_backup'];
+$migrator_paid_installed =  in_array('plogins-migrator-pro', array_column(get_plugins(), 'TextDomain'), true);
+
+// The bundled Reprint Server shares its options and its tables with the
+// standalone Reprint Server plugin, so they stay while that plugin is on disk.
+$migrator_reprint_ours = [] === (glob(rtrim((string) WP_PLUGIN_DIR, '/') . '/reprint-*', GLOB_ONLYDIR) ?: []);
+
 /**
  * Everything stored per site: the options the plugin writes, the three it
- * still reads from before scheduling moved here from the paid add-on, and the
- * scheduled backup event under both hook names.
+ * still reads from before scheduling moved here from the paid add-on, the
+ * bundled server's saved user list, and the scheduled backup event under both
+ * hook names.
  */
-$migrator_clean_site = static function (): void {
+$migrator_clean_site = static function () use ($wpdb, $migrator_legacy_options, $migrator_paid_installed, $migrator_reprint_ours): void {
     foreach ([
         'migrator_export_job',
         'migrator_export_postprocess',
@@ -29,11 +47,21 @@ $migrator_clean_site = static function (): void {
         'migrator_schedule',
         'migrator_offsite',
         'migrator_last_backup',
-        'migrator_pro_schedule',
-        'migrator_pro_offsite',
-        'migrator_pro_last_backup',
     ] as $migrator_option) {
         delete_option($migrator_option);
+    }
+
+    if (! $migrator_paid_installed) {
+        foreach ($migrator_legacy_options as $migrator_option) {
+            delete_option($migrator_option);
+        }
+    }
+
+    // The user list the bundled server saves per site when another site pulls
+    // one site of this network, kept there so the pull can resume.
+    if ($migrator_reprint_ours) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- uninstall cleanup of a table the bundled server created, prepared.
+        $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', $wpdb->prefix . 'reprint_users'));
     }
 
     wp_clear_scheduled_hook('migrator_run_scheduled_backup');
@@ -54,7 +82,7 @@ if (is_multisite()) {
 // options are shared with the standalone Reprint Server plugin, so they stay
 // when that plugin is installed and still needs them.
 delete_site_option('migrator_reprint_source');
-if ([] === (glob(rtrim((string) WP_PLUGIN_DIR, '/') . '/reprint-*', GLOB_ONLYDIR) ?: [])) {
+if ($migrator_reprint_ours) {
     $migrator_reprint = static function (): void {
         foreach (['reprint_server_connection_token', 'reprint_server_push_authorized_token_fingerprint', 'reprint_server_public_keys'] as $migrator_option) {
             delete_option($migrator_option);
@@ -71,6 +99,24 @@ if ([] === (glob(rtrim((string) WP_PLUGIN_DIR, '/') . '/reprint-*', GLOB_ONLYDIR
     } else {
         $migrator_reprint();
     }
+}
+
+// Reprint keeps its working tables under a fixed name, outside the WordPress
+// prefix: the cursor of an interrupted pull, and on the pushed-to side the
+// receipts of applied database changes and the staging tables of an unfinished
+// push. A site with Migrator gone has nothing to resume them with.
+// ponytail: the names carry no site prefix, so a second WordPress sharing this
+// database and running its own Reprint would lose these too.
+$migrator_drop_like = static function (string $like) use ($wpdb): void {
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall cleanup, prepared.
+    foreach ((array) $wpdb->get_col($wpdb->prepare('SHOW TABLES LIKE %s', $like)) as $migrator_table) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- uninstall cleanup of Reprint's own tables, prepared.
+        $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', (string) $migrator_table));
+    }
+};
+$migrator_drop_like($wpdb->esc_like('__reprint_db_pull_progress_') . '%');
+if ($migrator_reprint_ours) {
+    $migrator_drop_like($wpdb->esc_like('__reprint_db_') . '%');
 }
 
 // The PRO banner's dismissal is stored per user, so it belongs to the
