@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
 "Stable (latest release)\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-10-31T12:31:22+00:00\n"
+"POT-Creation-Date: 2026-10-31T13:15:52+00:00\n"
 "PO-Revision-Date: 2026-07-21 05:32:32+0000\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
@@ -49,69 +49,75 @@ msgstr "https://wppoland.com"
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr "Migrator wymaga PHP %1$s lub nowszego. Używasz PHP %2$s."
 
-#: src/Admin/Ajax.php:183
+#: src/Admin/Ajax.php:193
 msgid "Backup not found."
 msgstr "Nie znaleziono kopii zapasowej."
 
-#: src/Admin/Ajax.php:197 src/Admin/Ajax.php:213 src/Admin/Ajax.php:252
-#: src/Admin/Ajax.php:319 src/Admin/Ajax.php:485 src/Admin/Ajax.php:628
+#: src/Admin/Ajax.php:207 src/Admin/Ajax.php:223 src/Admin/Ajax.php:262
+#: src/Admin/Ajax.php:329 src/Admin/Ajax.php:495 src/Admin/Ajax.php:670
 msgid "Not allowed."
 msgstr "Niedozwolone."
 
-#: src/Admin/Ajax.php:220
+#: src/Admin/Ajax.php:230
 msgid "Bad upload request."
 msgstr "Nieprawidłowe żądanie przesłania."
 
-#: src/Admin/Ajax.php:225
+#: src/Admin/Ajax.php:235
 msgid "Invalid upload."
 msgstr "Nieprawidłowe przesyłanie."
 
-#: src/Admin/Ajax.php:236
+#: src/Admin/Ajax.php:246
 msgid "Could not store upload."
 msgstr "Nie można zapisać przesłanego pliku."
 
-#: src/Admin/Ajax.php:262
+#: src/Admin/Ajax.php:272
 msgid "Uploaded archive not found."
 msgstr "Nie znaleziono przesłanego archiwum."
 
-#: src/Admin/Ajax.php:295
+#: src/Admin/Ajax.php:305
 msgid "Choose at least one part of the backup to restore."
 msgstr ""
 
-#: src/Admin/Ajax.php:310
+#: src/Admin/Ajax.php:320
 msgid "Invalid upload id."
 msgstr "Nieprawidłowy identyfikator przesyłania."
 
-#: src/Admin/Ajax.php:331
+#: src/Admin/Ajax.php:341
 msgid ""
 "Another backup is being made right now, in another tab or by another "
 "administrator. Wait for it to finish, or about ten minutes if that tab was "
 "closed."
 msgstr ""
 
-#: src/Admin/Ajax.php:495
+#: src/Admin/Ajax.php:505
 msgid "File not found."
 msgstr "Nie znaleziono pliku."
 
-#: src/Admin/Ajax.php:580
+#: src/Admin/Ajax.php:563
+msgid ""
+"This backup could not be read, so it cannot be converted to .tar.gz. An "
+"encrypted backup can only be restored with Migrator."
+msgstr ""
+
+#: src/Admin/Ajax.php:622
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:584 src/Admin/Page.php:117
+#: src/Admin/Ajax.php:626 src/Admin/Page.php:119
 msgid "Enter the text to search for."
 msgstr "Wpisz tekst, który chcesz wyszukać."
 
-#: src/Admin/Ajax.php:587
+#: src/Admin/Ajax.php:629
 msgid "Search and replace values are identical."
 msgstr "Wartości wyszukiwania i zamiany są identyczne."
 
 #. translators: 1: number of rows, 2: database error
-#: src/Admin/Ajax.php:615
+#: src/Admin/Ajax.php:657
 #, php-format
 msgid "%1$d rows could not be written (%2$s)."
 msgstr ""
 
-#: src/Admin/Ajax.php:625
+#: src/Admin/Ajax.php:667
 msgid "Security check failed."
 msgstr "Weryfikacja zabezpieczeń nie powiodła się."
 
@@ -188,48 +194,58 @@ msgid "Download"
 msgstr "Pobierz"
 
 #: src/Admin/Page.php:112
+msgid "Download .tar.gz"
+msgstr ""
+
+#: src/Admin/Page.php:113
+msgid ""
+"A standard archive that opens without Migrator. To restore with Migrator, "
+"use Download."
+msgstr ""
+
+#: src/Admin/Page.php:114
 msgid "Restore"
 msgstr "Przywróć"
 
-#: src/Admin/Page.php:113
+#: src/Admin/Page.php:115
 msgid "Delete"
 msgstr "Usuń"
 
-#: src/Admin/Page.php:114
+#: src/Admin/Page.php:116
 msgid "Delete this backup? This cannot be undone."
 msgstr "Usunąć tę kopię zapasową? Tego nie można cofnąć."
 
-#: src/Admin/Page.php:115
+#: src/Admin/Page.php:117
 msgid "Details"
 msgstr "Szczegóły"
 
-#: src/Admin/Page.php:116
+#: src/Admin/Page.php:118
 msgid "Could not read this backup."
 msgstr "Nie można odczytać tej kopii zapasowej."
 
-#: src/Admin/Page.php:118
+#: src/Admin/Page.php:120
 msgid "This changes your database now. Make a backup first. Continue?"
 msgstr ""
 "To zmienia teraz twoją bazę danych. Najpierw wykonaj kopię zapasową. "
 "Kontynuować?"
 
-#: src/Admin/Page.php:119
+#: src/Admin/Page.php:121
 msgid "Working…"
 msgstr "Pracuję…"
 
-#: src/Admin/Page.php:120
+#: src/Admin/Page.php:122
 msgid "Search and replace failed."
 msgstr "Wyszukaj i zamień nie powiodło się."
 
-#: src/Admin/Page.php:121
+#: src/Admin/Page.php:123
 msgid "Would change"
 msgstr "Zmieniłoby się"
 
-#: src/Admin/Page.php:122
+#: src/Admin/Page.php:124
 msgid "Changed"
 msgstr "Zmieniono"
 
-#: src/Admin/Page.php:123
+#: src/Admin/Page.php:125
 msgid "Skipped (no primary key):"
 msgstr "Pominięte (brak klucza podstawowego):"
 
