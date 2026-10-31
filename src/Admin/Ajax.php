@@ -8,6 +8,7 @@ use Migrator\Support\Access;
 use Migrator\Contract\HasHooks;
 use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Archive\Inspector;
+use Migrator\Engine\Archive\TarExport;
 use Migrator\Engine\Db\SearchReplace;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\ExportPipeline;
@@ -94,6 +95,15 @@ final class Ajax implements HasHooks
                     [
                         'action' => 'migrator_download',
                         'file'   => rawurlencode($name),
+                        'nonce'  => wp_create_nonce('migrator_download'),
+                    ],
+                    admin_url('admin-ajax.php'),
+                ),
+                'tarUrl'      => add_query_arg(
+                    [
+                        'action' => 'migrator_download',
+                        'file'   => rawurlencode($name),
+                        'format' => 'tar',
                         'nonce'  => wp_create_nonce('migrator_download'),
                     ],
                     admin_url('admin-ajax.php'),
@@ -506,6 +516,10 @@ final class Ajax implements HasHooks
             @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
         }
 
+        if (isset($_GET['format']) && 'tar' === $_GET['format']) {
+            $this->downloadTar($realPath, $name);
+        }
+
         nocache_headers();
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . $name . '"');
@@ -522,6 +536,34 @@ final class Ajax implements HasHooks
                 flush();
             }
             fclose($handle);
+        }
+        exit;
+    }
+
+    /**
+     * Stream a stored backup re-packed as .tar.gz, which opens without
+     * Migrator. Headers go out with the first byte, so a backup that cannot be
+     * read (an encrypted one) still gets an error page instead of a broken file.
+     */
+    private function downloadTar(string $path, string $name): never
+    {
+        $file = preg_replace('/\.migrator(\.gz)?$/', '', $name) . TarExport::EXT;
+        try {
+            TarExport::stream($path, static function (string $bytes) use ($file): void {
+                if (! headers_sent()) {
+                    nocache_headers();
+                    header('Content-Type: application/gzip');
+                    header('Content-Disposition: attachment; filename="' . $file . '"');
+                }
+                echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                flush();
+            });
+        } catch (\Throwable $e) {
+            if (! headers_sent()) {
+                wp_die(esc_html__('This backup could not be read, so it cannot be converted to .tar.gz. An encrypted backup can only be restored with Migrator.', 'plogins-migrator'), '', ['response' => 422]);
+            }
+            // Mid-stream: the gzip stream is left unfinished, so tar reports
+            // the file as damaged rather than extracting a partial copy quietly.
         }
         exit;
     }

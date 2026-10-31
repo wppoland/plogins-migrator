@@ -109,6 +109,8 @@ final class Page implements HasHooks
                 'filesWord'     => __('files', 'plogins-migrator'),
                 'noBackups'     => __('No backups stored on this site yet.', 'plogins-migrator'),
                 'download'      => __('Download', 'plogins-migrator'),
+                'downloadTar'   => __('Download .tar.gz', 'plogins-migrator'),
+                'downloadTarHint' => __('A standard archive that opens without Migrator. To restore with Migrator, use Download.', 'plogins-migrator'),
                 'restore'       => __('Restore', 'plogins-migrator'),
                 'deleteWord'    => __('Delete', 'plogins-migrator'),
                 'confirmDelete' => __('Delete this backup? This cannot be undone.', 'plogins-migrator'),

@@ -226,6 +226,11 @@ function migratorRestoreParts() {
 			dl.className = 'button button-small';
 			dl.href = bk.downloadUrl;
 			dl.textContent = i18n.download || 'Download';
+			var tar = document.createElement( 'a' );
+			tar.className = 'button button-small';
+			tar.href = bk.tarUrl;
+			tar.textContent = i18n.downloadTar || 'Download .tar.gz';
+			tar.title = i18n.downloadTarHint || 'A standard archive that opens without Migrator. To restore with Migrator, use Download.';
 			var rs = document.createElement( 'button' );
 			rs.type = 'button';
 			rs.className = 'button button-small';
@@ -242,6 +247,7 @@ function migratorRestoreParts() {
 			insp.textContent = ( i18n.inspect || 'Details' );
 			insp.addEventListener( 'click', function () { inspectStored( bk.file, row, insp ); } );
 			actions.appendChild( dl );
+			actions.appendChild( tar );
 			actions.appendChild( rs );
 			actions.appendChild( insp );
 			actions.appendChild( del );

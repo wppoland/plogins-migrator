@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -58,6 +58,7 @@ For large sites where a browser request would time out, every job also runs from
 * Pull a live site to another server over HTTP with `wp migrator pull`: resumable, and the next run fetches only the changes
 * Push file changes back with `wp migrator push`, and run the low-level transfer commands through `wp migrator remote`
 * Off-site copies to an FTP or FTPS server, or to a local or mounted folder
+* Download any stored backup as a standard .tar.gz that opens without Migrator
 * WP-CLI `export`, `import` and `replace` commands for sites too large for the browser
 * A snapshot of your database before every restore. If the database import or the URL rewrite fails, the previous database is put back automatically. If a later step fails, such as extracting files, the site is left partly restored and the message gives the path of the previous database dump to restore by hand
 * Per-item checksums and an archive check before the database is touched, so a corrupt or unfinished archive is refused, not restored
@@ -188,7 +189,7 @@ Not yet. Restore it with the plugin that made it, then create a Migrator backup 
 
 = Can I open a .migrator file without the plugin? =
 
-It is Migrator's own streaming format, not a ZIP. Restore it with Migrator, or check its contents first with Details in the backups list.
+It is Migrator's own streaming format, not a ZIP. For a copy that opens anywhere, use Download .tar.gz in the backups list: the same database dump and `wp-content` files as a standard archive that `tar -xzf`, 7-Zip or your computer's archive tool opens without Migrator. To restore with Migrator, use the .migrator file.
 
 = Does it send my data anywhere? =
 
@@ -238,6 +239,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.9.0 =
+* Added: Download .tar.gz in the backups list. Any stored backup comes out as a standard archive (database.sql, the manifest and `wp-content`) that opens with tar, 7-Zip or a desktop archive tool, no Migrator needed.
 
 = 1.8.0 =
 * Added: choose what a restore brings back: the database, plugins, themes, uploads or other `wp-content` files, for an uploaded archive and for a backup stored on the site. A files-only restore leaves the database untouched. On the command line: `wp migrator import <file> --only=plugins,themes`.
