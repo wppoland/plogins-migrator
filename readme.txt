@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.7.0
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,7 @@ The address rewrite is **safe for serialized data**: Migrator walks the actual d
 
 **Scheduled backups and off-site copies**
 
-Back up daily or weekly and keep as many copies as you choose. Each scheduled backup can also be copied off the server, to an FTP or FTPS server or to a local or mounted folder outside the web root. Older scheduled copies are deleted automatically, on the server and at the destination, once they fall outside your retention setting.
+Back up every 2, 4 or 12 hours, daily or weekly, and keep as many copies as you choose. A second, database-only schedule can run more often than the full backup, with its own count of copies to keep, so a store can back up its orders every few hours and its files once a week. Each scheduled backup can also be copied off the server, to an FTP or FTPS server or to a local or mounted folder outside the web root. Older scheduled copies are deleted automatically, on the server and at the destination, once they fall outside your retention setting.
 
 Switch on "Back up the site before plugin, theme and WordPress updates" and Migrator takes a backup, with the same settings as your scheduled ones, right before WordPress replaces any files, for manual and automatic updates alike. Several updates within ten minutes share one backup. Tick "Email me when an automatic backup fails" to hear when a scheduled or before-update backup fails.
 
@@ -38,7 +38,7 @@ Copy a whole site to another server over HTTP, with no archive to download or up
 
 Backups are written to `wp-content/migrator-backups`. On Apache and IIS that folder denies direct web access. nginx ignores those rules, so every backup file name also carries a random token and is never at a guessable URL. The in-browser download is served only to logged-in administrators through an authenticated handler. Each item inside an archive carries a checksum, and a finished archive ends with an end marker, so a truncated or corrupted backup is caught before it is restored over a live site.
 
-Restoring **overwrites** the destination database and files, that is the point of a restore, so it asks for confirmation and is limited to administrators. Migrator never overwrites its own plugin folder during a restore, so it cannot pull the rug out from under itself mid-import.
+Restoring **overwrites** the parts you choose (the database, plugins, themes, uploads, other `wp-content` files), that is the point of a restore. Untick the database to roll back a plugin or theme without losing the orders and posts made since the backup, or restore only the database and leave the files alone. A restore asks for confirmation and is limited to administrators. Migrator never overwrites its own plugin folder during a restore, so it cannot pull the rug out from under itself mid-import.
 
 For large sites where a browser request would time out, every job also runs from WP-CLI, which has no timeout:
 
@@ -52,7 +52,8 @@ For large sites where a browser request would time out, every job also runs from
 * Choose what to leave out: media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables
 * Leave out files by name pattern (`*.log`, `*.zip`) and files over a size you choose, in the browser, on a schedule and with `wp migrator export --exclude-pattern --max-file-size`
 * In-browser export in short resumable steps with a progress bar and a direct download, plus drag-and-drop restore that uploads in 4 MB pieces
-* Scheduled backups, daily or weekly, with a retention rule
+* Scheduled backups every 2, 4 or 12 hours, daily or weekly, with a retention rule, plus an optional database-only schedule with its own interval and retention
+* Restore only what you need: the database, plugins, themes, uploads or other files, in the browser and with `wp migrator import --only`
 * A backup before every plugin, theme and WordPress update, and an email when an automatic backup fails
 * Pull a live site to another server over HTTP with `wp migrator pull`: resumable, and the next run fetches only the changes
 * Push file changes back with `wp migrator push`, and run the low-level transfer commands through `wp migrator remote`
@@ -155,7 +156,7 @@ The free edition is not a trial and its features stay available without a time l
 
 = Does restoring delete what is already on the destination? =
 
-Yes. A restore replaces the destination's database and files with the contents of the archive, that is what restoring a backup means. It is limited to administrators and asks for confirmation first. Always keep a separate backup of anything on the destination you want to keep.
+Yes for the parts you restore. A restore replaces the destination's database and files with the contents of the archive, that is what restoring a backup means. Untick a part (the database, plugins, themes, uploads or other files) to keep this site's copy of it. It is limited to administrators and asks for confirmation first. Always keep a separate backup of anything on the destination you want to keep.
 
 = Will my links break when I move to a new domain? =
 
@@ -220,7 +221,7 @@ It runs on Multisite: network activate it or activate it on individual sites, an
 Comparing free editions:
 
 * **Size**: Migrator sets no cap. All-in-One WP Migration is bounded by your host's PHP upload limits, and lifting them is a paid extension. Duplicator publishes 4 GB (500 MB on DupArchive).
-* **Scheduling and off-site copies**: free in Migrator (daily or weekly, FTP/FTPS or a folder). Paid in both others.
+* **Scheduling and off-site copies**: free in Migrator (every 2 hours up to weekly, a separate database schedule, FTP/FTPS or a folder). Paid in both others.
 * **WP-CLI**: `wp migrator export`, `import` and `replace` are in the free plugin.
 * **Rollback**: Migrator snapshots the database before every import and puts it back if the database import fails.
 * **Encryption**: All-in-One WP Migration encrypts exports in its free plugin. Migrator keeps encryption in PRO.
@@ -237,6 +238,11 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.8.0 =
+* Added: choose what a restore brings back: the database, plugins, themes, uploads or other `wp-content` files, for an uploaded archive and for a backup stored on the site. A files-only restore leaves the database untouched. On the command line: `wp migrator import <file> --only=plugins,themes`.
+* Added: scheduled backups every 2, 4 or 12 hours, alongside daily and weekly.
+* Added: an optional database-only schedule with its own interval and its own number of copies to keep, so frequent database backups never push out the full ones.
 
 = 1.7.0 =
 * Added: an optional backup right before plugin, theme and WordPress core updates, manual or automatic. Turn it on under Migrator > Scheduled Backups.

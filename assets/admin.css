@@ -91,6 +91,9 @@
 .migrator-drop__input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .migrator-drop__name { margin: 10px 0 0; font-weight: 600; }
 .migrator-drop__opt { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; color: #50575e; }
+.migrator-restore-parts { margin: 14px 0; padding: 0; border: 0; }
+.migrator-restore-parts legend { font-weight: 600; }
+.migrator-restore-parts .migrator-drop__opt { margin: 8px 16px 0 0; }
 .migrator-card__cli { margin-top: 18px; font-size: 12px; }
 
 @media (prefers-reduced-motion: reduce) {

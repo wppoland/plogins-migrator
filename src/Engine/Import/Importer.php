@@ -73,6 +73,41 @@ final class Importer
         return $prefixes;
     }
 
+    /** What a restore can bring back, each on its own. */
+    public const COMPONENTS = ['database', 'plugins', 'themes', 'uploads', 'other'];
+
+    /**
+     * Normalise a component choice. True means everything, false means the
+     * database alone (the old "skip files" switch), a list keeps the known names.
+     *
+     * @param bool|array<int, mixed> $choice
+     *
+     * @return list<string>
+     */
+    public static function components(bool|array $choice): array
+    {
+        if (is_bool($choice)) {
+            return $choice ? self::COMPONENTS : ['database'];
+        }
+
+        return array_values(array_intersect(self::COMPONENTS, array_map('strval', $choice)));
+    }
+
+    /**
+     * The component a wp-content archive entry belongs to. Archive paths are
+     * relative to wp-content, the same layout extract() writes back to.
+     */
+    public static function componentOf(string $entryPath): string
+    {
+        foreach (['plugins', 'themes', 'uploads'] as $component) {
+            if (str_starts_with($entryPath, 'wp-content/' . $component . '/')) {
+                return $component;
+            }
+        }
+
+        return 'other';
+    }
+
     public function __construct(
         private Workspace $workspace,
         private \wpdb $db,
@@ -80,13 +115,18 @@ final class Importer
     }
 
     /**
+     * @param bool|array<int, string>    $components True for everything, false for the database only, or a list of COMPONENTS.
      * @param callable(string):void|null $log
      *
      * @return array{tables: int, statements: int, replaced: int, files: int, warnings: list<string>}
      */
-    public function import(string $archivePath, bool $importFiles = true, ?callable $log = null): array
+    public function import(string $archivePath, bool|array $components = true, ?callable $log = null): array
     {
         $log ??= static function (string $m): void {};
+        $components = self::components($components);
+        if ([] === $components) {
+            throw new \RuntimeException(__('Migrator: nothing was chosen to restore. Pick the database, plugins, themes, uploads or other files.', 'plogins-migrator'));
+        }
 
         // A gzip-compressed archive is expanded to a temp file first; the rest of
         // the import is unchanged and the temp is always cleaned up.
@@ -100,7 +140,7 @@ final class Importer
                 $archivePath = $temp;
             }
 
-            return $this->runImport($archivePath, $importFiles, $log);
+            return $this->runImport($archivePath, $components, $log);
         } finally {
             if (null !== $temp) {
                 wp_delete_file($temp);
@@ -109,10 +149,11 @@ final class Importer
     }
 
     /**
+     * @param list<string>          $components
      * @param callable(string):void $log
      * @return array{tables: int, statements: int, replaced: int, files: int, warnings: list<string>}
      */
-    private function runImport(string $archivePath, bool $importFiles, callable $log): array
+    private function runImport(string $archivePath, array $components, callable $log): array
     {
         // Open first: the constructor checks the signature, so a file that is
         // not a Migrator archive at all is called that, rather than "never
@@ -213,9 +254,15 @@ final class Importer
         // standing on a replaced database with nothing to go back to.
         $replacedDbDump = null;
 
+        // Left out, the database is not touched at all: no safety dump, no
+        // URL rewrite, no routines, so a files-only restore keeps today's data.
+        $restoreDb = in_array('database', $components, true);
+
         try {
             while (($entry = $reader->nextEntry()) !== null) {
-                if (Exporter::DB_ENTRY === $entry->path) {
+                if (! $restoreDb && (Exporter::DB_ENTRY === $entry->path || Exporter::ROUTINES_ENTRY === $entry->path)) {
+                    $reader->skip();
+                } elseif (Exporter::DB_ENTRY === $entry->path) {
                     // Safety net: snapshot the current database so a failed import
                     // (DDL auto-commits, so DROP/CREATE cannot be transaction-rolled
                     // back) can be reverted instead of leaving a dead site.
@@ -294,7 +341,7 @@ final class Importer
                 } elseif (Exporter::ROUTINES_ENTRY === $entry->path) {
                     $this->importRoutines($reader->readContents(), $log);
                 } elseif (str_starts_with($entry->path, 'wp-content/')) {
-                    if ($importFiles && $this->extract($entry->path, $reader)) {
+                    if (in_array(self::componentOf($entry->path), $components, true) && $this->extract($entry->path, $reader)) {
                         $files++;
                     } else {
                         $reader->skip();

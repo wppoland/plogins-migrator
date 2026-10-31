@@ -130,6 +130,10 @@ final class Command
      * [--skip-files]
      * : Import the database only; do not extract wp-content files.
      *
+     * [--only=<parts>]
+     * : Restore only these parts, comma separated: database, plugins, themes,
+     * uploads, other. Leaving out database keeps this site's database as it is.
+     *
      * [--yes]
      * : Skip the confirmation prompt.
      *
@@ -137,6 +141,7 @@ final class Command
      *
      *     wp migrator import /tmp/my-site.migrator
      *     wp migrator import /tmp/db-only.migrator --skip-files --yes
+     *     wp migrator import /tmp/my-site.migrator --only=plugins,themes --yes
      *
      * @param array<int, string>    $args       Positional args: the archive path.
      * @param array<string, string> $assoc_args Flags.
@@ -152,7 +157,14 @@ final class Command
             \WP_CLI::error('Archive not found or not readable: ' . $archive);
         }
 
-        \WP_CLI::confirm('This overwrites the current database. Continue?', $assoc_args);
+        $parts = isset($assoc_args['only'])
+            ? Importer::components(array_map('trim', explode(',', (string) $assoc_args['only'])))
+            : Importer::components(! isset($assoc_args['skip-files']));
+        if ([] === $parts) {
+            \WP_CLI::error('--only takes one or more of: ' . implode(', ', Importer::COMPONENTS));
+        }
+
+        \WP_CLI::confirm('This overwrites the current ' . implode(', ', $parts) . '. Continue?', $assoc_args);
 
         $workspace = new Workspace();
         $workspace->ensure();
@@ -162,7 +174,7 @@ final class Command
         try {
             $result = $importer->import(
                 $archive,
-                ! isset($assoc_args['skip-files']),
+                $parts,
                 static function (string $message): void {
                     \WP_CLI::log('  ' . $message);
                 }

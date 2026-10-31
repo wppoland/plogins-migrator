@@ -37,16 +37,44 @@ final class Schedule
 
     public const FREQ_WEEKLY = 'weekly';
 
+    public const FREQ_2H = 'every2hours';
+
+    public const FREQ_4H = 'every4hours';
+
+    public const FREQ_12H = 'every12hours';
+
+    /** The database-only job's cron hook, separate so it keeps its own interval. */
+    public const DB_HOOK = 'migrator_run_scheduled_db_backup';
+
+    /**
+     * Marker of database-only archives. Neither marker is the start of the
+     * other, so each job's retention counts and deletes only its own files.
+     */
+    public const DB_MARKER = 'dbonly';
+
     /** Custom cron recurrences, so the interval never depends on which ones core ships. */
     public const RECURRENCE = [
+        self::FREQ_2H     => 'migrator_every2hours',
+        self::FREQ_4H     => 'migrator_every4hours',
+        self::FREQ_12H    => 'migrator_every12hours',
         self::FREQ_DAILY  => 'migrator_daily',
         self::FREQ_WEEKLY => 'migrator_weekly',
     ];
 
     private const INTERVAL = [
-        'migrator_daily'  => DAY_IN_SECONDS,
-        'migrator_weekly' => WEEK_IN_SECONDS,
+        'migrator_every2hours'  => 2 * HOUR_IN_SECONDS,
+        'migrator_every4hours'  => 4 * HOUR_IN_SECONDS,
+        'migrator_every12hours' => 12 * HOUR_IN_SECONDS,
+        'migrator_daily'        => DAY_IN_SECONDS,
+        'migrator_weekly'       => WEEK_IN_SECONDS,
     ];
+
+    /**
+     * The marker archivePrefix() hands out. Off-site destinations, here and in
+     * the add-on, prune through archivePrefix() with no way to pass a marker,
+     * so the database-only run switches it for its duration.
+     */
+    private static string $marker = self::MARKER;
 
     /**
      * @param array<string, bool> $exclude         ExportOptions flags to leave out of scheduled backups.
@@ -55,6 +83,9 @@ final class Schedule
      * @param bool                $beforeUpdate    Take a backup before plugin, theme and core updates.
      * @param bool                $notifyFailure   Email when an unattended backup fails.
      * @param string              $notifyEmail     Where to send it; blank means the site admin email.
+     * @param bool                $dbEnabled       Run a separate database-only backup.
+     * @param string              $dbFrequency     How often the database-only backup runs.
+     * @param int                 $dbRetention     Database-only backups to keep.
      */
     public function __construct(
         public readonly bool $enabled,
@@ -67,6 +98,9 @@ final class Schedule
         public readonly bool $beforeUpdate = false,
         public readonly bool $notifyFailure = false,
         public readonly string $notifyEmail = '',
+        public readonly bool $dbEnabled = false,
+        public readonly string $dbFrequency = self::FREQ_4H,
+        public readonly int $dbRetention = 12,
     ) {
     }
 
@@ -87,12 +121,13 @@ final class Schedule
      */
     public static function fromArray(array $raw): self
     {
-        $frequency = in_array($raw['frequency'] ?? '', [self::FREQ_DAILY, self::FREQ_WEEKLY], true)
-            ? (string) $raw['frequency']
-            : self::FREQ_DAILY;
+        $frequency = isset(self::RECURRENCE[$raw['frequency'] ?? '']) ? (string) $raw['frequency'] : self::FREQ_DAILY;
 
         $retention = isset($raw['retention']) ? (int) $raw['retention'] : 5;
         $retention = max(1, min(60, $retention));
+
+        $dbFrequency = isset(self::RECURRENCE[$raw['db_frequency'] ?? '']) ? (string) $raw['db_frequency'] : self::FREQ_4H;
+        $dbRetention = max(1, min(60, isset($raw['db_retention']) ? (int) $raw['db_retention'] : 12));
 
         $exclude    = [];
         $rawExclude = is_array($raw['exclude'] ?? null) ? $raw['exclude'] : [];
@@ -111,6 +146,9 @@ final class Schedule
             ! empty($raw['before_update']),
             ! empty($raw['notify_failure']),
             is_email((string) ($raw['notify_email'] ?? '')) ? (string) $raw['notify_email'] : '',
+            ! empty($raw['db_enabled']),
+            $dbFrequency,
+            $dbRetention,
         );
     }
 
@@ -127,6 +165,9 @@ final class Schedule
             'before_update'    => $this->beforeUpdate,
             'notify_failure'   => $this->notifyFailure,
             'notify_email'     => $this->notifyEmail,
+            'db_enabled'       => $this->dbEnabled,
+            'db_frequency'     => $this->dbFrequency,
+            'db_retention'     => $this->dbRetention,
         ], false);
     }
 
@@ -141,12 +182,61 @@ final class Schedule
         $host = (string) wp_parse_url((string) get_option('home'), PHP_URL_HOST);
         $host = preg_replace('/[^a-z0-9.-]/i', '', $host) ?: 'site';
 
-        return $host . '-' . self::MARKER . '-';
+        return $host . '-' . self::$marker . '-';
+    }
+
+    /**
+     * Run $work with archivePrefix() answering for the given marker, then put
+     * the default back, also when $work throws.
+     *
+     * ponytail: process-wide switch; fine because WP-Cron runs events one after
+     * another. Pass the prefix through BackupDestination::prune() if that changes.
+     *
+     * @template T
+     * @param callable(): T $work
+     * @return T
+     */
+    public static function withMarker(string $marker, callable $work): mixed
+    {
+        self::$marker = $marker;
+        try {
+            return $work();
+        } finally {
+            self::$marker = self::MARKER;
+        }
     }
 
     public function recurrence(): string
     {
         return self::RECURRENCE[$this->frequency] ?? self::RECURRENCE[self::FREQ_DAILY];
+    }
+
+    public function dbRecurrence(): string
+    {
+        return self::RECURRENCE[$this->dbFrequency] ?? self::RECURRENCE[self::FREQ_4H];
+    }
+
+    /**
+     * The settings the database-only job runs with: the same database
+     * exclusions and compression, no files at all, and its own retention.
+     */
+    public function databaseOnly(): self
+    {
+        return new self(
+            $this->dbEnabled,
+            $this->dbFrequency,
+            $this->dbRetention,
+            ['no_files' => true, 'no_database' => false] + $this->exclude,
+            $this->compress,
+            [],
+            0,
+            false,
+            $this->notifyFailure,
+            $this->notifyEmail,
+            $this->dbEnabled,
+            $this->dbFrequency,
+            $this->dbRetention,
+        );
     }
 
     public function options(): ExportOptions
@@ -162,14 +252,17 @@ final class Schedule
      */
     public static function registerRecurrences(array $schedules): array
     {
-        $schedules[self::RECURRENCE[self::FREQ_DAILY]] = [
-            'interval' => self::INTERVAL['migrator_daily'],
-            'display'  => __('Once a day (Migrator)', 'plogins-migrator'),
+        $labels = [
+            self::FREQ_2H     => __('Every 2 hours (Migrator)', 'plogins-migrator'),
+            self::FREQ_4H     => __('Every 4 hours (Migrator)', 'plogins-migrator'),
+            self::FREQ_12H    => __('Every 12 hours (Migrator)', 'plogins-migrator'),
+            self::FREQ_DAILY  => __('Once a day (Migrator)', 'plogins-migrator'),
+            self::FREQ_WEEKLY => __('Once a week (Migrator)', 'plogins-migrator'),
         ];
-        $schedules[self::RECURRENCE[self::FREQ_WEEKLY]] = [
-            'interval' => self::INTERVAL['migrator_weekly'],
-            'display'  => __('Once a week (Migrator)', 'plogins-migrator'),
-        ];
+        foreach ($labels as $frequency => $display) {
+            $recurrence             = self::RECURRENCE[$frequency];
+            $schedules[$recurrence] = ['interval' => self::INTERVAL[$recurrence], 'display' => $display];
+        }
 
         return $schedules;
     }
