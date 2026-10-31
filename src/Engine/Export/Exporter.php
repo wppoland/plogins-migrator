@@ -101,6 +101,8 @@ final class Exporter
         $scanner = new FileScanner(
             ['node_modules', '.git', '.DS_Store'],
             array_merge([$this->workspace->path(), $working, $destination], $options->fileExcludePaths()),
+            $options->fileExcludePatterns(),
+            $options->maxFileBytes(),
         );
 
         $fileCount = 0;

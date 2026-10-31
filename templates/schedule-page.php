@@ -82,6 +82,16 @@ $migrator_date = static fn (int $ts): string => wp_date(
 						</label>
 					<?php endforeach; ?>
 				</div>
+				<p class="migrator-field">
+					<label for="migrator-exclude-patterns"><?php esc_html_e('Leave out files named like', 'plogins-migrator'); ?></label>
+					<input id="migrator-exclude-patterns" name="exclude_patterns" type="text" class="regular-text code" placeholder="*.log, *.zip, *.mp4" value="<?php echo esc_attr(implode(', ', $schedule->excludePatterns)); ?>">
+					<span class="migrator-hint"><?php esc_html_e('Comma separated. * matches any characters, so *.log leaves out every log file in any folder.', 'plogins-migrator'); ?></span>
+				</p>
+				<p class="migrator-field">
+					<label for="migrator-max-file-mb"><?php esc_html_e('Leave out files larger than (MB)', 'plogins-migrator'); ?></label>
+					<input id="migrator-max-file-mb" name="max_file_mb" type="number" min="0" step="1" class="small-text" value="<?php echo esc_attr((string) $schedule->maxFileMb); ?>">
+					<span class="migrator-hint"><?php esc_html_e('0 or empty keeps files of any size.', 'plogins-migrator'); ?></span>
+				</p>
 			</details>
 
 			<h2 class="migrator-card__heading migrator-card__heading--spaced"><?php esc_html_e('Compression', 'plogins-migrator'); ?></h2>
@@ -89,6 +99,26 @@ $migrator_date = static fn (int $ts): string => wp_date(
 				<input type="checkbox" name="compress" value="1" <?php checked($schedule->compress); ?>>
 				<span><?php esc_html_e('Compress backups with gzip (smaller files)', 'plogins-migrator'); ?></span>
 			</label>
+
+			<h2 class="migrator-card__heading migrator-card__heading--spaced"><?php esc_html_e('Before updates', 'plogins-migrator'); ?></h2>
+			<label class="migrator-toggle">
+				<input type="checkbox" name="before_update" value="1" <?php checked($schedule->beforeUpdate); ?>>
+				<span><?php esc_html_e('Back up the site before plugin, theme and WordPress updates', 'plogins-migrator'); ?></span>
+			</label>
+			<p class="migrator-hint migrator-hint--block">
+				<?php esc_html_e('Works for manual and automatic updates, whether or not automatic backups are switched on. Several updates within ten minutes share one backup. It is kept with the scheduled backups and counts towards "Backups to keep".', 'plogins-migrator'); ?>
+			</p>
+
+			<h2 class="migrator-card__heading migrator-card__heading--spaced"><?php esc_html_e('Failure email', 'plogins-migrator'); ?></h2>
+			<label class="migrator-toggle">
+				<input type="checkbox" name="notify_failure" value="1" <?php checked($schedule->notifyFailure); ?>>
+				<span><?php esc_html_e('Email me when an automatic backup fails', 'plogins-migrator'); ?></span>
+			</label>
+			<p class="migrator-field">
+				<label for="migrator-notify-email"><?php esc_html_e('Send to', 'plogins-migrator'); ?></label>
+				<input id="migrator-notify-email" name="notify_email" type="email" class="regular-text" placeholder="<?php echo esc_attr((string) get_option('admin_email')); ?>" value="<?php echo esc_attr($schedule->notifyEmail); ?>">
+				<span class="migrator-hint"><?php esc_html_e('Leave empty to use the site admin email.', 'plogins-migrator'); ?></span>
+			</p>
 
 			<?php
 			/**

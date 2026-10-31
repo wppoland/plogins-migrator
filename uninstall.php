@@ -70,6 +70,7 @@ $migrator_clean_site = static function () use ($wpdb, $migrator_legacy_options, 
 
     wp_clear_scheduled_hook('migrator_run_scheduled_backup');
     wp_clear_scheduled_hook('migrator_pro_run_scheduled_backup');
+    delete_transient('migrator_before_update_backup');
 };
 
 if (is_multisite()) {

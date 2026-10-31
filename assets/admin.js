@@ -116,6 +116,14 @@
 		document.querySelectorAll( '.migrator-export-path:checked' ).forEach( function ( cb ) {
 			opts[ 'options[exclude_paths][' + pi++ + ']' ] = cb.value;
 		} );
+		var pat = document.getElementById( 'migrator-exclude-patterns' );
+		if ( pat && pat.value.trim() ) {
+			opts[ 'options[exclude_patterns]' ] = pat.value;
+		}
+		var maxMb = document.getElementById( 'migrator-max-file-mb' );
+		if ( maxMb && parseInt( maxMb.value, 10 ) > 0 ) {
+			opts[ 'options[max_file_mb]' ] = String( parseInt( maxMb.value, 10 ) );
+		}
 		var comp = document.querySelector( 'input[name="migrator-compress"]:checked' );
 		if ( comp && comp.value === 'gzip' ) {
 			opts.compress = '1';

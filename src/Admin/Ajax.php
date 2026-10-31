@@ -373,10 +373,16 @@ final class Ajax implements HasHooks
         $paths = isset($_POST['options']['exclude_paths']) && is_array($_POST['options']['exclude_paths'])
             ? array_map('sanitize_text_field', wp_unslash($_POST['options']['exclude_paths']))
             : [];
+        $patterns = isset($_POST['options']['exclude_patterns'])
+            ? sanitize_textarea_field(wp_unslash((string) $_POST['options']['exclude_patterns']))
+            : '';
+        $maxMb    = isset($_POST['options']['max_file_mb']) ? absint(wp_unslash($_POST['options']['max_file_mb'])) : 0;
         // phpcs:enable WordPress.Security.NonceVerification.Missing
 
-        $flags['exclude_tables'] = $tables;
-        $flags['exclude_paths']  = $paths;
+        $flags['exclude_tables']   = $tables;
+        $flags['exclude_paths']    = $paths;
+        $flags['exclude_patterns'] = $patterns;
+        $flags['max_file_mb']      = $maxMb;
 
         return ExportOptions::fromArray($flags);
     }

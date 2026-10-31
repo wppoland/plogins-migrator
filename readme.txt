@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.6.6
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,8 @@ The address rewrite is **safe for serialized data**: Migrator walks the actual d
 
 Back up daily or weekly and keep as many copies as you choose. Each scheduled backup can also be copied off the server, to an FTP or FTPS server or to a local or mounted folder outside the web root. Older scheduled copies are deleted automatically, on the server and at the destination, once they fall outside your retention setting.
 
+Switch on "Back up the site before plugin, theme and WordPress updates" and Migrator takes a backup, with the same settings as your scheduled ones, right before WordPress replaces any files, for manual and automatic updates alike. Several updates within ten minutes share one backup. Tick "Email me when an automatic backup fails" to hear when a scheduled or before-update backup fails.
+
 **Pull and push between live sites**
 
 Copy a whole site to another server over HTTP, with no archive to download or upload and no SSH or FTP. On the site you are copying, switch on Migrator > Pull and Push. On the destination, run `wp migrator pull https://your-old-site.example`: the first run prints a key, which you paste on the source's Pull and Push screen, then you run the same command again (a source without the OpenSSL extension takes a connection token instead). The files and the database travel in small pieces, an interrupted pull carries on where it stopped when you run it again, and the next run fetches only what changed. Addresses are rewritten while the database streams in, the database keeps its exact bytes so accented text survives, and the old host's own platform plugins and server-bound drop-ins are left behind. `wp migrator push` sends the destination's file changes back.
@@ -48,8 +50,10 @@ For large sites where a browser request would time out, every job also runs from
 * One-click backup of your database and all of `wp-content` into a single archive
 * Restore to the same site, or migrate to a new host with automatic, serialization-safe URL and path rewriting
 * Choose what to leave out: media, themes, plugins, cache, spam comments, post revisions, transients, WooCommerce sessions or Action Scheduler tables
+* Leave out files by name pattern (`*.log`, `*.zip`) and files over a size you choose, in the browser, on a schedule and with `wp migrator export --exclude-pattern --max-file-size`
 * In-browser export in short resumable steps with a progress bar and a direct download, plus drag-and-drop restore that uploads in 4 MB pieces
 * Scheduled backups, daily or weekly, with a retention rule
+* A backup before every plugin, theme and WordPress update, and an email when an automatic backup fails
 * Pull a live site to another server over HTTP with `wp migrator pull`: resumable, and the next run fetches only the changes
 * Push file changes back with `wp migrator push`, and run the low-level transfer commands through `wp migrator remote`
 * Off-site copies to an FTP or FTPS server, or to a local or mounted folder
@@ -233,6 +237,11 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.7.0 =
+* Added: an optional backup right before plugin, theme and WordPress core updates, manual or automatic. Turn it on under Migrator > Scheduled Backups.
+* Added: an optional email when a scheduled or before-update backup fails, sent to the site admin email or an address you choose.
+* Added: leave out files by name pattern (for example `*.log, *.zip`) and files larger than a size you set, on the export screen, in scheduled backups and in `wp migrator export` (`--exclude-pattern`, `--max-file-size`).
 
 = 1.6.6 =
 * Fixed: deleting the plugin keeps the progress tables of an unfinished pull while another plugin that runs pulls is still installed, so that plugin can finish it.

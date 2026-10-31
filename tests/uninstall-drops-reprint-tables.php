@@ -73,6 +73,11 @@ function delete_metadata(...$args): bool
 {
     return true;
 }
+function delete_transient($name): bool
+{
+    return true;
+}
+
 function wp_clear_scheduled_hook($hook): int
 {
     return 0;
