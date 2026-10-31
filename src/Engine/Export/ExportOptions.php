@@ -42,22 +42,34 @@ final class ExportOptions
     /** @var string[] Specific wp-content-relative paths the user chose to leave out. */
     private array $paths;
 
+    /** @var string[] File name patterns ("*.log", "*.zip") to leave out anywhere. */
+    private array $patterns;
+
+    /** Files larger than this many megabytes are left out; 0 means no limit. */
+    private int $maxFileMb;
+
     /**
      * @param array<string, bool> $flags
-     * @param string[]            $tables Exact table names to skip.
-     * @param string[]            $paths  wp-content-relative paths to prune.
+     * @param string[]            $tables    Exact table names to skip.
+     * @param string[]            $paths     wp-content-relative paths to prune.
+     * @param string[]            $patterns  File name patterns to leave out.
+     * @param int                 $maxFileMb Largest file to keep, in MB; 0 keeps all.
      */
-    public function __construct(array $flags = [], array $tables = [], array $paths = [])
+    public function __construct(array $flags = [], array $tables = [], array $paths = [], array $patterns = [], int $maxFileMb = 0)
     {
-        $this->flags  = $flags;
-        $this->tables = $tables;
-        $this->paths  = $paths;
+        $this->flags     = $flags;
+        $this->tables    = $tables;
+        $this->paths     = $paths;
+        $this->patterns  = $patterns;
+        $this->maxFileMb = max(0, $maxFileMb);
     }
 
     /**
      * Build from a raw request/CLI array, coercing values to booleans and
      * ignoring unknown keys. Accepts optional `exclude_tables` and
-     * `exclude_paths` lists for table- and file-level exclusion.
+     * `exclude_paths` lists for table- and file-level exclusion, an
+     * `exclude_patterns` list (or comma/newline separated string) of file name
+     * patterns, and `max_file_mb` for a per-file size limit.
      *
      * @param array<string, mixed> $raw
      */
@@ -71,7 +83,42 @@ final class ExportOptions
         $tables = self::cleanList($raw['exclude_tables'] ?? []);
         $paths  = self::cleanList($raw['exclude_paths'] ?? []);
 
-        return new self($flags, $tables, $paths);
+        return new self($flags, $tables, $paths, self::patternList($raw['exclude_patterns'] ?? []), (int) ($raw['max_file_mb'] ?? 0));
+    }
+
+    /**
+     * Normalise file name patterns typed as a list or as one comma/newline
+     * separated string. A path separator is dropped: patterns match a file's
+     * name, and the folder tree already covers paths.
+     *
+     * @return string[]
+     */
+    public static function patternList(mixed $value): array
+    {
+        if (is_string($value)) {
+            $value = preg_split('/[,\r\n]+/', $value) ?: [];
+        }
+
+        return array_values(array_filter(
+            self::cleanList($value),
+            static fn (string $p): bool => ! str_contains($p, '/') && ! str_contains($p, '\\'),
+        ));
+    }
+
+    /**
+     * @return string[] File name patterns to leave out, matched with fnmatch().
+     */
+    public function fileExcludePatterns(): array
+    {
+        return $this->patterns;
+    }
+
+    /**
+     * Largest file kept in the archive, in bytes; 0 means no limit.
+     */
+    public function maxFileBytes(): int
+    {
+        return $this->maxFileMb * 1024 * 1024;
     }
 
     /**

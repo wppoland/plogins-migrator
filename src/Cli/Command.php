@@ -46,6 +46,12 @@ final class Command
      * [--exclude-files=<list>]
      * : Comma-separated wp-content-relative paths to leave out (e.g. uploads/2019,cache).
      *
+     * [--exclude-pattern=<list>]
+     * : Comma-separated file name patterns to leave out anywhere (e.g. *.log,*.zip).
+     *
+     * [--max-file-size=<mb>]
+     * : Leave out files larger than this many megabytes.
+     *
      * [--compress]
      * : Gzip the finished archive (smaller file). Import auto-detects compression.
      *
@@ -82,8 +88,10 @@ final class Command
             $name        = str_replace(['no_', '_'], ['', '-'], $key); // no_post_revisions -> post-revisions
             $flags[$key] = in_array($name, $exclude, true);
         }
-        $flags['exclude_tables'] = array_filter(array_map('trim', explode(',', (string) ($assoc_args['exclude-tables'] ?? ''))));
-        $flags['exclude_paths']  = array_filter(array_map('trim', explode(',', (string) ($assoc_args['exclude-files'] ?? ''))));
+        $flags['exclude_tables']   = array_filter(array_map('trim', explode(',', (string) ($assoc_args['exclude-tables'] ?? ''))));
+        $flags['exclude_paths']    = array_filter(array_map('trim', explode(',', (string) ($assoc_args['exclude-files'] ?? ''))));
+        $flags['exclude_patterns'] = (string) ($assoc_args['exclude-pattern'] ?? '');
+        $flags['max_file_mb']      = (int) ($assoc_args['max-file-size'] ?? 0);
         $options = ExportOptions::fromArray($flags);
 
         \WP_CLI::log('Exporting site…');

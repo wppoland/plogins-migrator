@@ -26,6 +26,9 @@ final class Scheduler implements HasHooks
 
     public const PAGE_SLUG = 'migrator-schedule';
 
+    /** Set while a before-update backup is fresh, so a burst of updates takes one backup. */
+    public const UPDATE_LOCK = 'migrator_before_update_backup';
+
     /** Field types whose stored value is kept when the input is submitted blank. */
     private const SECRET_TYPES = ['password', 'textarea'];
 
@@ -44,6 +47,8 @@ final class Scheduler implements HasHooks
         // still has the old event in cron, and it fires with nothing listening.
         // Answer it too, and re-align on the next save.
         add_action(Schedule::LEGACY_HOOK, [$this, 'runScheduledBackup']);
+
+        add_filter('upgrader_pre_download', [$this, 'backupBeforeUpdate'], 10, 4);
 
         add_action('admin_menu', [$this, 'registerMenu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue']);
@@ -127,11 +132,16 @@ final class Scheduler implements HasHooks
 
         // Re-normalise through fromArray so out-of-range values are clamped.
         $schedule = Schedule::fromArray([
-            'enabled'   => ! empty($post['enabled']),
-            'frequency' => isset($post['frequency']) ? sanitize_text_field((string) $post['frequency']) : Schedule::FREQ_DAILY,
-            'retention' => isset($post['retention']) ? (int) $post['retention'] : 5,
-            'exclude'   => $exclude,
-            'compress'  => ! empty($post['compress']),
+            'enabled'          => ! empty($post['enabled']),
+            'frequency'        => isset($post['frequency']) ? sanitize_text_field((string) $post['frequency']) : Schedule::FREQ_DAILY,
+            'retention'        => isset($post['retention']) ? (int) $post['retention'] : 5,
+            'exclude'          => $exclude,
+            'compress'         => ! empty($post['compress']),
+            'exclude_patterns' => isset($post['exclude_patterns']) ? sanitize_textarea_field((string) $post['exclude_patterns']) : '',
+            'max_file_mb'      => isset($post['max_file_mb']) ? absint($post['max_file_mb']) : 0,
+            'before_update'    => ! empty($post['before_update']),
+            'notify_failure'   => ! empty($post['notify_failure']),
+            'notify_email'     => isset($post['notify_email']) ? sanitize_email((string) $post['notify_email']) : '',
         ]);
 
         $schedule->save();
@@ -234,7 +244,92 @@ final class Scheduler implements HasHooks
             return;
         }
 
-        $this->runner->run($schedule);
+        $this->runAndReport($schedule);
+    }
+
+    /**
+     * Take a rollback point before WordPress replaces plugin, theme or core files.
+     *
+     * upgrader_pre_download runs before every package is fetched, for manual,
+     * bulk and automatic updates alike. New installs and translations carry
+     * neither a plugin nor a theme key and are not core, so they pass through.
+     * One backup covers a burst of updates: a bulk run, or the Plugins screen,
+     * which updates each plugin in its own request.
+     *
+     * The update is never blocked. A backup that fails is recorded on the
+     * Scheduled Backups screen and mailed like any other unattended run.
+     *
+     * @param mixed                $reply     False to let WordPress download the package.
+     * @param mixed                $package
+     * @param mixed                $upgrader  The WP_Upgrader doing the work.
+     * @param array<string, mixed> $hookExtra
+     *
+     * @return mixed The reply, unchanged.
+     */
+    public function backupBeforeUpdate($reply, $package = '', $upgrader = null, $hookExtra = [])
+    {
+        $hookExtra = is_array($hookExtra) ? $hookExtra : [];
+        $isUpdate  = $upgrader instanceof \Core_Upgrader || isset($hookExtra['plugin']) || isset($hookExtra['theme']);
+
+        if (false !== $reply || ! $isUpdate || false !== get_transient(self::UPDATE_LOCK)) {
+            return $reply;
+        }
+
+        $schedule = Schedule::load();
+        if (! $schedule->beforeUpdate) {
+            return $reply;
+        }
+
+        set_transient(self::UPDATE_LOCK, time(), 10 * MINUTE_IN_SECONDS);
+
+        // A plain full archive: a rollback point that lands as an incremental
+        // link or encrypted with a passphrase nobody types at restore is no use.
+        $this->runAndReport($schedule, false);
+
+        return $reply;
+    }
+
+    /**
+     * Run an unattended backup and mail the owner when it fails, if asked to.
+     *
+     * @return array<string, mixed>
+     */
+    private function runAndReport(Schedule $schedule, bool $allowStrategies = true): array
+    {
+        $status = $this->runner->run($schedule, $allowStrategies);
+
+        if (empty($status['ok']) && $schedule->notifyFailure && ! $this->addonMailsFailures()) {
+            $site = wp_specialchars_decode((string) get_option('blogname'), ENT_QUOTES);
+            wp_mail(
+                '' !== $schedule->notifyEmail ? $schedule->notifyEmail : (string) get_option('admin_email'),
+                /* translators: %s: site name. */
+                sprintf(__('[%s] Automatic backup failed', 'plogins-migrator'), $site),
+                sprintf(
+                    /* translators: 1: site address, 2: error message, 3: link to the Scheduled Backups screen. */
+                    __("An automatic backup of %1\$s failed.\n\nError: %2\$s\n\nDetails: %3\$s", 'plogins-migrator'),
+                    home_url('/'),
+                    '' !== (string) ($status['message'] ?? '') ? (string) $status['message'] : __('unknown error', 'plogins-migrator'),
+                    admin_url('admin.php?page=' . self::PAGE_SLUG),
+                ),
+            );
+        }
+
+        return $status;
+    }
+
+    /**
+     * Whether the paid add-on's notification screen already mails failures,
+     * so the owner does not get the same news twice.
+     */
+    private function addonMailsFailures(): bool
+    {
+        if (! defined('Migrator\\Pro\\PLUGIN_FILE')) {
+            return false;
+        }
+
+        $pro = get_option('migrator_pro_notify', []);
+
+        return is_array($pro) && ! empty($pro['enabled']) && (! isset($pro['on_failure']) || ! empty($pro['on_failure']));
     }
 
     /**

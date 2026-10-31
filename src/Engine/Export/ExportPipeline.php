@@ -447,6 +447,8 @@ final class ExportPipeline
         return new FileScanner(
             ['node_modules', '.git', '.DS_Store'],
             array_merge([$this->workspace->path()], $options->fileExcludePaths()),
+            $options->fileExcludePatterns(),
+            $options->maxFileBytes(),
         );
     }
 

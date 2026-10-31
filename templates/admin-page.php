@@ -100,6 +100,16 @@ defined('ABSPATH') || exit;
 				</div>
 				<p class="migrator-explorer__hint"><?php esc_html_e('Browse your wp-content folder by size and tick anything you do not need in the backup, for example a large cache, logs, or another plugin\'s stored data.', 'plogins-migrator'); ?></p>
 				<div class="migrator-tree" id="migrator-tree" role="tree" hidden></div>
+				<p class="migrator-field">
+					<label for="migrator-exclude-patterns"><?php esc_html_e('Leave out files named like', 'plogins-migrator'); ?></label>
+					<input type="text" id="migrator-exclude-patterns" class="regular-text code" placeholder="*.log, *.zip, *.mp4">
+					<span class="migrator-hint"><?php esc_html_e('Comma separated. * matches any characters, so *.log leaves out every log file in any folder.', 'plogins-migrator'); ?></span>
+				</p>
+				<p class="migrator-field">
+					<label for="migrator-max-file-mb"><?php esc_html_e('Leave out files larger than (MB)', 'plogins-migrator'); ?></label>
+					<input type="number" id="migrator-max-file-mb" min="0" step="1" class="small-text" placeholder="0">
+					<span class="migrator-hint"><?php esc_html_e('0 or empty keeps files of any size.', 'plogins-migrator'); ?></span>
+				</p>
 			</details>
 
 			<fieldset class="migrator-compress">

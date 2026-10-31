@@ -25,10 +25,15 @@ final class FileScanner
      *                                   (e.g. 'node_modules', '.git', 'cache').
      * @param string[] $excludeAbsPaths Absolute path prefixes pruned entirely
      *                                   (e.g. the backups workspace).
+     * @param string[] $excludePatterns fnmatch() patterns matched against a
+     *                                   file's name (e.g. '*.log', '*.zip').
+     * @param int      $maxBytes        Files larger than this are skipped; 0 = no limit.
      */
     public function __construct(
         private array $excludeNames = [],
         private array $excludeAbsPaths = [],
+        private array $excludePatterns = [],
+        private int $maxBytes = 0,
     ) {
     }
 
@@ -82,6 +87,10 @@ final class FileScanner
                 continue;
             }
 
+            if ($this->excluded($file)) {
+                continue;
+            }
+
             $abs = str_replace('\\', '/', $file->getPathname());
 
             yield [
@@ -90,5 +99,20 @@ final class FileScanner
                 'size' => (int) $file->getSize(),
             ];
         }
+    }
+
+    private function excluded(\SplFileInfo $file): bool
+    {
+        if ($this->maxBytes > 0 && $file->getSize() > $this->maxBytes) {
+            return true;
+        }
+
+        foreach ($this->excludePatterns as $pattern) {
+            if (fnmatch(strtolower($pattern), strtolower($file->getFilename()))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

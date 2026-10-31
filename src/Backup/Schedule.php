@@ -49,7 +49,12 @@ final class Schedule
     ];
 
     /**
-     * @param array<string, bool> $exclude ExportOptions flags to leave out of scheduled backups.
+     * @param array<string, bool> $exclude         ExportOptions flags to leave out of scheduled backups.
+     * @param string[]            $excludePatterns File name patterns to leave out ("*.log").
+     * @param int                 $maxFileMb       Leave out files larger than this; 0 keeps all.
+     * @param bool                $beforeUpdate    Take a backup before plugin, theme and core updates.
+     * @param bool                $notifyFailure   Email when an unattended backup fails.
+     * @param string              $notifyEmail     Where to send it; blank means the site admin email.
      */
     public function __construct(
         public readonly bool $enabled,
@@ -57,6 +62,11 @@ final class Schedule
         public readonly int $retention,
         public readonly array $exclude,
         public readonly bool $compress = false,
+        public readonly array $excludePatterns = [],
+        public readonly int $maxFileMb = 0,
+        public readonly bool $beforeUpdate = false,
+        public readonly bool $notifyFailure = false,
+        public readonly string $notifyEmail = '',
     ) {
     }
 
@@ -96,17 +106,27 @@ final class Schedule
             $retention,
             $exclude,
             ! empty($raw['compress']),
+            ExportOptions::patternList($raw['exclude_patterns'] ?? []),
+            max(0, (int) ($raw['max_file_mb'] ?? 0)),
+            ! empty($raw['before_update']),
+            ! empty($raw['notify_failure']),
+            is_email((string) ($raw['notify_email'] ?? '')) ? (string) $raw['notify_email'] : '',
         );
     }
 
     public function save(): void
     {
         update_option(self::OPTION, [
-            'enabled'   => $this->enabled,
-            'frequency' => $this->frequency,
-            'retention' => $this->retention,
-            'exclude'   => $this->exclude,
-            'compress'  => $this->compress,
+            'enabled'          => $this->enabled,
+            'frequency'        => $this->frequency,
+            'retention'        => $this->retention,
+            'exclude'          => $this->exclude,
+            'compress'         => $this->compress,
+            'exclude_patterns' => $this->excludePatterns,
+            'max_file_mb'      => $this->maxFileMb,
+            'before_update'    => $this->beforeUpdate,
+            'notify_failure'   => $this->notifyFailure,
+            'notify_email'     => $this->notifyEmail,
         ], false);
     }
 
@@ -131,7 +151,7 @@ final class Schedule
 
     public function options(): ExportOptions
     {
-        return new ExportOptions($this->exclude);
+        return new ExportOptions($this->exclude, [], [], $this->excludePatterns, $this->maxFileMb);
     }
 
     /**
