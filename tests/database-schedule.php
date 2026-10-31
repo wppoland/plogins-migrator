@@ -49,7 +49,7 @@ namespace {
     $GLOBALS['opts']   = [];
     $GLOBALS['events'] = [];
     function get_option($k, $d = false) { return $GLOBALS['opts'][$k] ?? ('home' === $k || 'siteurl' === $k ? 'https://shop.test' : $d); }
-    function update_option($k, $v, $a = null) { $GLOBALS['opts'][$k] = $v; return true; }
+    function update_option($k, $v, $a = null) { $GLOBALS['opts'][$k] = $v; $GLOBALS['writes'][] = [$k, $v]; return true; }
     function get_bloginfo($k) { return '6.9'; }
     function is_multisite() { return false; }
     function wp_get_upload_dir() { return ['basedir' => WP_CONTENT_DIR . '/uploads']; }
@@ -141,6 +141,8 @@ namespace {
     ok('the full backup is still there', is_file($fullOld));
     ok('the full job retention does not count database backups', 1 === count($runner->archives()));
     ok('the list shows both kinds', 4 === count($runner->listArchives()));
+    $dbWrites = array_values(array_filter($GLOBALS['writes'], static fn (array $w): bool => BackupRunner::DB_STATUS_OPTION === $w[0]));
+    ok('a database run is recorded as started before it works', ! empty($dbWrites[0][1]['started']) && empty($dbWrites[1][1]['started']));
     ok('the database run has its own status', is_array($runner->lastDatabaseStatus()) && ! isset($GLOBALS['opts'][BackupRunner::STATUS_OPTION]));
 
     exec('rm -rf ' . escapeshellarg($content));

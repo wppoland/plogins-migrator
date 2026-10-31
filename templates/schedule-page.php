@@ -303,6 +303,12 @@ $migrator_date = static fn (int $ts): string => wp_date(
 							<?php
 							if (null === $lastDb) {
 								esc_html_e('Never', 'plogins-migrator');
+							} elseif (! empty($lastDb['started'])) {
+								echo '<span class="migrator-failed">' . esc_html(sprintf(
+									/* translators: %s: date */
+									__('Started on %s and has not finished', 'plogins-migrator'),
+									$migrator_date((int) $lastDb['time']),
+								)) . '</span>';
 							} elseif (! empty($lastDb['ok'])) {
 								echo esc_html(sprintf(
 									/* translators: 1: date, 2: human file size */

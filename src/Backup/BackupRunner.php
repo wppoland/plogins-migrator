@@ -64,15 +64,7 @@ final class BackupRunner
         // the host kills (execution time, memory, a restart) never reaches the
         // end, and used to leave the previous run's "ok" on screen as if
         // nothing had happened.
-        update_option(self::STATUS_OPTION, [
-            'time'    => time(),
-            'ok'      => false,
-            'started' => true,
-            'path'    => '',
-            'file'    => '',
-            'bytes'   => 0,
-            'message' => __('This backup started but has not finished. If it stays like this, the run was stopped part way (execution time, memory or a server restart).', 'plogins-migrator'),
-        ], false);
+        update_option(self::STATUS_OPTION, $this->startedStatus(), false);
 
         $status = null;
 
@@ -129,11 +121,32 @@ final class BackupRunner
             @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
         }
 
+        // Same reason as run(): a killed run must not leave the last "ok" on screen.
+        update_option(self::DB_STATUS_OPTION, $this->startedStatus(), false);
+
         $status = Schedule::withMarker(Schedule::DB_MARKER, fn (): array => $this->runFull($schedule->databaseOnly(), true));
 
         update_option(self::DB_STATUS_OPTION, $status, false);
 
         return $status;
+    }
+
+    /**
+     * Recorded before a run starts and overwritten when it ends.
+     *
+     * @return array<string, mixed>
+     */
+    private function startedStatus(): array
+    {
+        return [
+            'time'    => time(),
+            'ok'      => false,
+            'started' => true,
+            'path'    => '',
+            'file'    => '',
+            'bytes'   => 0,
+            'message' => __('This backup started but has not finished. If it stays like this, the run was stopped part way (execution time, memory or a server restart).', 'plogins-migrator'),
+        ];
     }
 
     /**

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-31T12:26:23+00:00\n"
+"POT-Creation-Date: 2026-10-31T12:31:22+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: plogins-migrator\n"
@@ -52,7 +52,7 @@ msgid "Backup not found."
 msgstr ""
 
 #: src/Admin/Ajax.php:197 src/Admin/Ajax.php:213 src/Admin/Ajax.php:252
-#: src/Admin/Ajax.php:318 src/Admin/Ajax.php:484 src/Admin/Ajax.php:627
+#: src/Admin/Ajax.php:319 src/Admin/Ajax.php:485 src/Admin/Ajax.php:628
 msgid "Not allowed."
 msgstr ""
 
@@ -72,44 +72,44 @@ msgstr ""
 msgid "Uploaded archive not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:294
+#: src/Admin/Ajax.php:295
 msgid "Choose at least one part of the backup to restore."
 msgstr ""
 
-#: src/Admin/Ajax.php:309
+#: src/Admin/Ajax.php:310
 msgid "Invalid upload id."
 msgstr ""
 
-#: src/Admin/Ajax.php:330
+#: src/Admin/Ajax.php:331
 msgid ""
 "Another backup is being made right now, in another tab or by another "
 "administrator. Wait for it to finish, or about ten minutes if that tab was "
 "closed."
 msgstr ""
 
-#: src/Admin/Ajax.php:494
+#: src/Admin/Ajax.php:495
 msgid "File not found."
 msgstr ""
 
-#: src/Admin/Ajax.php:579
+#: src/Admin/Ajax.php:580
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:583 src/Admin/Page.php:117
+#: src/Admin/Ajax.php:584 src/Admin/Page.php:117
 msgid "Enter the text to search for."
 msgstr ""
 
-#: src/Admin/Ajax.php:586
+#: src/Admin/Ajax.php:587
 msgid "Search and replace values are identical."
 msgstr ""
 
 #. translators: 1: number of rows, 2: database error
-#: src/Admin/Ajax.php:614
+#: src/Admin/Ajax.php:615
 #, php-format
 msgid "%1$d rows could not be written (%2$s)."
 msgstr ""
 
-#: src/Admin/Ajax.php:624
+#: src/Admin/Ajax.php:625
 msgid "Security check failed."
 msgstr ""
 
@@ -265,7 +265,7 @@ msgstr ""
 msgid "What %s adds"
 msgstr ""
 
-#: src/Backup/BackupRunner.php:74
+#: src/Backup/BackupRunner.php:148
 msgid ""
 "This backup started but has not finished. If it stays like this, the run was "
 "stopped part way (execution time, memory or a server restart)."
@@ -1163,19 +1163,19 @@ msgid "Never"
 msgstr ""
 
 #. translators: %s: date
-#: templates/schedule-page.php:256
+#: templates/schedule-page.php:256 templates/schedule-page.php:309
 #, php-format
 msgid "Started on %s and has not finished"
 msgstr ""
 
 #. translators: 1: date, 2: human file size
-#: templates/schedule-page.php:262 templates/schedule-page.php:309
+#: templates/schedule-page.php:262 templates/schedule-page.php:315
 #, php-format
 msgid "%1$s (%2$s)"
 msgstr ""
 
 #. translators: %s: date
-#: templates/schedule-page.php:269 templates/schedule-page.php:316
+#: templates/schedule-page.php:269 templates/schedule-page.php:322
 #, php-format
 msgid "Failed on %s"
 msgstr ""
@@ -1200,27 +1200,27 @@ msgstr ""
 msgid "Last database backup"
 msgstr ""
 
-#: templates/schedule-page.php:337
+#: templates/schedule-page.php:343
 msgid "Back up now"
 msgstr ""
 
-#: templates/schedule-page.php:344
+#: templates/schedule-page.php:350
 msgid "Kept backups"
 msgstr ""
 
-#: templates/schedule-page.php:349
+#: templates/schedule-page.php:355
 msgid "No scheduled backups yet. The first one appears here after a run."
 msgstr ""
 
-#: templates/schedule-page.php:354
+#: templates/schedule-page.php:360
 msgid "Backup"
 msgstr ""
 
-#: templates/schedule-page.php:355
+#: templates/schedule-page.php:361
 msgid "Created"
 msgstr ""
 
-#: templates/schedule-page.php:356
+#: templates/schedule-page.php:362
 msgid "Size"
 msgstr ""
 
