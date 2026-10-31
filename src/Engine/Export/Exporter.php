@@ -108,11 +108,14 @@ final class Exporter
         $fileCount = 0;
         $fileBytes = 0;
         $warnings  = [];
-        $outside   = $options->is('no_media') ? null : self::uploadsOutsideContent();
+        $outside   = $options->is('no_media') || $options->is('no_files') ? null : self::uploadsOutsideContent();
         if (null !== $outside) {
             $warnings[] = sprintf('The media library is outside wp-content (%s) and is not in this backup.', $outside);
         }
-        foreach ($scanner->scan($contentDir) as $file) {
+        // A database-only backup skips the walk entirely, not file by file:
+        // on a sub-daily schedule the scan of a large uploads folder is the cost.
+        $found = $options->is('no_files') ? [] : $scanner->scan($contentDir);
+        foreach ($found as $file) {
             if (! is_readable($file['abs'])) {
                 $warnings[] = sprintf('wp-content/%s is not readable and was left out.', $file['rel']);
                 continue;

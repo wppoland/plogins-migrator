@@ -51,6 +51,7 @@ $migrator_clean_site = static function () use ($wpdb, $migrator_legacy_options, 
         'migrator_schedule',
         'migrator_offsite',
         'migrator_last_backup',
+        'migrator_last_db_backup',
     ] as $migrator_option) {
         delete_option($migrator_option);
     }
@@ -70,6 +71,7 @@ $migrator_clean_site = static function () use ($wpdb, $migrator_legacy_options, 
 
     wp_clear_scheduled_hook('migrator_run_scheduled_backup');
     wp_clear_scheduled_hook('migrator_pro_run_scheduled_backup');
+    wp_clear_scheduled_hook('migrator_run_scheduled_db_backup');
     delete_transient('migrator_before_update_backup');
 };
 

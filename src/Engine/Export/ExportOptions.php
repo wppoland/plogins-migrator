@@ -22,6 +22,7 @@ final class ExportOptions
 
     private const KEYS = [
         'no_database',
+        'no_files',
         'no_media',
         'no_themes',
         'no_inactive_themes',

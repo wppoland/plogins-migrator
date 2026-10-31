@@ -8,6 +8,8 @@
  * @var array<string, mixed>|null            $last         Last run status.
  * @var array<int, array<string, mixed>>     $archives     Existing scheduled archives, newest first.
  * @var int|false                            $nextRun      Next scheduled run (unix) or false.
+ * @var int|false                            $nextDbRun    Next database-only run (unix) or false.
+ * @var array<string, mixed>|null            $lastDb       Last database-only run status.
  * @var array<string, string>                $labels       Exclusion flag => label.
  * @var \Migrator\Storage\OffsiteSettings    $offsite      Off-site copy settings.
  * @var array<string, array<string, mixed>>  $destinations Registered destinations.
@@ -24,6 +26,14 @@ $migrator_notices = [
     'ran'    => ['updated', __('Backup created.', 'plogins-migrator')],
     'failed' => ['error', __('Backup failed. See the status below.', 'plogins-migrator')],
     'badfolder' => ['error', __('Schedule saved, but no copies will go to the folder: it must be an absolute path outside the website and outside Migrator\'s own backups folder, and the web server must be able to write to it.', 'plogins-migrator')],
+];
+
+$migrator_frequencies = [
+	\Migrator\Backup\Schedule::FREQ_2H     => __('Every 2 hours', 'plogins-migrator'),
+	\Migrator\Backup\Schedule::FREQ_4H     => __('Every 4 hours', 'plogins-migrator'),
+	\Migrator\Backup\Schedule::FREQ_12H    => __('Every 12 hours', 'plogins-migrator'),
+	\Migrator\Backup\Schedule::FREQ_DAILY  => __('Every day', 'plogins-migrator'),
+	\Migrator\Backup\Schedule::FREQ_WEEKLY => __('Every week', 'plogins-migrator'),
 ];
 
 $migrator_date = static fn (int $ts): string => wp_date(
@@ -61,9 +71,11 @@ $migrator_date = static fn (int $ts): string => wp_date(
 			<p class="migrator-field">
 				<label for="migrator-frequency"><?php esc_html_e('How often', 'plogins-migrator'); ?></label>
 				<select id="migrator-frequency" name="frequency">
-					<option value="daily" <?php selected($schedule->frequency, 'daily'); ?>><?php esc_html_e('Every day', 'plogins-migrator'); ?></option>
-					<option value="weekly" <?php selected($schedule->frequency, 'weekly'); ?>><?php esc_html_e('Every week', 'plogins-migrator'); ?></option>
+					<?php foreach ($migrator_frequencies as $migrator_value => $migrator_label) : ?>
+						<option value="<?php echo esc_attr($migrator_value); ?>" <?php selected($schedule->frequency, $migrator_value); ?>><?php echo esc_html($migrator_label); ?></option>
+					<?php endforeach; ?>
 				</select>
+				<span class="migrator-hint"><?php esc_html_e('WordPress cron runs when the site gets a visit. For backups every few hours on a quiet site, have the server call wp-cron.php on a real cron.', 'plogins-migrator'); ?></span>
 			</p>
 
 			<p class="migrator-field">
@@ -93,6 +105,25 @@ $migrator_date = static fn (int $ts): string => wp_date(
 					<span class="migrator-hint"><?php esc_html_e('0 or empty keeps files of any size.', 'plogins-migrator'); ?></span>
 				</p>
 			</details>
+
+			<h2 class="migrator-card__heading migrator-card__heading--spaced"><?php esc_html_e('Database only', 'plogins-migrator'); ?></h2>
+			<label class="migrator-toggle">
+				<input type="checkbox" name="db_enabled" value="1" <?php checked($schedule->dbEnabled); ?>>
+				<span><?php esc_html_e('Also back up the database on its own schedule', 'plogins-migrator'); ?></span>
+			</label>
+			<p class="migrator-hint"><?php esc_html_e('A store takes orders all day. Back up the database every few hours and the files less often, with separate counts of backups to keep, so the frequent database copies never push out the full backups.', 'plogins-migrator'); ?></p>
+			<p class="migrator-field">
+				<label for="migrator-db-frequency"><?php esc_html_e('How often', 'plogins-migrator'); ?></label>
+				<select id="migrator-db-frequency" name="db_frequency">
+					<?php foreach ($migrator_frequencies as $migrator_value => $migrator_label) : ?>
+						<option value="<?php echo esc_attr($migrator_value); ?>" <?php selected($schedule->dbFrequency, $migrator_value); ?>><?php echo esc_html($migrator_label); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</p>
+			<p class="migrator-field">
+				<label for="migrator-db-retention"><?php esc_html_e('Database backups to keep', 'plogins-migrator'); ?></label>
+				<input id="migrator-db-retention" name="db_retention" type="number" min="1" max="60" step="1" value="<?php echo esc_attr((string) $schedule->dbRetention); ?>">
+			</p>
 
 			<h2 class="migrator-card__heading migrator-card__heading--spaced"><?php esc_html_e('Compression', 'plogins-migrator'); ?></h2>
 			<label class="migrator-toggle">
@@ -259,6 +290,37 @@ $migrator_date = static fn (int $ts): string => wp_date(
 						?>
 					</span>
 				</li>
+				<?php if ($schedule->dbEnabled || null !== $lastDb) : ?>
+					<li>
+						<span class="migrator-status__label"><?php esc_html_e('Next database backup', 'plogins-migrator'); ?></span>
+						<span class="migrator-status__value">
+							<?php echo $nextDbRun ? esc_html($migrator_date((int) $nextDbRun)) : esc_html__('Not scheduled', 'plogins-migrator'); ?>
+						</span>
+					</li>
+					<li>
+						<span class="migrator-status__label"><?php esc_html_e('Last database backup', 'plogins-migrator'); ?></span>
+						<span class="migrator-status__value">
+							<?php
+							if (null === $lastDb) {
+								esc_html_e('Never', 'plogins-migrator');
+							} elseif (! empty($lastDb['ok'])) {
+								echo esc_html(sprintf(
+									/* translators: 1: date, 2: human file size */
+									__('%1$s (%2$s)', 'plogins-migrator'),
+									$migrator_date((int) $lastDb['time']),
+									size_format((int) $lastDb['bytes']),
+								));
+							} else {
+								echo '<span class="migrator-failed">' . esc_html(sprintf(
+									/* translators: %s: date */
+									__('Failed on %s', 'plogins-migrator'),
+									$migrator_date((int) $lastDb['time']),
+								)) . '</span>';
+							}
+							?>
+						</span>
+					</li>
+				<?php endif; ?>
 				<?php
 				/**
 				 * Add rows to the status list.

@@ -42,6 +42,7 @@ final class Scheduler implements HasHooks
     {
         add_filter('cron_schedules', [Schedule::class, 'registerRecurrences']);
         add_action(Schedule::HOOK, [$this, 'runScheduledBackup']);
+        add_action(Schedule::DB_HOOK, [$this, 'runScheduledDatabaseBackup']);
 
         // A site that scheduled its backup while the add-on owned this feature
         // still has the old event in cron, and it fires with nothing listening.
@@ -103,6 +104,8 @@ final class Scheduler implements HasHooks
         $last         = $this->runner->lastStatus();
         $archives     = $this->runner->listArchives();
         $nextRun      = wp_next_scheduled(Schedule::HOOK);
+        $nextDbRun    = wp_next_scheduled(Schedule::DB_HOOK);
+        $lastDb       = $this->runner->lastDatabaseStatus();
         $labels       = $this->exclusionLabels();
         $offsite      = OffsiteSettings::load();
         $destinations = DestinationRegistry::all();
@@ -142,6 +145,9 @@ final class Scheduler implements HasHooks
             'before_update'    => ! empty($post['before_update']),
             'notify_failure'   => ! empty($post['notify_failure']),
             'notify_email'     => isset($post['notify_email']) ? sanitize_email((string) $post['notify_email']) : '',
+            'db_enabled'       => ! empty($post['db_enabled']),
+            'db_frequency'     => isset($post['db_frequency']) ? sanitize_key((string) $post['db_frequency']) : '',
+            'db_retention'     => isset($post['db_retention']) ? (int) $post['db_retention'] : 12,
         ]);
 
         $schedule->save();
@@ -248,6 +254,25 @@ final class Scheduler implements HasHooks
     }
 
     /**
+     * The database-only cron callback, on its own interval.
+     */
+    public function runScheduledDatabaseBackup(): void
+    {
+        $schedule = Schedule::load();
+        if (! $schedule->dbEnabled) {
+            return;
+        }
+
+        $status = $this->runner->runDatabase($schedule);
+
+        // The add-on's notifications hear only the full backup, so this one is
+        // always mailed from here when the owner asked for failure emails.
+        if (empty($status['ok']) && $schedule->notifyFailure) {
+            $this->mailFailure($schedule, $status);
+        }
+    }
+
+    /**
      * Take a rollback point before WordPress replaces plugin, theme or core files.
      *
      * upgrader_pre_download runs before every package is fetched, for manual,
@@ -299,22 +324,30 @@ final class Scheduler implements HasHooks
         $status = $this->runner->run($schedule, $allowStrategies);
 
         if (empty($status['ok']) && $schedule->notifyFailure && ! $this->addonMailsFailures()) {
-            $site = wp_specialchars_decode((string) get_option('blogname'), ENT_QUOTES);
-            wp_mail(
-                '' !== $schedule->notifyEmail ? $schedule->notifyEmail : (string) get_option('admin_email'),
-                /* translators: %s: site name. */
-                sprintf(__('[%s] Automatic backup failed', 'plogins-migrator'), $site),
-                sprintf(
-                    /* translators: 1: site address, 2: error message, 3: link to the Scheduled Backups screen. */
-                    __("An automatic backup of %1\$s failed.\n\nError: %2\$s\n\nDetails: %3\$s", 'plogins-migrator'),
-                    home_url('/'),
-                    '' !== (string) ($status['message'] ?? '') ? (string) $status['message'] : __('unknown error', 'plogins-migrator'),
-                    admin_url('admin.php?page=' . self::PAGE_SLUG),
-                ),
-            );
+            $this->mailFailure($schedule, $status);
         }
 
         return $status;
+    }
+
+    /**
+     * @param array<string, mixed> $status
+     */
+    private function mailFailure(Schedule $schedule, array $status): void
+    {
+        $site = wp_specialchars_decode((string) get_option('blogname'), ENT_QUOTES);
+        wp_mail(
+            '' !== $schedule->notifyEmail ? $schedule->notifyEmail : (string) get_option('admin_email'),
+            /* translators: %s: site name. */
+            sprintf(__('[%s] Automatic backup failed', 'plogins-migrator'), $site),
+            sprintf(
+                /* translators: 1: site address, 2: error message, 3: link to the Scheduled Backups screen. */
+                __("An automatic backup of %1\$s failed.\n\nError: %2\$s\n\nDetails: %3\$s", 'plogins-migrator'),
+                home_url('/'),
+                '' !== (string) ($status['message'] ?? '') ? (string) $status['message'] : __('unknown error', 'plogins-migrator'),
+                admin_url('admin.php?page=' . self::PAGE_SLUG),
+            ),
+        );
     }
 
     /**
@@ -339,6 +372,11 @@ final class Scheduler implements HasHooks
     {
         wp_clear_scheduled_hook(Schedule::HOOK);
         wp_clear_scheduled_hook(Schedule::LEGACY_HOOK);
+        wp_clear_scheduled_hook(Schedule::DB_HOOK);
+
+        if ($schedule->dbEnabled) {
+            wp_schedule_event(time() + MINUTE_IN_SECONDS, $schedule->dbRecurrence(), Schedule::DB_HOOK);
+        }
 
         if (! $schedule->enabled) {
             return;
@@ -366,6 +404,7 @@ final class Scheduler implements HasHooks
             'no_sessions'         => __('WooCommerce sessions', 'plogins-migrator'),
             'no_action_scheduler' => __('Action Scheduler tables', 'plogins-migrator'),
             'no_database'         => __('Database (files-only backup)', 'plogins-migrator'),
+            'no_files'            => __('Files (database-only backup)', 'plogins-migrator'),
         ];
     }
 

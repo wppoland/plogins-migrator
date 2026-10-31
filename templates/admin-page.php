@@ -172,7 +172,7 @@ defined('ABSPATH') || exit;
 				<?php esc_html_e('Restore a backup', 'plogins-migrator'); ?>
 			</h2>
 			<p class="migrator-card__desc">
-				<?php esc_html_e('Drop a Migrator archive here to restore it. This overwrites the current database (and files) with the archive, keep a backup of anything you want to keep.', 'plogins-migrator'); ?>
+				<?php esc_html_e('Drop a Migrator archive here to restore it. This overwrites the parts you choose below with the copy in the archive, keep a backup of anything you want to keep.', 'plogins-migrator'); ?>
 			</p>
 
 			<div class="migrator-drop" id="migrator-drop">
@@ -182,11 +182,27 @@ defined('ABSPATH') || exit;
 					<input type="file" id="migrator-file" accept=".migrator,.gz" class="migrator-drop__input">
 				</label>
 				<p class="migrator-drop__name" id="migrator-file-name" aria-live="polite"></p>
-				<label class="migrator-drop__opt">
-					<input type="checkbox" id="migrator-import-files" checked>
-					<?php esc_html_e('Also restore files (wp-content)', 'plogins-migrator'); ?>
-				</label>
 			</div>
+
+			<fieldset class="migrator-restore-parts" id="migrator-restore-parts">
+				<legend><?php esc_html_e('What to restore', 'plogins-migrator'); ?></legend>
+				<?php
+				$migrator_parts = [
+					'database' => __('Database', 'plogins-migrator'),
+					'plugins'  => __('Plugins', 'plogins-migrator'),
+					'themes'   => __('Themes', 'plogins-migrator'),
+					'uploads'  => __('Uploads (media library)', 'plogins-migrator'),
+					'other'    => __('Other wp-content files', 'plogins-migrator'),
+				];
+				foreach ($migrator_parts as $migrator_part => $migrator_part_label) :
+					?>
+					<label class="migrator-drop__opt">
+						<input type="checkbox" name="migrator_restore_part" value="<?php echo esc_attr($migrator_part); ?>" checked>
+						<?php echo esc_html($migrator_part_label); ?>
+					</label>
+				<?php endforeach; ?>
+				<p class="migrator-card__desc"><?php esc_html_e('Applies to the upload above and to the stored backups below. Untick the database to roll back files without losing orders or posts made since the backup.', 'plogins-migrator'); ?></p>
+			</fieldset>
 
 			<button type="button" class="button button-primary" id="migrator-import-start" disabled>
 				<?php esc_html_e('Restore backup', 'plogins-migrator'); ?>

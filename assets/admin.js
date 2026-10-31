@@ -1,4 +1,13 @@
 /* Migrator admin, resumable export driver. Vanilla JS, no dependencies. */
+
+/* The parts of a backup to restore, read from the shared "What to restore" boxes. */
+function migratorRestoreParts() {
+	'use strict';
+	return Array.prototype.map.call(
+		document.querySelectorAll( 'input[name="migrator_restore_part"]:checked' ),
+		function ( el ) { return el.value; }
+	).join( ',' );
+}
 ( function () {
 	'use strict';
 
@@ -255,7 +264,7 @@
 		var label = btn.textContent;
 		btn.disabled = true;
 		btn.textContent = i18n.restoring || 'Restoring…';
-		post( 'migrator_restore_backup', { file: file, import_files: '1' } ).then( function ( res ) {
+		post( 'migrator_restore_backup', { file: file, components: migratorRestoreParts() } ).then( function ( res ) {
 			btn.disabled = false;
 			btn.textContent = label;
 			var done = ( i18n.restoreDone || 'Restore complete.' ) + ( res && res.success && res.data && res.data.warnings && res.data.warnings.length ? ' ' + res.data.warnings.join( ' ' ) : '' );
@@ -335,7 +344,6 @@
 	}
 
 	var nameEl = document.getElementById( 'migrator-file-name' );
-	var filesCb = document.getElementById( 'migrator-import-files' );
 	var progress = document.getElementById( 'migrator-import-progress' );
 	var bar = progress.querySelector( '.migrator-progress__bar' );
 	var fill = document.getElementById( 'migrator-import-fill' );
@@ -427,7 +435,7 @@
 		body.set( 'action', 'migrator_import_run' );
 		body.set( 'nonce', data.nonce );
 		body.set( 'upload_id', id );
-		body.set( 'import_files', filesCb && filesCb.checked ? '1' : '' );
+		body.set( 'components', migratorRestoreParts() );
 
 		fetch( data.ajaxUrl, {
 			method: 'POST',

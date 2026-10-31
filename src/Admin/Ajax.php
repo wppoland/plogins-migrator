@@ -117,8 +117,8 @@ final class Ajax implements HasHooks
 
         // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified in guard().
         $name  = isset($_POST['file']) ? sanitize_file_name(wp_unslash((string) $_POST['file'])) : '';
-        $files = isset($_POST['import_files']) && '' !== sanitize_text_field(wp_unslash((string) $_POST['import_files']));
         // phpcs:enable WordPress.Security.NonceVerification.Missing
+        $files = $this->restoreComponents();
         $path  = $this->confinedBackup($name);
 
         if (function_exists('set_time_limit')) {
@@ -255,8 +255,8 @@ final class Ajax implements HasHooks
         global $wpdb;
 
         $id    = isset($_POST['upload_id']) ? sanitize_key(wp_unslash((string) $_POST['upload_id'])) : '';
-        $files = isset($_POST['import_files']) && '' !== sanitize_text_field(wp_unslash((string) $_POST['import_files']));
-        $path = $this->uploadPath($id);
+        $files = $this->restoreComponents();
+        $path  = $this->uploadPath($id);
 
         if ('' === $id || ! is_file($path)) {
             wp_send_json_error(['message' => __('Uploaded archive not found.', 'plogins-migrator')], 404);
@@ -276,6 +276,26 @@ final class Ajax implements HasHooks
             wp_delete_file($path);
             wp_send_json_error(['message' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * The parts of the archive to restore, sent as a comma separated list of
+     * Importer::COMPONENTS. Nothing chosen stops here rather than in the importer.
+     *
+     * @return list<string>
+     */
+    private function restoreComponents(): array
+    {
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- nonce verified by the caller.
+        $raw        = isset($_POST['components']) ? sanitize_text_field(wp_unslash((string) $_POST['components'])) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+        $components = Importer::components(array_map('trim', explode(',', $raw)));
+
+        if ([] === $components) {
+            wp_send_json_error(['message' => __('Choose at least one part of the backup to restore.', 'plogins-migrator')], 400);
+        }
+
+        return $components;
     }
 
     /**

@@ -116,7 +116,8 @@ final class ExportPipeline
             throw new \RuntimeException('Migrator: cannot open file list.');
         }
         $total = 0;
-        foreach ($this->scanner($options)->scan($this->contentDir()) as $file) {
+        $found = $options->is('no_files') ? [] : $this->scanner($options)->scan($this->contentDir());
+        foreach ($found as $file) {
             $line = $file['rel'] . "\n";
             // The list IS the backup's contents. A short write here drops files
             // from it while $total still counts them, so the job reports a file
@@ -437,7 +438,7 @@ final class ExportPipeline
      */
     private function uploadsWarning(ExportOptions $options): array
     {
-        $outside = $options->is('no_media') ? null : Exporter::uploadsOutsideContent();
+        $outside = $options->is('no_media') || $options->is('no_files') ? null : Exporter::uploadsOutsideContent();
 
         return null === $outside ? [] : [sprintf('The media library is outside wp-content (%s) and is not in this backup.', $outside)];
     }

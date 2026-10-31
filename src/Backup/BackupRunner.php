@@ -27,6 +27,9 @@ final class BackupRunner
 {
     public const STATUS_OPTION = 'migrator_last_backup';
 
+    /** Outcome of the last database-only run, kept apart from the full backup's. */
+    public const DB_STATUS_OPTION = 'migrator_last_db_backup';
+
     /** The pre-split option, read once so the last run still shows after upgrading. */
     private const LEGACY_STATUS_OPTION = 'migrator_pro_last_backup';
 
@@ -105,6 +108,44 @@ final class BackupRunner
         do_action('migrator/backup_recorded', $status, $schedule);
 
         return $status;
+    }
+
+    /**
+     * The database-only job: a database archive under its own marker, pruned to
+     * its own retention locally and off-site, so the full backups are never
+     * pushed out by a job running every few hours.
+     *
+     * The add-on's strategy hook is not offered: its incremental chain is a
+     * files strategy and would ignore the database-only options. Post-processing
+     * (compression, the add-on's encryption) still applies.
+     *
+     * @return array<string, mixed>
+     */
+    public function runDatabase(Schedule $schedule): array
+    {
+        $this->workspace->ensure();
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
+        $status = Schedule::withMarker(Schedule::DB_MARKER, fn (): array => $this->runFull($schedule->databaseOnly(), true));
+
+        update_option(self::DB_STATUS_OPTION, $status, false);
+
+        return $status;
+    }
+
+    /**
+     * The most recent database-only run, or null if it never ran.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function lastDatabaseStatus(): ?array
+    {
+        $status = get_option(self::DB_STATUS_OPTION, null);
+
+        return is_array($status) ? $status : null;
     }
 
     /**
@@ -293,6 +334,7 @@ final class BackupRunner
 
         $paths = array_merge(
             $this->scheduledFiles(),
+            Schedule::withMarker(Schedule::DB_MARKER, fn (): array => $this->scheduledFiles()),
             is_array($extra) ? array_filter($extra, 'is_string') : [],
         );
 
