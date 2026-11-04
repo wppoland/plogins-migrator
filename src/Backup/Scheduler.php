@@ -305,11 +305,15 @@ final class Scheduler implements HasHooks
             return $reply;
         }
 
-        set_transient(self::UPDATE_LOCK, time(), 10 * MINUTE_IN_SECONDS);
-
         // A plain full archive: a rollback point that lands as an incremental
         // link or encrypted with a passphrase nobody types at restore is no use.
-        $this->runAndReport($schedule, false);
+        $status = $this->runAndReport($schedule, false);
+
+        // Locked only once the archive exists: a run that failed or was killed
+        // part way must not let the next update go ahead without a backup.
+        if (! empty($status['ok'])) {
+            set_transient(self::UPDATE_LOCK, time(), 10 * MINUTE_IN_SECONDS);
+        }
 
         return $reply;
     }

@@ -106,6 +106,15 @@ namespace {
     $pre(false, 'theme.zip', new Plugin_Upgrader(), ['theme' => 'twentyx']);
     ok('a theme update takes a backup', 3 === count($runner->runs));
 
+    // A backup that failed (or was killed part way) must not count as taken:
+    // the owner's retry then updates with no rollback point and no notice.
+    $GLOBALS['trans'] = [];
+    $runner->status   = ['ok' => false, 'message' => 'Disk full'];
+    $pre(false, 'pkg.zip', new Plugin_Upgrader(), ['plugin' => 'a/a.php']);
+    ok('a failed before-update backup leaves no lock', false === get_transient(Scheduler::UPDATE_LOCK));
+    $pre(false, 'pkg.zip', new Plugin_Upgrader(), ['plugin' => 'a/a.php']);
+    ok('so the retry takes a backup again', 5 === count($runner->runs));
+
     // Failure email on a scheduled run.
     $runner->status = ['ok' => false, 'message' => 'Disk full'];
     $GLOBALS['opts'][Schedule::OPTION] = ['enabled' => true];
