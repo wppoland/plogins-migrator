@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.0
+Stable tag: 1.9.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -239,6 +239,10 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.9.1 =
+* Fixed: a backup before updates that failed or was stopped part way no longer counts as taken. An update retried within 10 minutes used to go ahead with no backup; now it takes one again.
+* Fixed: a backup keeps running when the browser gives up waiting, for example on a proxy timeout.
 
 = 1.9.0 =
 * Added: Download .tar.gz in the backups list. Any stored backup comes out as a standard archive (database.sql, the manifest and `wp-content`) that opens with tar, 7-Zip or a desktop archive tool, no Migrator needed.

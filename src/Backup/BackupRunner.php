@@ -60,6 +60,9 @@ final class BackupRunner
             @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
         }
 
+        // A browser that gives up on a proxy timeout must not stop the archive.
+        ignore_user_abort(true);
+
         // Recorded before the work starts and overwritten when it ends. A run
         // the host kills (execution time, memory, a restart) never reaches the
         // end, and used to leave the previous run's "ok" on screen as if
