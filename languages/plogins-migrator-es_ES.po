@@ -287,14 +287,12 @@ msgid "What %s adds"
 msgstr "Lo que %s añade"
 
 #: src/Admin/Rollback.php:58
-#, fuzzy
 msgid "Roll back"
-msgstr "Restaurar copia de seguridad"
+msgstr ""
 
 #: src/Admin/Rollback.php:69 src/Admin/Rollback.php:88
-#, fuzzy
 msgid "Roll back a plugin"
-msgstr "Todos los plugins"
+msgstr ""
 
 #: src/Admin/Rollback.php:80
 msgid "You are not allowed to update plugins."
@@ -319,9 +317,8 @@ msgid "WordPress.org lists no earlier release of this plugin."
 msgstr ""
 
 #: src/Admin/Rollback.php:146
-#, fuzzy
 msgid "Version"
-msgstr "Versión de PHP"
+msgstr ""
 
 #: src/Admin/Rollback.php:152
 msgid ""
