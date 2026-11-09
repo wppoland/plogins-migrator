@@ -40,6 +40,9 @@ return static function (Container $c): void {
         $c->get(Workspace::class),
     ));
 
+    $c->singleton(\Migrator\Admin\Rollback::class, static fn (Container $c): \Migrator\Admin\Rollback => new \Migrator\Admin\Rollback(
+        $c->get(BackupRunner::class),
+    ));
     $c->singleton(Scheduler::class, static fn (Container $c): Scheduler => new Scheduler(
         $c->get(BackupRunner::class),
     ));

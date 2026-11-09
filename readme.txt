@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.1
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,8 @@ The address rewrite is **safe for serialized data**: Migrator walks the actual d
 Back up every 2, 4 or 12 hours, daily or weekly, and keep as many copies as you choose. A second, database-only schedule can run more often than the full backup, with its own count of copies to keep, so a store can back up its orders every few hours and its files once a week. Each scheduled backup can also be copied off the server, to an FTP or FTPS server or to a local or mounted folder outside the web root. Older scheduled copies are deleted automatically, on the server and at the destination, once they fall outside your retention setting.
 
 Switch on "Back up the site before plugin, theme and WordPress updates" and Migrator takes a backup, with the same settings as your scheduled ones, right before WordPress replaces any files, for manual and automatic updates alike. Several updates within ten minutes share one backup. Tick "Email me when an automatic backup fails" to hear when a scheduled or before-update backup fails.
+
+To go back to an earlier release of a plugin from WordPress.org, click "Roll back" under it on the Plugins screen and pick the version. Migrator saves a full backup first and changes nothing if that backup fails.
 
 **Pull and push between live sites**
 
@@ -55,6 +57,7 @@ For large sites where a browser request would time out, every job also runs from
 * Scheduled backups every 2, 4 or 12 hours, daily or weekly, with a retention rule, plus an optional database-only schedule with its own interval and retention
 * Restore only what you need: the database, plugins, themes, uploads or other files, in the browser and with `wp migrator import --only`
 * A backup before every plugin, theme and WordPress update, and an email when an automatic backup fails
+* Roll back a WordPress.org plugin to an earlier release from the Plugins screen, after a full backup
 * Pull a live site to another server over HTTP with `wp migrator pull`: resumable, and the next run fetches only the changes
 * Push file changes back with `wp migrator push`, and run the low-level transfer commands through `wp migrator remote`
 * Off-site copies to an FTP or FTPS server, or to a local or mounted folder
@@ -239,6 +242,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.10.0 =
+* Added: "Roll back" on the Plugins screen for plugins from WordPress.org. Pick an earlier release and Migrator saves a full backup of the site, then installs that release and reactivates the plugin if it was active. If the backup fails, the plugin is not changed. Plugins only, not themes.
 
 = 1.9.1 =
 * Fixed: a backup before updates that failed or was stopped part way no longer counts as taken. An update retried within 10 minutes used to go ahead with no backup; now it takes one again.
@@ -454,6 +460,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.10.0 =
+Adds "Roll back" on the Plugins screen: reinstall an earlier WordPress.org release of a plugin, after a full backup.
 
 = 1.5.0 =
 Adds Pull and Push: copy a live site to another server over HTTP, with resume and changes-only updates. Off until you switch it on.

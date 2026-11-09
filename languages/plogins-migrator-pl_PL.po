@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
 "Stable (latest release)\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-10-31T13:15:52+00:00\n"
+"POT-Creation-Date: 2026-11-09T09:08:48+00:00\n"
 "PO-Revision-Date: 2026-07-21 05:32:32+0000\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
@@ -287,7 +287,82 @@ msgstr "jedna licencja, wszystkie funkcje PRO"
 msgid "What %s adds"
 msgstr "Co dodaje %s"
 
-#: src/Backup/BackupRunner.php:148
+#: src/Admin/Rollback.php:58
+#, fuzzy
+msgid "Roll back"
+msgstr "Przywróć kopię zapasową"
+
+#: src/Admin/Rollback.php:69 src/Admin/Rollback.php:88
+#, fuzzy
+msgid "Roll back a plugin"
+msgstr "Wszystkie wtyczki"
+
+#: src/Admin/Rollback.php:80
+#, fuzzy
+msgid "You are not allowed to update plugins."
+msgstr "Nie masz uprawnień do wykonania tej czynności."
+
+#: src/Admin/Rollback.php:91
+msgid "Only plugins from WordPress.org can be rolled back."
+msgstr ""
+
+#: src/Admin/Rollback.php:110
+msgid "Pick a version from the list."
+msgstr ""
+
+#. translators: 1: plugin name, 2: installed version
+#: src/Admin/Rollback.php:132
+#, php-format
+msgid "%1$s %2$s is installed. Pick the release to go back to."
+msgstr ""
+
+#: src/Admin/Rollback.php:139
+msgid "WordPress.org lists no earlier release of this plugin."
+msgstr ""
+
+#: src/Admin/Rollback.php:146
+#, fuzzy
+msgid "Version"
+msgstr "Wersja PHP"
+
+#: src/Admin/Rollback.php:152
+msgid ""
+"Migrator first saves a full backup of the site (files and database) to your "
+"backup folder. If the backup fails, nothing is changed. The settings a newer "
+"version saved stay in the database, and an older version may not read them."
+msgstr ""
+
+#: src/Admin/Rollback.php:153
+msgid "Back up the site and roll back"
+msgstr ""
+
+#: src/Admin/Rollback.php:159
+msgid "Saving a full backup of the site first. This can take a few minutes."
+msgstr ""
+
+#: src/Admin/Rollback.php:170
+msgid "The backup failed, so the plugin was not changed."
+msgstr ""
+
+#. translators: 1: plugin name, 2: version
+#: src/Admin/Rollback.php:189
+#, php-format
+msgid "Rolling back %1$s to %2$s"
+msgstr ""
+
+#: src/Admin/Rollback.php:194
+msgid "Installing the chosen version&#8230;"
+msgstr ""
+
+#: src/Admin/Rollback.php:195
+msgid "Plugin rolled back successfully."
+msgstr ""
+
+#: src/Admin/Rollback.php:222
+msgid "Back to Plugins"
+msgstr ""
+
+#: src/Backup/BackupRunner.php:151
 msgid ""
 "This backup started but has not finished. If it stays like this, the run was "
 "stopped part way (execution time, memory or a server restart)."
@@ -324,13 +399,13 @@ msgid "You are not allowed to do this."
 msgstr "Nie masz uprawnień do wykonania tej czynności."
 
 #. translators: %s: site name.
-#: src/Backup/Scheduler.php:342
+#: src/Backup/Scheduler.php:346
 #, php-format
 msgid "[%s] Automatic backup failed"
 msgstr ""
 
 #. translators: 1: site address, 2: error message, 3: link to the Scheduled Backups screen.
-#: src/Backup/Scheduler.php:345
+#: src/Backup/Scheduler.php:349
 #, php-format
 msgid ""
 "An automatic backup of %1$s failed.\n"
@@ -340,63 +415,63 @@ msgid ""
 "Details: %3$s"
 msgstr ""
 
-#: src/Backup/Scheduler.php:347
+#: src/Backup/Scheduler.php:351
 msgid "unknown error"
 msgstr ""
 
-#: src/Backup/Scheduler.php:394 templates/admin-page.php:53
+#: src/Backup/Scheduler.php:398 templates/admin-page.php:53
 msgid "Media library (uploads)"
 msgstr "Biblioteka multimediów (przesłane pliki)"
 
-#: src/Backup/Scheduler.php:395 templates/admin-page.php:54
+#: src/Backup/Scheduler.php:399 templates/admin-page.php:54
 msgid "All themes"
 msgstr "Wszystkie motywy"
 
-#: src/Backup/Scheduler.php:396 templates/admin-page.php:55
+#: src/Backup/Scheduler.php:400 templates/admin-page.php:55
 msgid "Inactive themes (keep active only)"
 msgstr "Nieaktywne motywy (tylko pozostaw aktywne)"
 
-#: src/Backup/Scheduler.php:397 templates/admin-page.php:56
+#: src/Backup/Scheduler.php:401 templates/admin-page.php:56
 msgid "All plugins"
 msgstr "Wszystkie wtyczki"
 
-#: src/Backup/Scheduler.php:398 templates/admin-page.php:57
+#: src/Backup/Scheduler.php:402 templates/admin-page.php:57
 msgid "Inactive plugins (keep active only)"
 msgstr "Nieaktywne wtyczki (tylko pozostaw aktywne)"
 
-#: src/Backup/Scheduler.php:399 templates/admin-page.php:58
+#: src/Backup/Scheduler.php:403 templates/admin-page.php:58
 msgid "Must-use plugins"
 msgstr "Wtyczki must-use"
 
-#: src/Backup/Scheduler.php:400 templates/admin-page.php:59
+#: src/Backup/Scheduler.php:404 templates/admin-page.php:59
 msgid "Cache files"
 msgstr "Pliki pamięci podręcznej"
 
-#: src/Backup/Scheduler.php:401 templates/admin-page.php:45
+#: src/Backup/Scheduler.php:405 templates/admin-page.php:45
 msgid "Spam comments"
 msgstr "Komentarze spamowe"
 
-#: src/Backup/Scheduler.php:402 templates/admin-page.php:46
+#: src/Backup/Scheduler.php:406 templates/admin-page.php:46
 msgid "Post revisions"
 msgstr "Wersje wpisów"
 
-#: src/Backup/Scheduler.php:403 templates/admin-page.php:47
+#: src/Backup/Scheduler.php:407 templates/admin-page.php:47
 msgid "Transients"
 msgstr "Transienty"
 
-#: src/Backup/Scheduler.php:404 templates/admin-page.php:48
+#: src/Backup/Scheduler.php:408 templates/admin-page.php:48
 msgid "WooCommerce sessions"
 msgstr "Sesje WooCommerce"
 
-#: src/Backup/Scheduler.php:405 templates/admin-page.php:49
+#: src/Backup/Scheduler.php:409 templates/admin-page.php:49
 msgid "Action Scheduler tables"
 msgstr "Tabele harmonogramu akcji"
 
-#: src/Backup/Scheduler.php:406 templates/admin-page.php:50
+#: src/Backup/Scheduler.php:410 templates/admin-page.php:50
 msgid "Database (files-only backup)"
 msgstr "Baza danych (kopia zapasowa samych plików)"
 
-#: src/Backup/Scheduler.php:407
+#: src/Backup/Scheduler.php:411
 msgid "Files (database-only backup)"
 msgstr ""
 

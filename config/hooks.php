@@ -17,5 +17,6 @@ return [
     \Migrator\Admin\Page::class,
     \Migrator\Admin\Ajax::class,
     \Migrator\Backup\Scheduler::class,
+    \Migrator\Admin\Rollback::class,
     \Migrator\Reprint\Source::class,
 ];
