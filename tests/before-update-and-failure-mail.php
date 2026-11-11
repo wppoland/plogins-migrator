@@ -14,6 +14,8 @@ namespace Migrator\Backup {
     // Stand-in for the real runner: records each run and returns a set outcome.
     final class BackupRunner
     {
+        public const STATUS_OPTION = 'migrator_last_backup';
+
         /** @var list<bool> allowStrategies of each run. */
         public array $runs = [];
 
@@ -49,6 +51,7 @@ namespace {
     function wp_specialchars_decode($s, $q = 0) { return $s; }
     function home_url($p = '') { return 'https://example.test' . $p; }
     function admin_url($p = '') { return 'https://example.test/wp-admin/' . $p; }
+    function wp_date($f, $t) { return gmdate('Y-m-d H:i', (int) $t); }
     $GLOBALS['hooks'] = [];
     function add_filter($h, $cb, $p = 10, $n = 1) { $GLOBALS['hooks'][$h] = $n; return true; }
     function add_action($h, $cb, $p = 10, $n = 1) { $GLOBALS['hooks'][$h] = $n; return true; }
@@ -138,6 +141,17 @@ namespace {
     $runner->status   = ['ok' => true, 'message' => ''];
     $scheduler->runScheduledBackup();
     ok('a backup that succeeds sends nothing', [] === $GLOBALS['mails']);
+
+    // A run the host killed left "started" behind; the next run reports it.
+    $GLOBALS['mails'] = [];
+    $GLOBALS['opts'][BackupRunner::STATUS_OPTION] = ['started' => true, 'ok' => false, 'time' => time() - 5 * HOUR_IN_SECONDS];
+    $scheduler->runScheduledBackup();
+    ok('a run killed hours ago is mailed by the next run', 1 === count($GLOBALS['mails']) && str_contains((string) ($GLOBALS['mails'][0]['body'] ?? ''), 'never finished'));
+
+    $GLOBALS['mails'] = [];
+    $GLOBALS['opts'][BackupRunner::STATUS_OPTION] = ['started' => true, 'ok' => false, 'time' => time() - 10 * MINUTE_IN_SECONDS];
+    $scheduler->runScheduledBackup();
+    ok('a run that may still be going is not reported', [] === $GLOBALS['mails']);
 
     echo 0 === $failures ? "\nALL PASSED\n" : "\n{$failures} FAILED\n";
     exit(0 === $failures ? 0 : 1);

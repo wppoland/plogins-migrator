@@ -325,6 +325,19 @@ final class Scheduler implements HasHooks
      */
     private function runAndReport(Schedule $schedule, bool $allowStrategies = true): array
     {
+        // A run the host killed (time or memory limit, a restart) never reaches
+        // the end, so it was never reported. The next run finds its "started"
+        // status still there and reports it before overwriting it.
+        $previous = get_option(BackupRunner::STATUS_OPTION, []);
+        if (is_array($previous) && ! empty($previous['started']) && (int) ($previous['time'] ?? 0) < time() - 3 * HOUR_IN_SECONDS
+            && ($schedule->notifyFailure || $this->addonMailsFailures())) {
+            $this->mailFailure($schedule, ['message' => sprintf(
+                /* translators: %s: date and time the backup started */
+                __('the backup started on %s never finished. The server most likely stopped it at its time or memory limit.', 'plogins-migrator'),
+                wp_date((string) get_option('date_format') . ' ' . (string) get_option('time_format'), (int) $previous['time']),
+            )]);
+        }
+
         $status = $this->runner->run($schedule, $allowStrategies);
 
         if (empty($status['ok']) && $schedule->notifyFailure && ! $this->addonMailsFailures()) {

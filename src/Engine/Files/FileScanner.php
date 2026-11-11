@@ -79,7 +79,9 @@ final class FileScanner
             },
         );
 
-        $iterator = new \RecursiveIteratorIterator($filtered, \RecursiveIteratorIterator::LEAVES_ONLY);
+        // A directory that vanishes mid-scan (a cache being purged) or cannot
+        // be opened is skipped instead of ending the whole backup.
+        $iterator = new \RecursiveIteratorIterator($filtered, \RecursiveIteratorIterator::LEAVES_ONLY, \RecursiveIteratorIterator::CATCH_GET_CHILD);
 
         $prefixLen = strlen($base) + 1;
         foreach ($iterator as $file) {

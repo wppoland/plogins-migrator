@@ -72,4 +72,14 @@ $wpdb->suppress_errors(false);
 $check('a failed import leaves no import-*.sql behind', [] === (glob($ws->path('import-*.sql')) ?: []));
 $check('and the successful rollback removed its dump', [] === (glob($ws->path('rollback-*.sql')) ?: []));
 
+// A dump the failure message hands to the user must outlive the next sweep.
+$dump = $ws->path('rollback-20260101-000000-abcdef.sql');
+file_put_contents($dump, "-- previous database\n");
+$keep = new \ReflectionMethod(Importer::class, 'keepForRecovery');
+$kept = (string) $keep->invoke(new Importer($ws, $wpdb), $dump);
+touch($kept, time() - 2 * DAY_IN_SECONDS);
+$ws->sweep();
+$check('a dump named in a failure message survives the sweep', str_contains($kept, 'previous-database-') && file_exists($kept));
+@unlink($kept);
+
 echo 0 === $fail ? "workspace sweep: OK\n" : "workspace sweep: {$fail} failure(s)\n";

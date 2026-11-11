@@ -77,5 +77,27 @@ foreach ($it as $i) {
 @unlink($outside . '/secret.txt');
 @rmdir($outside);
 
+// A directory that cannot be opened (or vanished mid-scan) is skipped, not fatal.
+$locked = sys_get_temp_dir() . '/migrator-locked-' . uniqid();
+mkdir($locked . '/cache', 0777, true);
+file_put_contents($locked . '/keep.txt', 'k');
+file_put_contents($locked . '/cache/x.tmp', 'x');
+chmod($locked . '/cache', 0000);
+$got = [];
+$err = '';
+try {
+    foreach ((new FileScanner([], []))->scan($locked) as $f) {
+        $got[] = $f['rel'];
+    }
+} catch (\Throwable $e) {
+    $err = $e->getMessage();
+}
+chmod($locked . '/cache', 0777);
+ok('an unreadable directory does not stop the scan' . ('' !== $err ? " ({$err})" : ''), '' === $err && in_array('keep.txt', $got, true));
+@unlink($locked . '/cache/x.tmp');
+@rmdir($locked . '/cache');
+@unlink($locked . '/keep.txt');
+@rmdir($locked);
+
 echo $failures === 0 ? "\nALL PASSED\n" : "\n{$failures} FAILED\n";
 exit($failures === 0 ? 0 : 1);
