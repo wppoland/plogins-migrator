@@ -94,6 +94,24 @@ final class Importer
     }
 
     /**
+     * Components a restore may not write while DISALLOW_FILE_MODS is set.
+     *
+     * WordPress uses that constant to stop wp-admin from installing, updating or
+     * editing plugins, themes and language files; a restore that overwrote them
+     * would walk around the host's lock. Uploads and the database stay open, as
+     * they do in core. WP-CLI runs with shell access to the same files, so the
+     * lock is not applied there.
+     *
+     * @return list<string>
+     */
+    public static function lockedComponents(): array
+    {
+        $locked = defined('DISALLOW_FILE_MODS') && DISALLOW_FILE_MODS && ! (defined('WP_CLI') && WP_CLI);
+
+        return $locked ? ['plugins', 'themes', 'other'] : [];
+    }
+
+    /**
      * The component a wp-content archive entry belongs to. Archive paths are
      * relative to wp-content, the same layout extract() writes back to.
      */
@@ -126,6 +144,15 @@ final class Importer
         $components = self::components($components);
         if ([] === $components) {
             throw new \RuntimeException(__('Migrator: nothing was chosen to restore. Pick the database, plugins, themes, uploads or other files.', 'plogins-migrator'));
+        }
+
+        $locked = array_values(array_intersect($components, self::lockedComponents()));
+        if ([] !== $locked) {
+            throw new \RuntimeException(sprintf(
+                /* translators: %s: the parts that cannot be restored, comma separated */
+                __('Migrator: this site sets DISALLOW_FILE_MODS, so it does not let wp-admin replace code files. Restore the database and uploads only, or run the restore with WP-CLI. Blocked: %s.', 'plogins-migrator'),
+                implode(', ', $locked),
+            ));
         }
 
         // A gzip-compressed archive is expanded to a temp file first; the rest of

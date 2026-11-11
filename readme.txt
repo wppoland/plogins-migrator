@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.10.0
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -243,6 +243,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 == Changelog ==
 
+= 1.11.0 =
+* Changed: on a site that sets DISALLOW_FILE_MODS, a restore from wp-admin brings back only the database and uploads. Plugins, themes and other code files are left as they are, the same lock WordPress applies to installing and updating them, and the restore screen says so. WP-CLI restores everything as before.
+
 = 1.10.0 =
 * Added: "Roll back" on the Plugins screen for plugins from WordPress.org. Pick an earlier release and Migrator saves a full backup of the site, then installs that release and reactivates the plugin if it was active. If the backup fails, the plugin is not changed. Plugins only, not themes.
 
@@ -460,6 +463,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.11.0 =
+Sites that set DISALLOW_FILE_MODS: restores from wp-admin now skip plugins, themes and other code files. Use WP-CLI to restore those.
 
 = 1.10.0 =
 Adds "Roll back" on the Plugins screen: reinstall an earlier WordPress.org release of a plugin, after a full backup.

@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Migrator - Site Migration and Backup 1.10.0\n"
+"Project-Id-Version: Migrator - Site Migration and Backup 1.11.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1669,4 +1669,20 @@ msgstr ""
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:683
 #, php-format
 msgid "Key id: %s"
+msgstr ""
+
+#. translators: %s: the parts that cannot be restored, comma separated
+#: src/Engine/Import/Importer.php:153
+#, php-format
+msgid ""
+"Migrator: this site sets DISALLOW_FILE_MODS, so it does not let wp-admin "
+"replace code files. Restore the database and uploads only, or run the "
+"restore with WP-CLI. Blocked: %s."
+msgstr ""
+
+#: templates/admin-page.php:207
+msgid ""
+"This site sets DISALLOW_FILE_MODS, which stops wp-admin from changing "
+"plugins, themes and other code files, so only the database and uploads can "
+"be restored here. To restore code files, run the restore with WP-CLI."
 msgstr ""
