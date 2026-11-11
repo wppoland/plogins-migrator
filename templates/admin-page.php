@@ -194,13 +194,18 @@ defined('ABSPATH') || exit;
 					'uploads'  => __('Uploads (media library)', 'plogins-migrator'),
 					'other'    => __('Other wp-content files', 'plogins-migrator'),
 				];
+				$migrator_locked = \Migrator\Engine\Import\Importer::lockedComponents();
 				foreach ($migrator_parts as $migrator_part => $migrator_part_label) :
+					$migrator_is_locked = in_array($migrator_part, $migrator_locked, true);
 					?>
 					<label class="migrator-drop__opt">
-						<input type="checkbox" name="migrator_restore_part" value="<?php echo esc_attr($migrator_part); ?>" checked>
+						<input type="checkbox" name="migrator_restore_part" value="<?php echo esc_attr($migrator_part); ?>" <?php echo $migrator_is_locked ? 'disabled' : 'checked'; ?>>
 						<?php echo esc_html($migrator_part_label); ?>
 					</label>
 				<?php endforeach; ?>
+				<?php if ([] !== $migrator_locked) : ?>
+					<p class="migrator-card__desc"><?php esc_html_e('This site sets DISALLOW_FILE_MODS, which stops wp-admin from changing plugins, themes and other code files, so only the database and uploads can be restored here. To restore code files, run the restore with WP-CLI.', 'plogins-migrator'); ?></p>
+				<?php endif; ?>
 				<p class="migrator-card__desc"><?php esc_html_e('Applies to the upload above and to the stored backups below. Untick the database to roll back files without losing orders or posts made since the backup.', 'plogins-migrator'); ?></p>
 			</fieldset>
 

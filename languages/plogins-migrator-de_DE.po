@@ -1705,6 +1705,22 @@ msgstr ""
 msgid "Key id: %s"
 msgstr ""
 
+#. translators: %s: the parts that cannot be restored, comma separated
+#: src/Engine/Import/Importer.php:153
+#, php-format
+msgid ""
+"Migrator: this site sets DISALLOW_FILE_MODS, so it does not let wp-admin "
+"replace code files. Restore the database and uploads only, or run the "
+"restore with WP-CLI. Blocked: %s."
+msgstr ""
+
+#: templates/admin-page.php:207
+msgid ""
+"This site sets DISALLOW_FILE_MODS, which stops wp-admin from changing "
+"plugins, themes and other code files, so only the database and uploads can "
+"be restored here. To restore code files, run the restore with WP-CLI."
+msgstr ""
+
 #~ msgid ""
 #~ "Drop a Migrator archive here to restore it. This overwrites the current "
 #~ "database (and files) with the archive, keep a backup of anything you want "
