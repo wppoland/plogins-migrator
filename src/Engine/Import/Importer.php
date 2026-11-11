@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Migrator\Engine\Import;
 
+use Migrator\Backup\Schedule;
+use Migrator\Backup\Scheduler;
 use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Archive\Manifest;
 use Migrator\Engine\Archive\Reader;
@@ -511,6 +513,11 @@ final class Importer
                 $this->db->insert($this->db->options, ['option_name' => $name, 'option_value' => $row['value'], 'autoload' => $row['autoload']]);
             }
         }
+
+        // The cron option came from the archive, so its events are the
+        // source's. Align them with the schedule just put back.
+        wp_cache_flush();
+        Scheduler::reschedule(Schedule::load());
     }
 
     /**

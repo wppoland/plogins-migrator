@@ -7,6 +7,8 @@
  * @package Migrator
  */
 
+use Migrator\Backup\Schedule;
+use Migrator\Backup\Scheduler;
 use Migrator\Engine\Import\Importer;
 use Migrator\Support\Workspace;
 
@@ -30,6 +32,7 @@ $rows     = $capture->invoke($importer);
 // What an imported source database would leave behind.
 update_option('migrator_schedule', ['enabled' => true, 'marker' => 'source']);
 update_option('migrator_offsite', ['enabled' => true, 'host' => 'ftp.source.example']);
+wp_clear_scheduled_hook(Schedule::HOOK); // the source's cron had no backup event
 
 $put->invoke($importer, $rows);
 wp_cache_flush();
@@ -37,9 +40,11 @@ wp_cache_flush();
 $schedule = get_option('migrator_schedule');
 $check('the target keeps its own schedule', is_array($schedule) && 'target' === ($schedule['marker'] ?? ''));
 $check('the source off-site storage is not inherited', false === get_option('migrator_offsite'));
+$check('the kept schedule is back in cron', false !== wp_next_scheduled(Schedule::HOOK));
 
 foreach (['migrator_schedule', 'migrator_offsite'] as $i => $name) {
     null === $saved[$i] ? delete_option($name) : update_option($name, $saved[$i]);
 }
+Scheduler::reschedule(Schedule::load());
 
 echo 0 === $fail ? "site-bound options: OK\n" : "site-bound options: {$fail} failure(s)\n";

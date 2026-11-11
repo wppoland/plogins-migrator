@@ -348,6 +348,11 @@ final class Dumper
 
             // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
             $create = $this->db->get_row("SHOW CREATE TABLE {$safe}", ARRAY_N);
+            // A table dropped since the list was read (a plugin's temporary
+            // table) has nothing to back up; the DROP above is all it needs.
+            if (str_contains((string) $this->db->last_error, "doesn't exist")) {
+                return null;
+            }
             $this->failOnQueryError($safe);
             if (is_array($create) && isset($create[1])) {
                 $createSql = (string) $create[1];

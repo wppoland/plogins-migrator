@@ -49,6 +49,9 @@ class wpdb // phpcs:ignore
 
     public string $last_error = '';
 
+    /** The table was dropped after the backup listed it. */
+    public bool $dropped = false;
+
     /** @var string[] */
     public array $queries = [];
 
@@ -153,6 +156,12 @@ class wpdb // phpcs:ignore
             return ['Value' => '1048576'];
         }
         if (str_starts_with($sql, 'SHOW CREATE TABLE')) {
+            if ($this->dropped) {
+                $this->last_error = "Table 'wp.wp_thing' doesn't exist";
+
+                return null;
+            }
+
             return [0 => 'wp_thing', 1 => 'CREATE TABLE `wp_thing` (`id` int)'];
         }
 
@@ -304,6 +313,11 @@ foreach ([['id'], []] as $keys) {
     }
     ok('a failed SELECT stops the dump instead of ending the table (' . ([] === $keys ? 'offset' : 'primary key') . ' paging)', str_contains($thrown, 'maximum statement execution time'));
 }
+
+$db          = new wpdb(table([1, 2]), ['id']);
+$db->dropped = true;
+$sql         = dump($db);
+ok('a table dropped since the list was read is skipped, not a failure', str_contains($sql, 'DROP TABLE IF EXISTS') && ! str_contains($sql, 'CREATE TABLE') && ! str_contains($sql, 'INSERT'));
 
 echo $failures === 0 ? "\nALL VERIFIED\n" : "\n{$failures} FAILED\n";
 exit($failures === 0 ? 0 : 1);

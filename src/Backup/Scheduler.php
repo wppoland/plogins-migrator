@@ -385,7 +385,7 @@ final class Scheduler implements HasHooks
     /**
      * Clear any existing event, then schedule a fresh one when enabled. Idempotent.
      */
-    public function reschedule(Schedule $schedule): void
+    public static function reschedule(Schedule $schedule): void
     {
         wp_clear_scheduled_hook(Schedule::HOOK);
         wp_clear_scheduled_hook(Schedule::LEGACY_HOOK);

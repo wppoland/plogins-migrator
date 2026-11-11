@@ -245,9 +245,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 = 1.11.1 =
 * Fixed: a database read that failed during a backup (a query timeout, a lock wait) was taken as the end of the table, so the backup could restore that table empty. The backup now stops with the error instead.
-* Fixed: a folder deleted or unreadable during a backup (a cache being purged) no longer ends the backup; it is skipped.
+* Fixed: a folder deleted or unreadable during a backup (a cache being purged), or a table deleted during it, no longer ends the backup; it is skipped.
 * Fixed: when a restore fails and Migrator names the file holding the previous database, that file is now kept until you delete it. Before, the daily workspace cleanup removed it after a day.
-* Fixed: restoring a backup onto a different address (a staging copy, a clone) kept the source's backup schedule and off-site storage, so the copy uploaded into the source's folder and its retention could delete the source's backups. The copy now keeps its own settings. Restores onto the same address are unchanged.
+* Fixed: restoring a backup onto a different address (a staging copy, a clone) kept the source's backup schedule and off-site storage, so the copy uploaded into the source's folder and its retention could delete the source's backups. The copy now keeps its own settings. Its own scheduled backups keep running too. Restores onto the same address are unchanged.
 * Fixed: links stored URL-encoded (page builders such as WPBakery) are now rewritten to the new address.
 * Fixed: a scheduled backup the server killed (time or memory limit) is now reported by email on the next run, when failure emails are on.
 
