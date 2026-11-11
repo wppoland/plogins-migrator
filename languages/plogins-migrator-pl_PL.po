@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
 "Stable (latest release)\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-11-09T09:08:48+00:00\n"
+"POT-Creation-Date: 2026-11-11T20:20:14+00:00\n"
 "PO-Revision-Date: 2026-07-21 05:32:32+0000\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
@@ -394,14 +394,22 @@ msgstr "Zaplanowane kopie zapasowe"
 msgid "You are not allowed to do this."
 msgstr "Nie masz uprawnień do wykonania tej czynności."
 
+#. translators: %s: date and time the backup started
+#: src/Backup/Scheduler.php:336
+#, php-format
+msgid ""
+"the backup started on %s never finished. The server most likely stopped it "
+"at its time or memory limit."
+msgstr ""
+
 #. translators: %s: site name.
-#: src/Backup/Scheduler.php:346
+#: src/Backup/Scheduler.php:359
 #, php-format
 msgid "[%s] Automatic backup failed"
 msgstr ""
 
 #. translators: 1: site address, 2: error message, 3: link to the Scheduled Backups screen.
-#: src/Backup/Scheduler.php:349
+#: src/Backup/Scheduler.php:362
 #, php-format
 msgid ""
 "An automatic backup of %1$s failed.\n"
@@ -411,63 +419,63 @@ msgid ""
 "Details: %3$s"
 msgstr ""
 
-#: src/Backup/Scheduler.php:351
+#: src/Backup/Scheduler.php:364
 msgid "unknown error"
 msgstr ""
 
-#: src/Backup/Scheduler.php:398 templates/admin-page.php:53
+#: src/Backup/Scheduler.php:411 templates/admin-page.php:53
 msgid "Media library (uploads)"
 msgstr "Biblioteka multimediów (przesłane pliki)"
 
-#: src/Backup/Scheduler.php:399 templates/admin-page.php:54
+#: src/Backup/Scheduler.php:412 templates/admin-page.php:54
 msgid "All themes"
 msgstr "Wszystkie motywy"
 
-#: src/Backup/Scheduler.php:400 templates/admin-page.php:55
+#: src/Backup/Scheduler.php:413 templates/admin-page.php:55
 msgid "Inactive themes (keep active only)"
 msgstr "Nieaktywne motywy (tylko pozostaw aktywne)"
 
-#: src/Backup/Scheduler.php:401 templates/admin-page.php:56
+#: src/Backup/Scheduler.php:414 templates/admin-page.php:56
 msgid "All plugins"
 msgstr "Wszystkie wtyczki"
 
-#: src/Backup/Scheduler.php:402 templates/admin-page.php:57
+#: src/Backup/Scheduler.php:415 templates/admin-page.php:57
 msgid "Inactive plugins (keep active only)"
 msgstr "Nieaktywne wtyczki (tylko pozostaw aktywne)"
 
-#: src/Backup/Scheduler.php:403 templates/admin-page.php:58
+#: src/Backup/Scheduler.php:416 templates/admin-page.php:58
 msgid "Must-use plugins"
 msgstr "Wtyczki must-use"
 
-#: src/Backup/Scheduler.php:404 templates/admin-page.php:59
+#: src/Backup/Scheduler.php:417 templates/admin-page.php:59
 msgid "Cache files"
 msgstr "Pliki pamięci podręcznej"
 
-#: src/Backup/Scheduler.php:405 templates/admin-page.php:45
+#: src/Backup/Scheduler.php:418 templates/admin-page.php:45
 msgid "Spam comments"
 msgstr "Komentarze spamowe"
 
-#: src/Backup/Scheduler.php:406 templates/admin-page.php:46
+#: src/Backup/Scheduler.php:419 templates/admin-page.php:46
 msgid "Post revisions"
 msgstr "Wersje wpisów"
 
-#: src/Backup/Scheduler.php:407 templates/admin-page.php:47
+#: src/Backup/Scheduler.php:420 templates/admin-page.php:47
 msgid "Transients"
 msgstr "Transienty"
 
-#: src/Backup/Scheduler.php:408 templates/admin-page.php:48
+#: src/Backup/Scheduler.php:421 templates/admin-page.php:48
 msgid "WooCommerce sessions"
 msgstr "Sesje WooCommerce"
 
-#: src/Backup/Scheduler.php:409 templates/admin-page.php:49
+#: src/Backup/Scheduler.php:422 templates/admin-page.php:49
 msgid "Action Scheduler tables"
 msgstr "Tabele harmonogramu akcji"
 
-#: src/Backup/Scheduler.php:410 templates/admin-page.php:50
+#: src/Backup/Scheduler.php:423 templates/admin-page.php:50
 msgid "Database (files-only backup)"
 msgstr "Baza danych (kopia zapasowa samych plików)"
 
-#: src/Backup/Scheduler.php:411
+#: src/Backup/Scheduler.php:424
 msgid "Files (database-only backup)"
 msgstr ""
 
@@ -516,13 +524,22 @@ msgstr "WooCommerce"
 msgid "Yes (HPOS)"
 msgstr "Tak (HPOS)"
 
-#: src/Engine/Import/Importer.php:128
+#: src/Engine/Import/Importer.php:148
 msgid ""
 "Migrator: nothing was chosen to restore. Pick the database, plugins, themes, "
 "uploads or other files."
 msgstr ""
 
-#: src/Engine/Import/Importer.php:170
+#. translators: %s: the parts that cannot be restored, comma separated
+#: src/Engine/Import/Importer.php:155
+#, php-format
+msgid ""
+"Migrator: this site sets DISALLOW_FILE_MODS, so it does not let wp-admin "
+"replace code files. Restore the database and uploads only, or run the "
+"restore with WP-CLI. Blocked: %s."
+msgstr ""
+
+#: src/Engine/Import/Importer.php:199
 msgid ""
 "Migrator: this archive was never finished, so it is not a complete backup. "
 "The run that wrote it was cut short (execution time, memory, or a full "
@@ -530,18 +547,18 @@ msgid ""
 "backup that finished."
 msgstr ""
 
-#: src/Engine/Import/Importer.php:186
+#: src/Engine/Import/Importer.php:215
 msgid "Migrator: archive has no manifest (is this a Migrator archive?)."
 msgstr ""
 
-#: src/Engine/Import/Importer.php:190
+#: src/Engine/Import/Importer.php:219
 msgid ""
 "Migrator: this archive was made by a newer version of Migrator. Update the "
 "plugin on this site and try again."
 msgstr ""
 
 #. translators: 1: the archive's table prefix, 2: this site's table prefix
-#: src/Engine/Import/Importer.php:202
+#: src/Engine/Import/Importer.php:231
 #, php-format
 msgid ""
 "Migrator: table prefix mismatch. This archive uses \"%1$s\" but this site "
@@ -549,7 +566,7 @@ msgid ""
 "and try again."
 msgstr ""
 
-#: src/Engine/Import/Importer.php:227
+#: src/Engine/Import/Importer.php:256
 msgid ""
 "Migrator: this restore crosses a multisite boundary. Restoring a network "
 "backup rewrites the network tables to the destination domain, which this "
@@ -557,7 +574,7 @@ msgid ""
 msgstr ""
 
 #. translators: 1: number of rows, 2: database error
-#: src/Engine/Import/Importer.php:286
+#: src/Engine/Import/Importer.php:316
 #, php-format
 msgid ""
 "%1$d rows could not be rewritten and may still point at the old address "
@@ -565,7 +582,7 @@ msgid ""
 msgstr ""
 
 #. translators: 1: path to the SQL dump of the previous database, 2: the original error
-#: src/Engine/Import/Importer.php:327
+#: src/Engine/Import/Importer.php:368
 #, php-format
 msgid ""
 "Migrator: the import failed AND the rollback failed, so the database is in a "
@@ -574,7 +591,7 @@ msgid ""
 msgstr ""
 
 #. translators: %s: the original error
-#: src/Engine/Import/Importer.php:335
+#: src/Engine/Import/Importer.php:376
 #, php-format
 msgid ""
 "Migrator: import failed and the database was rolled back to its previous "
@@ -582,7 +599,7 @@ msgid ""
 msgstr ""
 
 #. translators: 1: number of files restored, 2: path to the SQL dump of the previous database, 3: the original error
-#: src/Engine/Import/Importer.php:370
+#: src/Engine/Import/Importer.php:412
 #, php-format
 msgid ""
 "Migrator: the restore stopped after the database had already been replaced, "
@@ -595,21 +612,21 @@ msgid ""
 msgstr ""
 
 #. translators: %s: what was wrong with the archive
-#: src/Engine/Import/Importer.php:409
+#: src/Engine/Import/Importer.php:451
 #, php-format
 msgid ""
 "Migrator: this archive is damaged, so nothing has been imported and this "
 "site is untouched. %s"
 msgstr ""
 
-#: src/Engine/Import/Importer.php:428
+#: src/Engine/Import/Importer.php:470
 msgid ""
 "Migrator: cannot create the pre-import safety backup, so nothing has been "
 "imported. Check that the backups folder is writable."
 msgstr ""
 
 #. translators: %s: path of the temporary SQL file
-#: src/Engine/Import/Importer.php:503
+#: src/Engine/Import/Importer.php:600
 #, php-format
 msgid ""
 "Migrator: could not write the whole SQL dump to %s. The disk is most likely "
@@ -949,39 +966,46 @@ msgstr ""
 msgid "Other wp-content files"
 msgstr ""
 
-#: templates/admin-page.php:204
+#: templates/admin-page.php:207
+msgid ""
+"This site sets DISALLOW_FILE_MODS, which stops wp-admin from changing "
+"plugins, themes and other code files, so only the database and uploads can "
+"be restored here. To restore code files, run the restore with WP-CLI."
+msgstr ""
+
+#: templates/admin-page.php:209
 msgid ""
 "Applies to the upload above and to the stored backups below. Untick the "
 "database to roll back files without losing orders or posts made since the "
 "backup."
 msgstr ""
 
-#: templates/admin-page.php:208
+#: templates/admin-page.php:213
 msgid "Restore backup"
 msgstr "Przywróć kopię zapasową"
 
-#: templates/admin-page.php:212
+#: templates/admin-page.php:217
 msgid "Restore progress"
 msgstr "Przywróć postęp"
 
-#: templates/admin-page.php:223
+#: templates/admin-page.php:228
 msgid "Or restore one already stored on this site"
 msgstr "Lub przywróć plik już zapisany na tej stronie"
 
-#: templates/admin-page.php:224
+#: templates/admin-page.php:229
 msgid "Backups saved on this site. Download, restore or delete them here."
 msgstr ""
 "Kopie zapasowe zapisane na tej stronie. Pobierz, przywróć lub usuń je tutaj."
 
-#: templates/admin-page.php:229
+#: templates/admin-page.php:234
 msgid "Large site? Restore from the command line, it has no time limit:"
 msgstr "Duża witryna? Przywróć z wiersza poleceń, nie ma limitu czasu:"
 
-#: templates/admin-page.php:235
+#: templates/admin-page.php:240
 msgid "Search & replace"
 msgstr "Wyszukaj i zamień"
 
-#: templates/admin-page.php:236
+#: templates/admin-page.php:241
 msgid ""
 "Change a domain, URL or path across this site's database, safely for "
 "serialized data. Run a dry run first to see how many rows would change. Back "
@@ -991,23 +1015,23 @@ msgstr ""
 "dla danych serializowanych. Najpierw wykonaj przebieg próbny, aby zobaczyć, "
 "ile wierszy ulegnie zmianie. Zrób kopię zapasową przed uruchomieniem na żywo."
 
-#: templates/admin-page.php:239
+#: templates/admin-page.php:244
 msgid "Find"
 msgstr "Znajdź"
 
-#: templates/admin-page.php:243
+#: templates/admin-page.php:248
 msgid "Replace with"
 msgstr "Zamień na"
 
-#: templates/admin-page.php:248
+#: templates/admin-page.php:253
 msgid "Dry run (preview only, writes nothing)"
 msgstr "Przebieg próbny (tylko podgląd, nic nie zapisuje)"
 
-#: templates/admin-page.php:250
+#: templates/admin-page.php:255
 msgid "Run"
 msgstr "Uruchom"
 
-#: templates/admin-page.php:254
+#: templates/admin-page.php:259
 msgid "From the command line:"
 msgstr "Z wiersza poleceń:"
 
@@ -1705,22 +1729,6 @@ msgstr ""
 #: lib/vendor/reprint/reprint-server-wp/wordpress/reprint-server.php:683
 #, php-format
 msgid "Key id: %s"
-msgstr ""
-
-#. translators: %s: the parts that cannot be restored, comma separated
-#: src/Engine/Import/Importer.php:153
-#, php-format
-msgid ""
-"Migrator: this site sets DISALLOW_FILE_MODS, so it does not let wp-admin "
-"replace code files. Restore the database and uploads only, or run the "
-"restore with WP-CLI. Blocked: %s."
-msgstr ""
-
-#: templates/admin-page.php:207
-msgid ""
-"This site sets DISALLOW_FILE_MODS, which stops wp-admin from changing "
-"plugins, themes and other code files, so only the database and uploads can "
-"be restored here. To restore code files, run the restore with WP-CLI."
 msgstr ""
 
 #~ msgid ""
