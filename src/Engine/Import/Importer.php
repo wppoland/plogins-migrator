@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Migrator\Engine\Import;
 
+use Migrator\Backup\Schedule;
+use Migrator\Backup\Scheduler;
 use Migrator\Engine\Archive\Compressor;
 use Migrator\Engine\Archive\Manifest;
 use Migrator\Engine\Archive\Reader;
@@ -294,6 +296,7 @@ final class Importer
                     // (DDL auto-commits, so DROP/CREATE cannot be transaction-rolled
                     // back) can be reverted instead of leaving a dead site.
                     $rollback = $this->backupDatabase($log);
+                    $siteBound = $this->siteBoundOptions();
 
                     try {
                         $statements = $this->importDatabase($reader, $log, $this->dumpCharset($manifest));
@@ -326,6 +329,16 @@ final class Importer
                             $this->db->update($this->db->options, ['option_value' => $target[$option]], ['option_name' => $option]);
                         }
 
+                        // A copy on another address (staging, a clone) must not
+                        // inherit the source's backup schedule and off-site
+                        // storage: it would upload into the source's folder
+                        // under the same file prefix and its retention would
+                        // prune the source's backups. Same address (a restore,
+                        // a host move) keeps what the archive had.
+                        if ('' !== $source['home'] && $source['home'] !== $target['home']) {
+                            $this->putSiteBoundOptions($siteBound);
+                        }
+
                         /**
                          * Fires after the database is imported and the standard
                          * URL/path rewrite has run, while the safety backup is still
@@ -347,6 +360,7 @@ final class Importer
                         wp_cache_flush();
                         $reader->close();
                         if (! $restored) {
+                            $rollback = $this->keepForRecovery($rollback);
                             $log('The rollback did not complete. The previous database is in ' . $rollback);
 
                             throw new \RuntimeException(sprintf(
@@ -386,6 +400,7 @@ final class Importer
 
             // The database is the archive's now; the cache still holds the old one.
             wp_cache_flush();
+            $replacedDbDump = $this->keepForRecovery($replacedDbDump);
 
             // The database is already the archive's and the files got only as
             // far as the read did. Rolling the database back on its own would
@@ -461,6 +476,61 @@ final class Importer
         $log('Safety backup of the current database created.');
 
         return $path;
+    }
+
+    /**
+     * This site's own backup schedule and off-site settings, as raw rows.
+     *
+     * @return array<string, array{value:string, autoload:string}|null> null = the site has no such option
+     */
+    private function siteBoundOptions(): array
+    {
+        /**
+         * Options that describe where and when THIS site backs up, kept by a
+         * restore that lands on a different address.
+         *
+         * @param string[] $names
+         */
+        $names = array_values(array_unique(array_map('strval', (array) apply_filters('migrator/site_bound_options', ['migrator_schedule', 'migrator_offsite']))));
+        $out   = array_fill_keys($names, null);
+        foreach ($names as $name) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+            $row = $this->db->get_row($this->db->prepare('SELECT option_value, autoload FROM %i WHERE option_name = %s', $this->db->options, $name), ARRAY_A);
+            if (is_array($row)) {
+                $out[$name] = ['value' => (string) $row['option_value'], 'autoload' => (string) $row['autoload']];
+            }
+        }
+
+        return $out;
+    }
+
+    /** @param array<string, array{value:string, autoload:string}|null> $rows */
+    private function putSiteBoundOptions(array $rows): void
+    {
+        foreach ($rows as $name => $row) {
+            $this->db->delete($this->db->options, ['option_name' => $name]);
+            if (null !== $row) {
+                $this->db->insert($this->db->options, ['option_name' => $name, 'option_value' => $row['value'], 'autoload' => $row['autoload']]);
+            }
+        }
+
+        // The cron option came from the archive, so its events are the
+        // source's. Align them with the schedule just put back.
+        wp_cache_flush();
+        Scheduler::reschedule(Schedule::load());
+    }
+
+    /**
+     * Move a rollback dump the user has been told to restore by hand out of
+     * the rollback-*.sql pattern, so Workspace::sweep() does not delete the
+     * only copy of the previous database a day later. Returns the new path,
+     * or the old one when the move fails.
+     */
+    private function keepForRecovery(string $path): string
+    {
+        $kept = dirname($path) . '/previous-database-' . substr(basename($path), strlen('rollback-'));
+
+        return (is_file($path) && rename($path, $kept)) ? $kept : $path;
     }
 
     /**
@@ -673,6 +743,16 @@ final class Importer
         foreach ($this->schemelessPairs($from, $to) as $old => $new) {
             $from[] = $old;
             $to[]   = $new;
+        }
+
+        // Page builders store links URL-encoded ("url:https%3A%2F%2Fold.example"
+        // in a WPBakery shortcode). No plain pair matches those bytes.
+        foreach (['home', 'siteurl'] as $key) {
+            $old = rawurlencode($source[$key]);
+            if ('' !== $source[$key] && $source[$key] !== $target[$key] && ! in_array($old, $from, true)) {
+                $from[] = $old;
+                $to[]   = rawurlencode($target[$key]);
+            }
         }
 
         return [$from, $to];

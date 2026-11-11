@@ -44,6 +44,14 @@ class wpdb // phpcs:ignore
 
     public int $batches = 0;
 
+    /** Fail the SELECT batch with this number (1-based), as a statement timeout would. */
+    public ?int $failBatch = null;
+
+    public string $last_error = '';
+
+    /** The table was dropped after the backup listed it. */
+    public bool $dropped = false;
+
     /** @var string[] */
     public array $queries = [];
 
@@ -125,6 +133,13 @@ class wpdb // phpcs:ignore
         $rows   = array_slice($rows, $offset, $limit);
 
         $this->batches++;
+        $this->last_error = '';
+        if ($this->batches === $this->failBatch) {
+            // Real wpdb returns an empty array and sets last_error on a failed SELECT.
+            $this->last_error = 'Query execution was interrupted, maximum statement execution time exceeded';
+
+            return [];
+        }
         if (null !== $this->deleteAfterBatch && 1 === $this->batches) {
             unset($this->rows[(int) $this->deleteAfterBatch]);
         }
@@ -141,6 +156,12 @@ class wpdb // phpcs:ignore
             return ['Value' => '1048576'];
         }
         if (str_starts_with($sql, 'SHOW CREATE TABLE')) {
+            if ($this->dropped) {
+                $this->last_error = "Table 'wp.wp_thing' doesn't exist";
+
+                return null;
+            }
+
             return [0 => 'wp_thing', 1 => 'CREATE TABLE `wp_thing` (`id` int)'];
         }
 
@@ -280,6 +301,23 @@ ok('the dump throws rather than returning a short table', str_contains($thrown, 
 $db  = new wpdb(table([1, 2, 3, 4, 5, 6]), []);
 $sql = dump($db);
 ok('a table with no primary key and no deletes still dumps', str_contains($sql, "'row-6'"));
+
+foreach ([['id'], []] as $keys) {
+    $db            = new wpdb(table([1, 2, 3, 4, 5, 6]), $keys);
+    $db->failBatch = 2;
+    $thrown        = '';
+    try {
+        dump($db);
+    } catch (\RuntimeException $e) {
+        $thrown = $e->getMessage();
+    }
+    ok('a failed SELECT stops the dump instead of ending the table (' . ([] === $keys ? 'offset' : 'primary key') . ' paging)', str_contains($thrown, 'maximum statement execution time'));
+}
+
+$db          = new wpdb(table([1, 2]), ['id']);
+$db->dropped = true;
+$sql         = dump($db);
+ok('a table dropped since the list was read is skipped, not a failure', str_contains($sql, 'DROP TABLE IF EXISTS') && ! str_contains($sql, 'CREATE TABLE') && ! str_contains($sql, 'INSERT'));
 
 echo $failures === 0 ? "\nALL VERIFIED\n" : "\n{$failures} FAILED\n";
 exit($failures === 0 ? 0 : 1);

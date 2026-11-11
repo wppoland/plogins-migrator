@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.11.0
+Stable tag: 1.11.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -243,6 +243,14 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 == Changelog ==
 
+= 1.11.1 =
+* Fixed: a database read that failed during a backup (a query timeout, a lock wait) was taken as the end of the table, so the backup could restore that table empty. The backup now stops with the error instead.
+* Fixed: a folder deleted or unreadable during a backup (a cache being purged), or a table deleted during it, no longer ends the backup; it is skipped.
+* Fixed: when a restore fails and Migrator names the file holding the previous database, that file is now kept until you delete it. Before, the daily workspace cleanup removed it after a day.
+* Fixed: restoring a backup onto a different address (a staging copy, a clone) kept the source's backup schedule and off-site storage, so the copy uploaded into the source's folder and its retention could delete the source's backups. The copy now keeps its own settings. Its own scheduled backups keep running too. Restores onto the same address are unchanged.
+* Fixed: links stored URL-encoded (page builders such as WPBakery) are now rewritten to the new address.
+* Fixed: a scheduled backup the server killed (time or memory limit) is now reported by email on the next run, when failure emails are on.
+
 = 1.11.0 =
 * Changed: on a site that sets DISALLOW_FILE_MODS, a restore from wp-admin brings back only the database and uploads. Plugins, themes and other code files are left as they are, the same lock WordPress applies to installing and updating them, and the restore screen says so. WP-CLI restores everything as before.
 
@@ -463,6 +471,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.11.1 =
+Backup and restore fixes: failed table reads stop the backup, clones keep their own schedule and off-site storage, URL-encoded links are rewritten.
 
 = 1.11.0 =
 Sites that set DISALLOW_FILE_MODS: restores from wp-admin now skip plugins, themes and other code files. Use WP-CLI to restore those.

@@ -49,6 +49,7 @@ $dump = "SET FOREIGN_KEY_CHECKS=0;\n"
     . "DROP TABLE IF EXISTS {$safe};\n"
     . "CREATE TABLE {$safe} (`id` int(11) NOT NULL AUTO_INCREMENT, `val` text, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n"
     . "INSERT INTO {$safe} (`id`, `val`) VALUES (1, '" . esc_sql($source) . "/wp-content/uploads/x.png');\n"
+    . "INSERT INTO {$safe} (`id`, `val`) VALUES (2, '[vc_btn link=\"url:" . esc_sql(rawurlencode($source . '/contact/')) . "|title:Contact\"]');\n"
     . "SET FOREIGN_KEY_CHECKS=1;\n";
 
 $manifest = [
@@ -77,6 +78,13 @@ $value = (string) $wpdb->get_var("SELECT val FROM {$safe} WHERE id = 1");
 $check(
     'the source URL is rewritten exactly once (got: ' . $value . ')',
     $value === $home . '/wp-content/uploads/x.png'
+);
+
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+$encoded = (string) $wpdb->get_var("SELECT val FROM {$safe} WHERE id = 2");
+$check(
+    'a URL-encoded link is rewritten too (got: ' . $encoded . ')',
+    str_contains($encoded, 'url:' . rawurlencode($home . '/contact/') . '|')
 );
 
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery

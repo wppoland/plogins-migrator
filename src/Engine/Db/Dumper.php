@@ -348,6 +348,12 @@ final class Dumper
 
             // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
             $create = $this->db->get_row("SHOW CREATE TABLE {$safe}", ARRAY_N);
+            // A table dropped since the list was read (a plugin's temporary
+            // table) has nothing to back up; the DROP above is all it needs.
+            if (str_contains((string) $this->db->last_error, "doesn't exist")) {
+                return null;
+            }
+            $this->failOnQueryError($safe);
             if (is_array($create) && isset($create[1])) {
                 $createSql = (string) $create[1];
                 if (null !== $outputTable) {
@@ -414,6 +420,7 @@ final class Dumper
 
             // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
             $rows = $this->db->get_results($this->db->prepare($sql, $args), ARRAY_A);
+            $this->failOnQueryError($safe);
 
             if (! is_array($rows) || [] === $rows) {
                 $done = true;
@@ -505,6 +512,7 @@ final class Dumper
                 $this->db->prepare("SELECT * FROM {$safe}{$filter} LIMIT %d OFFSET %d", $this->batchSize, $offset),
                 ARRAY_A,
             );
+            $this->failOnQueryError($safe);
 
             if (! is_array($rows) || [] === $rows) {
                 $done = true;
@@ -587,6 +595,23 @@ final class Dumper
     private function decodeKey(array $key): array
     {
         return array_values(array_map(static fn ($v): string => (string) base64_decode((string) $v, true), $key));
+    }
+
+    /**
+     * wpdb answers a failed SELECT (a statement timeout, a lock wait) with an
+     * empty result, which would otherwise read as the end of the table and
+     * leave a backup that restores the table empty. Stop the backup instead.
+     */
+    private function failOnQueryError(string $table): void
+    {
+        $error = isset($this->db->last_error) ? (string) $this->db->last_error : '';
+        if ('' !== $error) {
+            throw new \RuntimeException(esc_html(sprintf(
+                'Migrator: reading %s failed (%s). The backup was stopped so it does not hold an incomplete table.',
+                $table,
+                $error
+            )));
+        }
     }
 
     private function countRows(string $safe, string $filter): int
