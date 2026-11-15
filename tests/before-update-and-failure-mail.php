@@ -153,6 +153,14 @@ namespace {
     $scheduler->runScheduledBackup();
     ok('a run that may still be going is not reported', [] === $GLOBALS['mails']);
 
+    // On LiteSpeed the report also carries the server's documented fix.
+    $killed = new \ReflectionMethod(Scheduler::class, 'killedRunMessage');
+    $killed->setAccessible(true);
+    $plain = (string) $killed->invoke(null, time() - HOUR_IN_SECONDS, false);
+    $ls    = (string) $killed->invoke(null, time() - HOUR_IN_SECONDS, true);
+    ok('off LiteSpeed the report has no LiteSpeed advice', ! str_contains($plain, 'LiteSpeed'));
+    ok('on LiteSpeed the report carries the wp-cron.php noabort rule', str_contains($ls, 'never finished') && str_contains($ls, "RewriteRule wp-cron\\.php - [E=noabort:1, E=noconntimeout:1]") && str_contains($ls, '<IfModule Litespeed>'));
+
     echo 0 === $failures ? "\nALL PASSED\n" : "\n{$failures} FAILED\n";
     exit(0 === $failures ? 0 : 1);
 }

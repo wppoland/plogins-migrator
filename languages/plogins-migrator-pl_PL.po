@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: Plugins - Migrator &#8211; Site Migration and Backup - "
 "Stable (latest release)\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-11-11T20:20:14+00:00\n"
+"POT-Creation-Date: 2026-11-15T08:45:18+00:00\n"
 "PO-Revision-Date: 2026-07-21 05:32:32+0000\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
@@ -395,21 +395,32 @@ msgid "You are not allowed to do this."
 msgstr "Nie masz uprawnień do wykonania tej czynności."
 
 #. translators: %s: date and time the backup started
-#: src/Backup/Scheduler.php:336
+#: src/Backup/Scheduler.php:357
 #, php-format
 msgid ""
 "the backup started on %s never finished. The server most likely stopped it "
 "at its time or memory limit."
 msgstr ""
 
+#. translators: %s: the .htaccess lines to add
+#: src/Backup/Scheduler.php:364
+#, php-format
+msgid ""
+"This server runs LiteSpeed, which stops PHP when the request that started it "
+"disconnects. To let scheduled backups finish, add these lines at the very "
+"top of the site's .htaccess file, or ask your host to:\n"
+"\n"
+"%s"
+msgstr ""
+
 #. translators: %s: site name.
-#: src/Backup/Scheduler.php:359
+#: src/Backup/Scheduler.php:384
 #, php-format
 msgid "[%s] Automatic backup failed"
 msgstr ""
 
 #. translators: 1: site address, 2: error message, 3: link to the Scheduled Backups screen.
-#: src/Backup/Scheduler.php:362
+#: src/Backup/Scheduler.php:387
 #, php-format
 msgid ""
 "An automatic backup of %1$s failed.\n"
@@ -419,63 +430,63 @@ msgid ""
 "Details: %3$s"
 msgstr ""
 
-#: src/Backup/Scheduler.php:364
+#: src/Backup/Scheduler.php:389
 msgid "unknown error"
 msgstr ""
 
-#: src/Backup/Scheduler.php:411 templates/admin-page.php:53
+#: src/Backup/Scheduler.php:436 templates/admin-page.php:53
 msgid "Media library (uploads)"
 msgstr "Biblioteka multimediów (przesłane pliki)"
 
-#: src/Backup/Scheduler.php:412 templates/admin-page.php:54
+#: src/Backup/Scheduler.php:437 templates/admin-page.php:54
 msgid "All themes"
 msgstr "Wszystkie motywy"
 
-#: src/Backup/Scheduler.php:413 templates/admin-page.php:55
+#: src/Backup/Scheduler.php:438 templates/admin-page.php:55
 msgid "Inactive themes (keep active only)"
 msgstr "Nieaktywne motywy (tylko pozostaw aktywne)"
 
-#: src/Backup/Scheduler.php:414 templates/admin-page.php:56
+#: src/Backup/Scheduler.php:439 templates/admin-page.php:56
 msgid "All plugins"
 msgstr "Wszystkie wtyczki"
 
-#: src/Backup/Scheduler.php:415 templates/admin-page.php:57
+#: src/Backup/Scheduler.php:440 templates/admin-page.php:57
 msgid "Inactive plugins (keep active only)"
 msgstr "Nieaktywne wtyczki (tylko pozostaw aktywne)"
 
-#: src/Backup/Scheduler.php:416 templates/admin-page.php:58
+#: src/Backup/Scheduler.php:441 templates/admin-page.php:58
 msgid "Must-use plugins"
 msgstr "Wtyczki must-use"
 
-#: src/Backup/Scheduler.php:417 templates/admin-page.php:59
+#: src/Backup/Scheduler.php:442 templates/admin-page.php:59
 msgid "Cache files"
 msgstr "Pliki pamięci podręcznej"
 
-#: src/Backup/Scheduler.php:418 templates/admin-page.php:45
+#: src/Backup/Scheduler.php:443 templates/admin-page.php:45
 msgid "Spam comments"
 msgstr "Komentarze spamowe"
 
-#: src/Backup/Scheduler.php:419 templates/admin-page.php:46
+#: src/Backup/Scheduler.php:444 templates/admin-page.php:46
 msgid "Post revisions"
 msgstr "Wersje wpisów"
 
-#: src/Backup/Scheduler.php:420 templates/admin-page.php:47
+#: src/Backup/Scheduler.php:445 templates/admin-page.php:47
 msgid "Transients"
 msgstr "Transienty"
 
-#: src/Backup/Scheduler.php:421 templates/admin-page.php:48
+#: src/Backup/Scheduler.php:446 templates/admin-page.php:48
 msgid "WooCommerce sessions"
 msgstr "Sesje WooCommerce"
 
-#: src/Backup/Scheduler.php:422 templates/admin-page.php:49
+#: src/Backup/Scheduler.php:447 templates/admin-page.php:49
 msgid "Action Scheduler tables"
 msgstr "Tabele harmonogramu akcji"
 
-#: src/Backup/Scheduler.php:423 templates/admin-page.php:50
+#: src/Backup/Scheduler.php:448 templates/admin-page.php:50
 msgid "Database (files-only backup)"
 msgstr "Baza danych (kopia zapasowa samych plików)"
 
-#: src/Backup/Scheduler.php:424
+#: src/Backup/Scheduler.php:449
 msgid "Files (database-only backup)"
 msgstr ""
 
