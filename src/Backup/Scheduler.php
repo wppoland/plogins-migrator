@@ -331,11 +331,8 @@ final class Scheduler implements HasHooks
         $previous = get_option(BackupRunner::STATUS_OPTION, []);
         if (is_array($previous) && ! empty($previous['started']) && (int) ($previous['time'] ?? 0) < time() - 3 * HOUR_IN_SECONDS
             && ($schedule->notifyFailure || $this->addonMailsFailures())) {
-            $this->mailFailure($schedule, ['message' => sprintf(
-                /* translators: %s: date and time the backup started */
-                __('the backup started on %s never finished. The server most likely stopped it at its time or memory limit.', 'plogins-migrator'),
-                wp_date((string) get_option('date_format') . ' ' . (string) get_option('time_format'), (int) $previous['time']),
-            )]);
+            $message = self::killedRunMessage((int) $previous['time'], 'litespeed' === PHP_SAPI);
+            $this->mailFailure($schedule, ['message' => $message]);
         }
 
         $status = $this->runner->run($schedule, $allowStrategies);
@@ -346,6 +343,34 @@ final class Scheduler implements HasHooks
 
         return $status;
     }
+
+    /**
+     * The failure text for a run that never finished. On LiteSpeed it adds the
+     * server's documented fix: LiteSpeed kills a PHP process as soon as the
+     * request that started it disconnects, and WordPress's cron request
+     * disconnects at once.
+     */
+    private static function killedRunMessage(int $startedAt, bool $liteSpeed): string
+    {
+        $message = sprintf(
+            /* translators: %s: date and time the backup started */
+            __('the backup started on %s never finished. The server most likely stopped it at its time or memory limit.', 'plogins-migrator'),
+            wp_date((string) get_option('date_format') . ' ' . (string) get_option('time_format'), $startedAt),
+        );
+
+        if ($liteSpeed) {
+            $message .= "\n\n" . sprintf(
+                /* translators: %s: the .htaccess lines to add */
+                __("This server runs LiteSpeed, which stops PHP when the request that started it disconnects. To let scheduled backups finish, add these lines at the very top of the site's .htaccess file, or ask your host to:\n\n%s", 'plogins-migrator'),
+                self::LITESPEED_NOABORT
+            );
+        }
+
+        return $message;
+    }
+
+    /** LiteSpeed's documented rule ("PHP Without Timeout"), scoped to wp-cron.php as its docs advise. */
+    public const LITESPEED_NOABORT = "<IfModule Litespeed>\nRewriteEngine On\nRewriteRule wp-cron\\.php - [E=noabort:1, E=noconntimeout:1]\n</IfModule>";
 
     /**
      * @param array<string, mixed> $status
