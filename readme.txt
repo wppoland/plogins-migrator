@@ -244,7 +244,7 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 == Changelog ==
 
 = 1.11.2 =
-* Added: on a LiteSpeed server, the email about a scheduled backup that never finished now includes the fix LiteSpeed documents. LiteSpeed stops PHP as soon as the request that started it disconnects, which WordPress's own cron request does at once; the email gives the .htaccess lines that exempt wp-cron.php.
+* Added: on a LiteSpeed server, the email about a scheduled backup that never finished now includes LiteSpeed's documented wp-cron rule. LiteSpeed stops PHP as soon as the request that started it disconnects, which WordPress's own cron request does at once; the email gives the .htaccess lines that exempt wp-cron.php.
 
 = 1.11.1 =
 * Fixed: a database read that failed during a backup (a query timeout, a lock wait) was taken as the end of the table, so the backup could restore that table empty. The backup now stops with the error instead.
