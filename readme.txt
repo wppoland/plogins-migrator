@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.11.5
+Stable tag: 1.11.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -204,6 +204,8 @@ If you switch on Pull and Push, a site holding your connection token or an enrol
 
 Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push. On the new one, run `wp migrator pull https://old-site.example` with WP-CLI. The first run prints a key: paste it on the old site's Pull and Push screen and run the command again. A server without the OpenSSL extension cannot check keys, so there you set a connection token and add `--secret=<token>`. The new site keeps its own WordPress core, wp-config.php and table prefix (the prefixes must match), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
 
+To bring over only new uploads, for example at the switch-over after plugins and themes were updated on the new site, run `wp migrator pull https://old-site.example --skip-database --only=uploads`. `--only` takes any of uploads, plugins, themes, mu-plugins and languages, comma separated, and `--exclude=uploads/cache` leaves a path out. Files outside the chosen folders are neither overwritten nor removed.
+
 = Can I send changes back to the original site? =
 
 Files, yes: `wp migrator push https://old-site.example` sends what changed since the pull. The old site must grant push access to your key on its Pull and Push screen, and its server needs a writable folder beside the web root on the same disk, where the upload is staged before it is swapped in. The database is pushed only to hosts that serve the transfer API on a standalone route; `wp migrator remote db-push --help` explains it. While a push applies its changes the old site shows a maintenance page; if the push stops part way, run it again to finish.
@@ -242,6 +244,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.11.6 =
+* Added: `wp migrator pull` takes `--only` (uploads, plugins, themes, mu-plugins, languages) and `--exclude` (paths under wp-content). With `--skip-database --only=uploads` only new uploads come over, and plugins and themes updated on this site keep their versions.
 
 = 1.11.5 =
 * Fixed: the Pull and Push keys table showed a long dash when a key had no added date; it now shows a plain hyphen, and the bundled server carries no long dashes.

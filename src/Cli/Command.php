@@ -12,6 +12,7 @@ use Migrator\Engine\Import\Importer;
 use Migrator\Engine\Transform\SerializedReplacer;
 use Migrator\Reprint\Client;
 use Migrator\Reprint\EnrolKey;
+use Migrator\Reprint\Mirror;
 use Migrator\Reprint\Pull;
 use Migrator\Reprint\Push;
 use Migrator\Support\Access;
@@ -295,6 +296,16 @@ final class Command
      * [--skip-database]
      * : Pull wp-content only.
      *
+     * [--only=<folders>]
+     * : Copy only these wp-content folders into this site, comma separated:
+     * uploads, plugins, themes, mu-plugins, languages. Everything else here is
+     * neither overwritten nor removed. The database is still replaced unless
+     * you add --skip-database.
+     *
+     * [--exclude=<paths>]
+     * : Never copy these paths, relative to wp-content, comma separated
+     * (e.g. uploads/cache).
+     *
      * [--yes]
      * : Do not ask for confirmation.
      *
@@ -302,6 +313,9 @@ final class Command
      *
      *     wp migrator pull https://example.com
      *     wp migrator pull https://example.com --skip-database
+     *
+     *     # New uploads only: plugins and themes updated here stay as they are.
+     *     wp migrator pull https://example.com --skip-database --only=uploads
      *
      * @param array<int, string>    $args       Positional args: the source URL.
      * @param array<string, string> $assoc_args Flags.
@@ -315,6 +329,18 @@ final class Command
 
         $withFiles    = ! isset($assoc_args['skip-files']);
         $withDatabase = ! isset($assoc_args['skip-database']);
+        if (! $withFiles && (isset($assoc_args['only']) || isset($assoc_args['exclude']))) {
+            \WP_CLI::error('--only and --exclude choose files, so they cannot be combined with --skip-files.');
+        }
+        try {
+            $only    = Mirror::roots((string) ($assoc_args['only'] ?? ''));
+            $exclude = Mirror::paths((string) ($assoc_args['exclude'] ?? ''));
+        } catch (\InvalidArgumentException $e) {
+            \WP_CLI::error($e->getMessage());
+        }
+        if (isset($assoc_args['only']) && [] === $only) {
+            \WP_CLI::error('Give --only at least one folder: ' . implode(', ', Mirror::ROOTS) . '.');
+        }
         if ($withDatabase) {
             \WP_CLI::confirm('This replaces the database of this site with the one from ' . $url . '. Continue?', $assoc_args);
         }
@@ -325,7 +351,7 @@ final class Command
         });
 
         try {
-            $result = $pull->run($url, $this->authFlags($assoc_args), $withFiles, $withDatabase, isset($assoc_args['include-host-plugins']));
+            $result = $pull->run($url, $this->authFlags($assoc_args), $withFiles, $withDatabase, isset($assoc_args['include-host-plugins']), $only, $exclude);
         } catch (EnrolKey $key) {
             \WP_CLI::log('');
             \WP_CLI::log('This site made a key to sign its requests to ' . $url . '. On that site open');
