@@ -110,7 +110,7 @@ final class HMACServer {
      *
      * The X-Auth-Content-Hash header must be the literal string
      * UNSIGNED-PAYLOAD. Because of that, headers signed for this check can
-     * never pass the body-signed checks and vice versa — the two signatures
+     * never pass the body-signed checks and vice versa - the two signatures
      * are computed over strings that can never be equal. Each route decides
      * which check it calls, so a client cannot make a pull endpoint accept
      * this body-less check.
@@ -166,7 +166,7 @@ final class HMACServer {
     }
 
     /**
-     * Checks header presence, timestamp tolerance, and nonce length —
+     * Checks header presence, timestamp tolerance, and nonce length -
      * everything except the signature. Body-signed and envelope-signed
      * requests compute their signatures over different strings, so each
      * caller does its own signature check after this passes.

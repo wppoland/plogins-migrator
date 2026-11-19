@@ -1,6 +1,6 @@
 # Reprint Server
 
-Composer package for the Reprint streaming export engine — the HTTP endpoint
+Composer package for the Reprint streaming export engine - the HTTP endpoint
 installed on the WordPress host that Reprint clients pull from and push to.
 
 This package was previously published as `wp-php-toolkit/reprint-exporter`.

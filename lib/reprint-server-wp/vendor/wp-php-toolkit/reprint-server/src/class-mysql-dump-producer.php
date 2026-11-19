@@ -9,7 +9,7 @@ require_once __DIR__ . "/class-database-rows-reader.php";
  *
  * This class exists because shared hosting environments kill long-running PHP processes.
  * A traditional mysqldump would time out on large databases. Instead, this producer
- * yields one SQL fragment at a time — a CREATE TABLE, a batched INSERT, or an UPDATE —
+ * yields one SQL fragment at a time - a CREATE TABLE, a batched INSERT, or an UPDATE -
  * and exposes a JSON cursor after each emitted fragment. The caller can serialize that
  * cursor, end the HTTP request, and resume at the same SQL-fragment boundary in a later
  * request. The cursor records emitted SQL progress instead of fetched-but-unemitted rows.
@@ -35,7 +35,7 @@ require_once __DIR__ . "/class-database-rows-reader.php";
  * All values are base64-encoded in the SQL output (via FROM_BASE64('...')). This avoids
  * charset-related corruption: MySQL interprets string literals according to the
  * connection charset, but base64 is pure ASCII and the decoded bytes are assigned
- * directly to the column's declared charset. JSON columns are a special case — MySQL
+ * directly to the column's declared charset. JSON columns are a special case - MySQL
  * rejects binary charset input for JSON, so those get an extra CONVERT(... USING utf8mb4).
  *
  * For keyed rows, eligible large text and binary columns can be inserted as empty
@@ -194,7 +194,7 @@ class MySQLDumpProducer
     private $current_insert_has_nonzero_srid_context = false;
 
     /**
-     * @param object $db Database connection — either a real PDO (MySQL) or a
+     * @param object $db Database connection - either a real PDO (MySQL) or a
      *        PDO-compatible adapter (SQLite sites). No type hint because the
      *        adapter isn't a PDO subclass and PHP 7.4 lacks union types.
      * @param array $options {
@@ -357,7 +357,7 @@ class MySQLDumpProducer
                     if ($this->emit_insert_header()) {
                         return true;
                     }
-                    // Empty table — emit_insert_header set state to NEXT_TABLE
+                    // Empty table - emit_insert_header set state to NEXT_TABLE
                     break;
 
                 case self::STATE_EMIT_ROW:
@@ -394,7 +394,7 @@ class MySQLDumpProducer
      * Emits "INSERT INTO ... VALUES (first_row)" as a single fragment.
      *
      * The first row is always bundled with the INSERT header to prevent
-     * emitting a dangling "INSERT INTO ... VALUES" with no rows — which
+     * emitting a dangling "INSERT INTO ... VALUES" with no rows - which
      * would happen if the caller saves the cursor right after the header
      * and the data changes before the next request.
      */
@@ -787,13 +787,13 @@ class MySQLDumpProducer
      *
      * From the MySQL 8.0 Reference Manual (§5.1.11 "Server SQL Modes"):
      *
-     *   NO_ZERO_DATE — [...] The server requires dates to have nonzero month
+     *   NO_ZERO_DATE - [...] The server requires dates to have nonzero month
      *   and day values. If NO_ZERO_DATE is enabled and strict mode is enabled,
      *   '0000-00-00' is not permitted and inserts produce an error. [...]
      *   If NO_ZERO_DATE is disabled, '0000-00-00' is permitted and inserts
      *   produce no warning.
      *
-     *   NO_ZERO_IN_DATE — [...] Affects whether the server permits dates in
+     *   NO_ZERO_IN_DATE - [...] Affects whether the server permits dates in
      *   which the year part is nonzero but the month or day part is 0.
      *   [...] If this mode is disabled, dates with zero parts are permitted
      *   and inserts produce no warning.
@@ -872,7 +872,7 @@ class MySQLDumpProducer
      *
      * The caller can pass this string back as the "cursor" option to a new
      * MySQLDumpProducer to resume at the current SQL-fragment boundary. The
-     * JSON is NOT base64-encoded — that's the HTTP layer's concern (export.php).
+     * JSON is NOT base64-encoded - that's the HTTP layer's concern (export.php).
      *
      * String values in primary key checkpoints are wrapped in
      * {"__binary__": "<base64>"} markers because raw database bytes can't
@@ -1249,8 +1249,8 @@ class MySQLDumpProducer
     /**
      * Formats a single column value as a SQL literal.
      *
-     * Numeric types are emitted as bare literals. Everything else — strings,
-     * binary, dates, enums — goes through FROM_BASE64(). JSON is special:
+     * Numeric types are emitted as bare literals. Everything else - strings,
+     * binary, dates, enums - goes through FROM_BASE64(). JSON is special:
      * MySQL rejects binary-charset input for JSON columns, so we wrap with
      * CONVERT(... USING utf8mb4) to decode the base64 into a utf8mb4 string.
      * JSON can only be encoded as UTF-8 or UTF-16, and it's typically UTF-8.

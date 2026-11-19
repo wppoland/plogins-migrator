@@ -45,7 +45,7 @@ final class DatabasePush {
             throw new InvalidArgumentException('Database push requires a 32-character hexadecimal push session ID.');
         }
         if (!preg_match('/^[a-zA-Z0-9_]+$/D', $table_prefix) || strlen($table_prefix) > 32 || ( strpos('__reprint_db_', $table_prefix) === 0 || strpos($table_prefix, '__reprint_db_') === 0 )) {
-            throw new InvalidArgumentException('Database push requires 1–32 letters, digits, or underscores in its table prefix, without overlap with the reserved __reprint_db_ prefix.');
+            throw new InvalidArgumentException('Database push requires 1-32 letters, digits, or underscores in its table prefix, without overlap with the reserved __reprint_db_ prefix.');
         }
         $this->database = $database;
         $this->table_prefix = $table_prefix;
@@ -398,7 +398,7 @@ final class DatabasePush {
     /** Reject names outside the database push identifier format without returning SQL. */
     public static function validate_identifier(string $name): void {
         if (!preg_match('/^[a-zA-Z0-9_]{1,64}$/D', $name)) {
-            throw new InvalidArgumentException('Database push SQL identifier must contain 1–64 letters, digits, or underscores: ' . $name . '.');
+            throw new InvalidArgumentException('Database push SQL identifier must contain 1-64 letters, digits, or underscores: ' . $name . '.');
         }
     }
 
