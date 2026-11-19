@@ -2,6 +2,8 @@
 
 namespace WordPress\Reprint\Server\Plugin;
 
+defined('ABSPATH') || exit;
+
 /** Bundled WordPress administrator adapter for Pull and Push access. */
 
 class SettingsPage {

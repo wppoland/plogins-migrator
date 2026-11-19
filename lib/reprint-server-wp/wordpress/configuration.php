@@ -2,6 +2,8 @@
 
 namespace WordPress\Reprint\Server\Plugin;
 
+defined('ABSPATH') || exit;
+
 /**
  * UI-independent WordPress configuration integration for Pull and Push access.
  *
