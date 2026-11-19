@@ -43,3 +43,7 @@ languages/*.mo
 languages/*.json
 languages/*.l10n.php
 languages/*.po~
+
+# The bundled server's own uninstall.php is never run (it is not a registered
+# plugin); Migrator's uninstall.php drops its tables and options.
+/lib/reprint-server-wp/uninstall.php

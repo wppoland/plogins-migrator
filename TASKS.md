@@ -3,7 +3,7 @@
 Decided with the user 2026-10-04: Reprint via its packages, all of it in FREE (pull, push, delta), fix the Reprint issues that apply to us, ship the useful open PRs.
 
 - [x] Packagist reprint-client 0.10.13 fatals without the sqlite submodule: vendor from git tag v0.10.13 instead
-- [x] scripts/vendor-reprint.sh: tag + submodule + patches into lib/vendor/reprint (Plugin Check skips vendor folders; server strings moved to our text domain)
+- [x] scripts/vendor-reprint.sh: tag + submodule + patches into lib/vendor/reprint (client) and lib/reprint-server-wp (server: outside vendor so GlotPress imports its strings, moved to our text domain)
 - [x] 23 open PRs: 15 ported (849 845 771 751 284 817 818 837 663 586 854 295 853 801 562); skipped 821 (in 817), 850 (in 853), 570 (rewriter redesigned in tag), 380 + 394 (old paths, huge conflicts), 460 (overlaps 837, conflicts with 849), 683 + 651 (drafts against removed behaviour)
 - [~] Triage 31 open issues: (a) fixed by a PR, (b) fixed in our wrapper, (c) moot for us, (d) upstream only
   - (b) done: #24 password via MYSQL_PASSWORD env, #25 disk space before first pull, #114 server-bound drop-ins skipped, #789 host platform plugins excluded by default, #276 files push shipped

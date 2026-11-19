@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.11.2
+Stable tag: 1.11.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -243,6 +243,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 == Changelog ==
 
+= 1.11.3 =
+* Fixed: the Pull and Push access screen and its messages could not be translated. Their strings sat in a folder translate.wordpress.org does not read, so they never reached the translators; they now do, and translated sites will show them in their language once the translations land.
+
 = 1.11.2 =
 * Added: on a LiteSpeed server, the email about a scheduled backup that never finished now includes LiteSpeed's documented wp-cron rule. LiteSpeed stops PHP as soon as the request that started it disconnects, which WordPress's own cron request does at once; the email gives the .htaccess lines that exempt wp-cron.php.
 
@@ -474,6 +477,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.11.3 =
+The Pull and Push access screen can now be translated.
 
 = 1.11.2 =
 LiteSpeed servers: the failed-backup email now includes the .htaccess lines that let scheduled backups finish.

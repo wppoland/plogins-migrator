@@ -2,6 +2,8 @@
 
 namespace WordPress\Reprint\Server\Plugin;
 
+defined('ABSPATH') || exit;
+
 use WordPress\Reprint\Server\MultisiteDatabaseSelection;
 
 // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- These source validation errors are JSON protocol messages, not HTML.
