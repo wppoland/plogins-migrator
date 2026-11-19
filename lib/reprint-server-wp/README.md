@@ -1,4 +1,4 @@
-# Reprint Server — WordPress Plugin
+# Reprint Server - WordPress Plugin
 
 When working from this monorepo checkout, run `composer install` in
 `reprint-server-wp/` to populate the bundled `vendor/` directory used by the
@@ -15,7 +15,7 @@ Many shared hosts (SiteGround, GoDaddy, etc.) block direct PHP execution inside 
 
 ### How it works
 
-The plugin file (`index.php`) is `include`'d by WordPress during its plugin loading loop — this happens *before* the `plugins_loaded` hook fires, making it the earliest interception point available to a regular plugin.
+The plugin file (`index.php`) is `include`'d by WordPress during its plugin loading loop - this happens *before* the `plugins_loaded` hook fires, making it the earliest interception point available to a regular plugin.
 
 When a request arrives at `https://example.com/?reprint-api`, the plugin:
 
@@ -23,7 +23,7 @@ When a request arrives at `https://example.com/?reprint-api`, the plugin:
 2. Reverts WordPress error display settings (`display_errors`, `html_errors`) that `wp_debug_mode()` may have turned on
 3. Clears any output buffering WordPress started
 4. Sets up error handlers, authentication through `RequestAuthenticator`, and runs the export endpoint
-5. Calls `exit` — WordPress never finishes booting
+5. Calls `exit` - WordPress never finishes booting
 
 This gives us a clean execution environment while using WordPress's front controller as the entry point.
 
@@ -45,20 +45,20 @@ add_filter('reprint_server_api_options', static function (array $options): array
 
 The supported options are:
 
-- `authenticate` — a callback that authenticates every non-preflight API
+- `authenticate` - a callback that authenticates every non-preflight API
   request instead of the built-in `RequestAuthenticator`. For a push request, this
   callback must authenticate from request metadata without reading or
   buffering `php://input`; the endpoint streams that body after authentication.
-- `docroot` — the document root for push. It must resolve to an
+- `docroot` - the document root for push. It must resolve to an
   existing directory and defaults to `$_SERVER['DOCUMENT_ROOT']`.
-- `reprint_directory` — the private push storage directory outside `docroot`.
+- `reprint_directory` - the private push storage directory outside `docroot`.
   It defaults to a document-root-specific sibling directory.
-- `excluded_paths` — document-root-relative paths that push must preserve. The
+- `excluded_paths` - document-root-relative paths that push must preserve. The
   Reprint Server plugin directory is also preserved automatically when it is
   below `docroot`.
-- `maximum_part_bytes` — the maximum `Content-Length` accepted for one push
+- `maximum_part_bytes` - the maximum `Content-Length` accepted for one push
   upload part. It defaults to 4 MiB.
-- `maximum_commit_entries` — the maximum number of bounded entries processed
+- `maximum_commit_entries` - the maximum number of bounded entries processed
   by one `push_commit` request. It defaults to 256.
 
 ## Authentication
@@ -157,7 +157,7 @@ define('ABSPATH', '/path/to/wordpress/');
 
 require_once '/path/to/reprint-server-wp/lib.php';
 
-// Route however you like — lib.php doesn't check URLs.
+// Route however you like - lib.php doesn't check URLs.
 if ($myRouter->matches('/export')) {
     // Use the default authentication: key signatures on a host with openssl_verify,
     // connection tokens elsewhere. Keys come from public-keys.php when present,
@@ -212,14 +212,14 @@ and the configuration state lists no enrolled keys.
 `lib.php` defines these constants in `WordPress\Reprint\Server\Plugin`
 (using WordPress's `plugin_dir_path`):
 
-- `VERSION` — plugin version string
-- `PLUGIN_DIR` — absolute path to the plugin directory
-- `CONNECTION_TOKEN_FILE` — optional path to a PHP file that overrides the stored connection token
-- `CONNECTION_TOKEN_OPTION` — WordPress site option name used for the stored connection token
-- `PUBLIC_KEYS_FILE` — optional path to a PHP file returning the enrolled public keys; it replaces the option while it exists
-- `PUBLIC_KEYS_OPTION` — WordPress site option name (network option on multisite) holding the enrolled public keys and their push grants
-- `PUSH_AUTHORIZATION_OPTION` — WordPress site option containing the connection-token fingerprint granted personal push access
-- `TIMESTAMP_TOLERANCE` — max request age in seconds (default 300)
+- `VERSION` - plugin version string
+- `PLUGIN_DIR` - absolute path to the plugin directory
+- `CONNECTION_TOKEN_FILE` - optional path to a PHP file that overrides the stored connection token
+- `CONNECTION_TOKEN_OPTION` - WordPress site option name used for the stored connection token
+- `PUBLIC_KEYS_FILE` - optional path to a PHP file returning the enrolled public keys; it replaces the option while it exists
+- `PUBLIC_KEYS_OPTION` - WordPress site option name (network option on multisite) holding the enrolled public keys and their push grants
+- `PUSH_AUTHORIZATION_OPTION` - WordPress site option containing the connection-token fingerprint granted personal push access
+- `TIMESTAMP_TOLERANCE` - max request age in seconds (default 300)
 
 For compatibility, the plugin still accepts `?site-export-api`, applies the
 legacy `site_export_api_options` filter before the canonical filter, migrates
@@ -234,8 +234,8 @@ it: `compat.php` copies `site_export_secret` and
 `site_export_push_authorized_token_fingerprint` into the option names above
 when those do not exist yet, then deletes the legacy options. The copy runs
 while `lib.php` loads, which is early enough for the endpoint to authenticate
-on the first request after the update — that request exits before any hook
-fires — and early enough that the settings page has not yet registered its
+on the first request after the update - that request exits before any hook
+fires - and early enough that the settings page has not yet registered its
 option listeners, so moving the token does not read as a rotation and does not
 revoke push authorization. Once no site carries the legacy options,
 `compat.php` can be deleted outright.

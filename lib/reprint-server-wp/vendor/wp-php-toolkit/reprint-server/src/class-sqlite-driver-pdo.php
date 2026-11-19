@@ -2,7 +2,7 @@
 /**
  * PDO-compatible adapter for the SQLite Database Integration driver.
  *
- * MySQLDumpProducer expects a PDO connection — prepare(), query(), and the
+ * MySQLDumpProducer expects a PDO connection - prepare(), query(), and the
  * statement methods fetch(), fetchAll(), fetchColumn(), execute().
  * On SQLite sites, the plugin's db.php drop-in loads a driver which translates
  * MySQL queries to SQLite. This adapter supplies the PDO operations which that
@@ -239,7 +239,7 @@ class SqliteDriverPDOStatement
     /**
      * Fetches the next row from the result set.
      *
-     * @param int $mode Fetch mode (ignored — always returns associative array).
+     * @param int $mode Fetch mode (ignored - always returns associative array).
      * @return array|false Associative array or false when exhausted.
      */
     public function fetch($mode = PDO::FETCH_ASSOC)

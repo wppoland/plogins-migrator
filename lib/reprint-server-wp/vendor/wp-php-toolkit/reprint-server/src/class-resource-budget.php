@@ -9,7 +9,7 @@ namespace WordPress\Reprint\Server;
 /**
  * Tracks time and memory limits for a single API request.
  *
- * Every export endpoint runs under resource constraints — a maximum
+ * Every export endpoint runs under resource constraints - a maximum
  * execution time and a memory ceiling.  Rather than threading four
  * separate values through every function signature and every
  * should_continue() call, this class bundles them into a single

@@ -1,4 +1,6 @@
 <?php
+
+defined('ABSPATH') || exit;
 /**
  * PHP 5.6 support: release builds downgrade a copy of this PHP 7.2 source and set its requirement to 5.6.20.
  */

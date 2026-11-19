@@ -166,25 +166,25 @@ final class Utils
                 $port = substr($after, 1);
             }
         } elseif (($socket_pos = strpos($db_host, ':/')) !== false) {
-            // "host:/path/to/socket" — check before general colon split
+            // "host:/path/to/socket" - check before general colon split
             // to avoid misinterpreting IPv6 addresses as host:port
             $candidate_socket = substr($db_host, $socket_pos + 1);
             if (file_exists($candidate_socket)) {
                 $host   = substr($db_host, 0, $socket_pos);
                 $socket = $candidate_socket;
             } elseif (substr_count($db_host, ':') === 1) {
-                // Single colon but not a socket — treat as host:port
+                // Single colon but not a socket - treat as host:port
                 [$host, $port] = explode(':', $db_host, 2);
             }
         } elseif (
             self::str_contains($db_host, ':') &&
             substr_count($db_host, ':') === 1
         ) {
-            // Exactly one colon: "host:port" — not IPv6
+            // Exactly one colon: "host:port" - not IPv6
             [$host, $port] = explode(':', $db_host, 2);
         }
         // Otherwise (multiple colons, no socket marker): bare IPv6 like "::1"
-        // — $host stays as the full value.
+        // - $host stays as the full value.
 
         if ($socket !== '') {
             return "mysql:unix_socket={$socket};dbname={$db_name};charset=utf8mb4";
@@ -227,7 +227,7 @@ final class Utils
     /**
      * Throws on json_encode failure instead of returning false.
      *
-     * Do NOT use inside error/shutdown handlers — those need hardcoded fallback strings.
+     * Do NOT use inside error/shutdown handlers - those need hardcoded fallback strings.
      */
     public static function json_encode_or_throw($value, int $flags = 0): string
     {
@@ -649,7 +649,7 @@ final class Utils
      * separator below their root; drive-relative paths such as `D:site` are rejected.
      *
      * Useful anywhere untrusted or remote paths need to be checked before
-     * use — both the exporter (directory config) and the importer (remote
+     * use - both the exporter (directory config) and the importer (remote
      * paths from the server) share this validation.
      *
      * The caller must supply the source format. D:\photos passes in Windows
@@ -883,7 +883,7 @@ final class Utils
     // nothing but PHP.
     //
     // Consumers vendor this package into Composer autoloaders that are not scoped
-    // to one plugin — Jetpack's is the one that bites. It folds every installed
+    // to one plugin - Jetpack's is the one that bites. It folds every installed
     // package's psr-4, classmap and files entries into site-global manifests that
     // arbitrate class and function names, by version, across every plugin on the
     // site. Requiring wp-php-toolkit/filesystem would publish WordPress\Filesystem

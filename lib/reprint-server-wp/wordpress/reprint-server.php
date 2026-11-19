@@ -2,6 +2,8 @@
 
 namespace WordPress\Reprint\Server\Plugin;
 
+defined('ABSPATH') || exit;
+
 /** Bundled WordPress administrator adapter for Pull and Push access. */
 
 class SettingsPage {
@@ -528,7 +530,7 @@ class SettingsPage {
                 ?>
                 <tr>
                     <td><code><?php echo esc_html($entry['key_id']); ?></code></td>
-                    <td><?php echo esc_html($entry['added_at'] > 0 ? gmdate('Y-m-d', $entry['added_at']) : '—'); ?></td>
+                    <td><?php echo esc_html($entry['added_at'] > 0 ? gmdate('Y-m-d', $entry['added_at']) : '-'); ?></td>
                     <td>
                         <form method="post" action="<?php echo esc_url($post_url); ?>" style="display:inline">
                             <input type="hidden" name="action" value="reprint_server_save_key_push_access" />

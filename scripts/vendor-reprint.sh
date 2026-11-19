@@ -6,12 +6,16 @@
 # sqlite-database-integration git submodule, which the Packagist archive does
 # not contain. So we vendor from the git tag, submodule included.
 #
-# It sits under a folder named vendor because it is a third-party library kept
-# as upstream wrote it, and Plugin Check skips vendor folders for that reason.
+# The client and its parser sit under a folder named vendor because they are a
+# third-party library kept as upstream wrote it, and Plugin Check skips vendor
+# folders for that reason. The server does NOT: its admin screen (Pull and Push
+# access) carries strings in our text domain, and translate.wordpress.org skips
+# every path containing vendor, so under vendor those strings never reached
+# GlotPress and the screen stayed English on translated sites (fixed in 1.11.3).
 #
+#   lib/reprint-server-wp/             source role (runs inside WordPress)
 # Layout under lib/vendor/reprint mirrors the upstream repo root, because the client
 # finds the parser by walking up from its own path:
-#   reprint-server-wp/                 source role (runs inside WordPress)
 #   packages/reprint-client/           target role (runs as a separate PHP process)
 #   lib/sqlite-database-integration/packages/mysql-on-sqlite/
 #
@@ -19,14 +23,23 @@
 # one per upstream PR) applied in order with git am. Drop a patch once upstream
 # releases it and REPRINT_TAG moves past it.
 #
+# Reproducible: a run on a clean checkout leaves git status clean. The tag is
+# pinned to its commit, git am takes the patch dates instead of the clock, the
+# client installs from scripts/reprint-locks (it has no lock upstream and would
+# float to wp-php-toolkit/reprint-server dev-main), and Composer keeps the
+# autoloader suffix of the committed vendor/autoload.php. Moving REPRINT_TAG
+# means updating REPRINT_COMMIT and regenerating that lock on purpose.
+#
 #   scripts/vendor-reprint.sh            # clone into a temp dir
 #   REPRINT_SRC=/path/to/clone scripts/vendor-reprint.sh
 set -euo pipefail
 
 REPRINT_TAG="${REPRINT_TAG:-v0.10.13}"
+REPRINT_COMMIT="${REPRINT_COMMIT:-d24b69affeb5377c6efa1195c4f39644bef46a85}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PATCHES="${ROOT}/scripts/reprint-patches"
 DEST="${ROOT}/lib/vendor/reprint"
+SERVER="${ROOT}/lib/reprint-server-wp"
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
 
@@ -36,7 +49,11 @@ else
     git clone -q https://github.com/WordPress/reprint.git "${WORK}/src"
 fi
 cd "${WORK}/src"
-git -c advice.detachedHead=false checkout -q "${REPRINT_TAG}"
+if [ "$(git rev-parse "${REPRINT_TAG}^{commit}")" != "${REPRINT_COMMIT}" ]; then
+    echo "${REPRINT_TAG} no longer points at ${REPRINT_COMMIT}; refusing to vendor a moved tag" >&2
+    exit 1
+fi
+git -c advice.detachedHead=false checkout -q "${REPRINT_COMMIT}"
 git submodule update -q --init --depth 1 lib/sqlite-database-integration
 
 if [ -f "${PATCHES}/SERIES" ]; then
@@ -44,33 +61,42 @@ if [ -f "${PATCHES}/SERIES" ]; then
     git config user.name vendor
     while read -r p; do
         [ -z "${p}" ] && continue
-        git am -q "${PATCHES}/${p}"
+        git am -q --committer-date-is-author-date "${PATCHES}/${p}"
     done < "${PATCHES}/SERIES"
 fi
 
 # Runtime dependencies only. The client package requires reprint-server through
 # a path repository in the monorepo, so install from inside the checkout.
+cp "${ROOT}/scripts/reprint-locks/reprint-client.composer.lock" packages/reprint-client/composer.lock
+# Composer reuses the suffix it finds in an existing vendor/autoload.php.
+for pair in "reprint-server-wp:${SERVER}" "packages/reprint-client:${DEST}/packages/reprint-client"; do
+    if [ -f "${pair#*:}/vendor/autoload.php" ]; then
+        mkdir -p "${pair%%:*}/vendor"
+        cp "${pair#*:}/vendor/autoload.php" "${pair%%:*}/vendor/autoload.php"
+    fi
+done
 ( cd reprint-server-wp && composer install -q --no-dev --no-interaction --optimize-autoloader )
 ( cd packages/reprint-client && composer install -q --no-dev --no-interaction --optimize-autoloader )
 
-rm -rf "${DEST}"
+rm -rf "${DEST}" "${SERVER}"
 mkdir -p "${DEST}/lib/sqlite-database-integration/packages" "${DEST}/packages"
 rsync -a --copy-links --exclude tests --exclude '.git*' --exclude 'composer.lock' \
-    reprint-server-wp/ "${DEST}/reprint-server-wp/"
+    reprint-server-wp/ "${SERVER}/"
 rsync -a --copy-links --exclude tests --exclude '.git*' --exclude 'composer.lock' \
     packages/reprint-client/ "${DEST}/packages/reprint-client/"
 rsync -a --exclude tests \
     lib/sqlite-database-integration/packages/mysql-on-sqlite/ \
     "${DEST}/lib/sqlite-database-integration/packages/mysql-on-sqlite/"
 cp LICENSE "${DEST}/LICENSE"
+cp LICENSE "${SERVER}/LICENSE"
 
 # Development files have no place in a plugin package (wp.org rejects
 # phpunit.xml as "application files").
-find "${DEST}" \( -name 'phpunit.xml*' -o -name 'phpstan*.neon*' -o -name 'phpcs.xml*' -o -name '.editorconfig' \) -delete
+find "${DEST}" "${SERVER}" \( -name 'phpunit.xml*' -o -name 'phpstan*.neon*' -o -name 'phpcs.xml*' -o -name '.editorconfig' \) -delete
 
 # The server's admin screen ships under Migrator, so its strings belong to
 # Migrator's text domain or they can never be translated.
-find "${DEST}/reprint-server-wp" -name '*.php' -not -path "${DEST}/reprint-server-wp/vendor/*" -print0 \
+find "${SERVER}" -name '*.php' -not -path "${SERVER}/vendor/*" -print0 \
     | xargs -0 perl -0pi -e "s/(\b(?:__|_e|esc_html__|esc_html_e|esc_attr__|esc_attr_e|_x|_n|esc_html_x|esc_attr_x)\(\s*(?:'(?:[^'\\\\]|\\\\.)*'\s*,\s*)+)'reprint'(\s*\))/\\1'plogins-migrator'\\2/g"
 
 # The credentials screen and the endpoint's messages are part of Migrator's
@@ -90,7 +116,7 @@ perl -pi -e '
     s/Standalone Reprint (requires|configuration|on a host)/The standalone transfer route $1/g;
     s/Update the Reprint client to a version that has `reprint keygen`, run it,/Update Migrator on the pulling site, run `wp migrator remote keygen`,/g;
     s/Reprint client/Migrator/g;
-' "${DEST}/reprint-server-wp/lib.php" "${DEST}/reprint-server-wp/standalone.php" "${DEST}"/reprint-server-wp/wordpress/*.php
+' "${SERVER}/lib.php" "${SERVER}/standalone.php" "${SERVER}"/wordpress/*.php
 
 # Migrator serves the endpoint at ?migrator-api. The client's pull pipeline
 # appends its own query name to any address without one, which then no longer
@@ -114,7 +140,7 @@ PY
 # requests with the endpoint in the POST body, and Migrator serves the API at
 # ?migrator-api. A commit that failed once then locked the source out of the
 # very requests that finish it: every page 503, the push unable to resume.
-python3 - "${DEST}/reprint-server-wp/vendor/wp-php-toolkit/reprint-server/src/class-push-session.php" <<'PY'
+python3 - "${SERVER}/vendor/wp-php-toolkit/reprint-server/src/class-push-session.php" <<'PY'
 import sys
 p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
@@ -185,11 +211,56 @@ grep -q 'getenv("MYSQL_PASSWORD") ? getenv' "${DEST}/packages/reprint-client/src
 # Migrator that file is included, never activated, so the header only confuses
 # WordPress's plugin scanner when someone unzips us one level too deep.
 perl -0pi -e 's/^ \* (Plugin Name|Plugin URI|Version|Requires PHP|Author|License|License URI|Description):[^\n]*\n//mg' \
-    "${DEST}/reprint-server-wp/index.php"
+    "${SERVER}/index.php"
+
+# These files only run once ABSPATH exists (index.php is included by Migrator
+# while plugins load, the rest by it or under is_multisite(); compat.php by
+# index.php or by lib.php, which the standalone route requires only after its
+# private configuration defined ABSPATH), so they refuse a direct request like
+# every other plugin file.
+perl -0pi -e 's/\A<\?php\n(\s*namespace [^\n]+;\n)?/"<?php\n" . ($1 \/\/ "") . "\ndefined(\x27ABSPATH\x27) || exit;\n"/e' \
+    "${SERVER}/index.php" "${SERVER}/compat.php" "${SERVER}/wordpress/configuration.php" \
+    "${SERVER}/wordpress/multisite.php" "${SERVER}/wordpress/reprint-server.php"
+
+# standalone.php is the entry a host requests directly, and ABSPATH comes from
+# the private file named by REPRINT_SERVER_CONFIG. Without that variable the
+# route is off: refuse before doing anything else, with the 503 not_configured
+# answer the client reads (the same one the configuration checks below give).
+python3 - "${SERVER}/standalone.php" <<'PY2'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+anchor = "    echo json_encode(['status' => 'rejected', 'reason' => 'not_configured', 'detail' => $detail]);\n    exit;\n};\n"
+guard = (
+    "\n// The route is off unless the host named its private configuration, which defines ABSPATH.\n"
+    "if (!defined('ABSPATH')) {\n"
+    "    if (getenv('REPRINT_SERVER_CONFIG') === false) {\n"
+    "        $reject_configuration('The standalone transfer route requires a readable private configuration file and token file.');\n"
+    "    }\n"
+    "}\n"
+)
+if s.count(anchor) != 1:
+    sys.exit("standalone guard did not apply; check standalone.php")
+s = s.replace(anchor, anchor + guard, 1)
+open(p, "w", encoding="utf-8").write(s)
+PY2
+
+# No en or em dash ships in anything we publish, UI included. Byte-level, so it
+# is safe on any file: digit ranges and the empty-date placeholder in the keys
+# table become a hyphen, a spaced en dash a colon, a spaced em dash " - ".
+find "${SERVER}" -type f -print0 | xargs -0 perl -pi -e '
+    s/(\d)\xe2\x80[\x93\x94](\d)/$1-$2/g;
+    s/ \xe2\x80\x93 /: /g;
+    s/ \xe2\x80\x94 / - /g;
+    s/\xe2\x80[\x93\x94]/-/g;
+'
+if grep -rlF -e $'\xe2\x80\x93' -e $'\xe2\x80\x94' "${SERVER}"; then
+    echo "en/em dash left in lib/reprint-server-wp" >&2; exit 1
+fi
 
 {
-    echo "WordPress/reprint ${REPRINT_TAG} ($(git rev-parse --short HEAD) after patches)"
+    echo "WordPress/reprint ${REPRINT_TAG} ($(git rev-parse --short=8 HEAD) after patches)"
     [ -f "${PATCHES}/SERIES" ] && sed 's/^/  patch: /' "${PATCHES}/SERIES"
 } > "${DEST}/VERSION"
 
-echo "lib/vendor/reprint rebuilt from ${REPRINT_TAG}: $(du -sh "${DEST}" | cut -f1)"
+echo "lib/vendor/reprint and lib/reprint-server-wp rebuilt from ${REPRINT_TAG}: $(du -sh "${DEST}" "${SERVER}" | cut -f1 | paste -sd+ -)"
