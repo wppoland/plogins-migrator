@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.11.5
+Stable tag: 1.11.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -244,6 +244,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.11.6 =
+* Added: `wp migrator pull` takes `--only` (uploads, plugins, themes, mu-plugins, languages) and `--exclude` (paths under wp-content). With `--skip-database --only=uploads` only new uploads come over, and plugins and themes updated on this site keep their versions.
 
 = 1.11.5 =
 * Fixed: the Pull and Push keys table showed a long dash when a key had no added date; it now shows a plain hyphen, and the bundled server carries no long dashes.
