@@ -47,9 +47,11 @@ final class Pull
     /**
      * @param list<string> $auth Credential flags passed through to the client
      *                           (--secret, --private-key-path, --insecure).
+     * @param list<string> $only    wp-content folders to copy into this site; empty copies all.
+     * @param list<string> $exclude Paths under wp-content never to copy into this site.
      * @return array{files: int, database: bool}
      */
-    public function run(string $url, array $auth, bool $withFiles, bool $withDatabase, bool $hostPlugins = false): array
+    public function run(string $url, array $auth, bool $withFiles, bool $withDatabase, bool $hostPlugins = false, array $only = [], array $exclude = []): array
     {
         $this->workspace->ensure();
         $dirs = $this->client->dirs($url);
@@ -109,7 +111,7 @@ final class Pull
         $files = 0;
         if ($withFiles) {
             ($this->log)('Copying wp-content into this site…');
-            $files = Mirror::copy($dirs['files'] . $content, untrailingslashit(WP_CONTENT_DIR));
+            $files = Mirror::copy($dirs['files'] . $content, untrailingslashit(WP_CONTENT_DIR), $only, $exclude);
         }
 
         wp_cache_flush();

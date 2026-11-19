@@ -21,13 +21,58 @@ defined('ABSPATH') || exit;
  * its size differs, or its time differs and its contents do too: a push and the
  * pull after it touch every time stamp, and comparing times alone recopied the
  * whole site. Files only the destination has are left alone.
+ *
+ * A pull can be limited to some wp-content folders ($only) and can leave
+ * others out ($exclude): everything outside them is neither copied nor
+ * created, so plugins and themes updated on the destination keep their
+ * versions while new uploads still arrive.
  */
 final class Mirror
 {
     /** Drop-ins that carry server-specific wiring. */
     public const DROP_INS = ['advanced-cache.php', 'object-cache.php', 'db.php', 'db-error.php', 'sunrise.php', 'fatal-error-handler.php'];
 
-    public static function copy(string $from, string $to): int
+    /** The wp-content folders a pull can be limited to. */
+    public const ROOTS = ['uploads', 'plugins', 'themes', 'mu-plugins', 'languages'];
+
+    /**
+     * Parse a comma separated list of ROOTS, for --only.
+     *
+     * @return list<string>
+     */
+    public static function roots(string $list): array
+    {
+        $roots = self::split($list);
+        $wrong = array_diff($roots, self::ROOTS);
+        if ([] !== $wrong) {
+            throw new \InvalidArgumentException('Unknown folder in --only: ' . implode(', ', $wrong) . '. Use any of: ' . implode(', ', self::ROOTS) . '.');
+        }
+
+        return $roots;
+    }
+
+    /**
+     * Parse a comma separated list of paths relative to wp-content, for --exclude.
+     *
+     * @return list<string>
+     */
+    public static function paths(string $list): array
+    {
+        $paths = self::split($list);
+        foreach ($paths as $path) {
+            if (in_array('..', explode('/', $path), true)) {
+                throw new \InvalidArgumentException('A path in --exclude cannot contain "..": ' . $path . '.');
+            }
+        }
+
+        return $paths;
+    }
+
+    /**
+     * @param list<string> $only    Folders under wp-content to copy; empty copies all.
+     * @param list<string> $exclude Paths under wp-content never to copy.
+     */
+    public static function copy(string $from, string $to, array $only = [], array $exclude = []): int
     {
         if (! is_dir($from)) {
             throw new \RuntimeException('There is no wp-content folder at ' . $from . '.');
@@ -44,6 +89,9 @@ final class Mirror
         }
         foreach (self::DROP_INS as $dropIn) {
             $skip[] = '/' . $dropIn;
+        }
+        foreach ($exclude as $path) {
+            $skip[] = '/' . $path;
         }
 
         $copied = 0;
@@ -62,6 +110,9 @@ final class Mirror
                     continue 2;
                 }
             }
+            if ([] !== $only && ! self::within($relative, $only)) {
+                continue;
+            }
 
             if ($item->isDir()) {
                 wp_mkdir_p($target);
@@ -79,5 +130,29 @@ final class Mirror
         }
 
         return $copied;
+    }
+
+    /**
+     * @param list<string> $roots
+     */
+    private static function within(string $relative, array $roots): bool
+    {
+        foreach ($roots as $root) {
+            if ($relative === '/' . $root || str_starts_with($relative, '/' . $root . '/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function split(string $list): array
+    {
+        $parts = array_map(static fn (string $part): string => trim(trim($part), '/'), explode(',', $list));
+
+        return array_values(array_unique(array_filter($parts, static fn (string $part): bool => '' !== $part)));
     }
 }
