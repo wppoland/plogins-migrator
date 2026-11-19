@@ -23,11 +23,19 @@
 # one per upstream PR) applied in order with git am. Drop a patch once upstream
 # releases it and REPRINT_TAG moves past it.
 #
+# Reproducible: a run on a clean checkout leaves git status clean. The tag is
+# pinned to its commit, git am takes the patch dates instead of the clock, the
+# client installs from scripts/reprint-locks (it has no lock upstream and would
+# float to wp-php-toolkit/reprint-server dev-main), and Composer keeps the
+# autoloader suffix of the committed vendor/autoload.php. Moving REPRINT_TAG
+# means updating REPRINT_COMMIT and regenerating that lock on purpose.
+#
 #   scripts/vendor-reprint.sh            # clone into a temp dir
 #   REPRINT_SRC=/path/to/clone scripts/vendor-reprint.sh
 set -euo pipefail
 
 REPRINT_TAG="${REPRINT_TAG:-v0.10.13}"
+REPRINT_COMMIT="${REPRINT_COMMIT:-d24b69affeb5377c6efa1195c4f39644bef46a85}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PATCHES="${ROOT}/scripts/reprint-patches"
 DEST="${ROOT}/lib/vendor/reprint"
@@ -41,7 +49,11 @@ else
     git clone -q https://github.com/WordPress/reprint.git "${WORK}/src"
 fi
 cd "${WORK}/src"
-git -c advice.detachedHead=false checkout -q "${REPRINT_TAG}"
+if [ "$(git rev-parse "${REPRINT_TAG}^{commit}")" != "${REPRINT_COMMIT}" ]; then
+    echo "${REPRINT_TAG} no longer points at ${REPRINT_COMMIT}; refusing to vendor a moved tag" >&2
+    exit 1
+fi
+git -c advice.detachedHead=false checkout -q "${REPRINT_COMMIT}"
 git submodule update -q --init --depth 1 lib/sqlite-database-integration
 
 if [ -f "${PATCHES}/SERIES" ]; then
@@ -49,12 +61,20 @@ if [ -f "${PATCHES}/SERIES" ]; then
     git config user.name vendor
     while read -r p; do
         [ -z "${p}" ] && continue
-        git am -q "${PATCHES}/${p}"
+        git am -q --committer-date-is-author-date "${PATCHES}/${p}"
     done < "${PATCHES}/SERIES"
 fi
 
 # Runtime dependencies only. The client package requires reprint-server through
 # a path repository in the monorepo, so install from inside the checkout.
+cp "${ROOT}/scripts/reprint-locks/reprint-client.composer.lock" packages/reprint-client/composer.lock
+# Composer reuses the suffix it finds in an existing vendor/autoload.php.
+for pair in "reprint-server-wp:${SERVER}" "packages/reprint-client:${DEST}/packages/reprint-client"; do
+    if [ -f "${pair#*:}/vendor/autoload.php" ]; then
+        mkdir -p "${pair%%:*}/vendor"
+        cp "${pair#*:}/vendor/autoload.php" "${pair%%:*}/vendor/autoload.php"
+    fi
+done
 ( cd reprint-server-wp && composer install -q --no-dev --no-interaction --optimize-autoloader )
 ( cd packages/reprint-client && composer install -q --no-dev --no-interaction --optimize-autoloader )
 
@@ -193,16 +213,40 @@ grep -q 'getenv("MYSQL_PASSWORD") ? getenv' "${DEST}/packages/reprint-client/src
 perl -0pi -e 's/^ \* (Plugin Name|Plugin URI|Version|Requires PHP|Author|License|License URI|Description):[^\n]*\n//mg' \
     "${SERVER}/index.php"
 
-# These four files only ever run inside WordPress (index.php is included by
-# Migrator while plugins load, the rest by it or under is_multisite()), so they
-# refuse a direct request like every other plugin file. compat.php and
-# standalone.php are left alone: the standalone route loads them without WordPress.
+# These files only run once ABSPATH exists (index.php is included by Migrator
+# while plugins load, the rest by it or under is_multisite(); compat.php by
+# index.php or by lib.php, which the standalone route requires only after its
+# private configuration defined ABSPATH), so they refuse a direct request like
+# every other plugin file.
 perl -0pi -e 's/\A<\?php\n(\s*namespace [^\n]+;\n)?/"<?php\n" . ($1 \/\/ "") . "\ndefined(\x27ABSPATH\x27) || exit;\n"/e' \
-    "${SERVER}/index.php" "${SERVER}/wordpress/configuration.php" \
+    "${SERVER}/index.php" "${SERVER}/compat.php" "${SERVER}/wordpress/configuration.php" \
     "${SERVER}/wordpress/multisite.php" "${SERVER}/wordpress/reprint-server.php"
 
+# standalone.php is the entry a host requests directly, and ABSPATH comes from
+# the private file named by REPRINT_SERVER_CONFIG. Without that variable the
+# route is off: refuse before doing anything else, with the 503 not_configured
+# answer the client reads (the same one the configuration checks below give).
+python3 - "${SERVER}/standalone.php" <<'PY2'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+anchor = "    echo json_encode(['status' => 'rejected', 'reason' => 'not_configured', 'detail' => $detail]);\n    exit;\n};\n"
+guard = (
+    "\n// The route is off unless the host named its private configuration, which defines ABSPATH.\n"
+    "if (!defined('ABSPATH')) {\n"
+    "    if (getenv('REPRINT_SERVER_CONFIG') === false) {\n"
+    "        $reject_configuration('The standalone transfer route requires a readable private configuration file and token file.');\n"
+    "    }\n"
+    "}\n"
+)
+if s.count(anchor) != 1:
+    sys.exit("standalone guard did not apply; check standalone.php")
+s = s.replace(anchor, anchor + guard, 1)
+open(p, "w", encoding="utf-8").write(s)
+PY2
+
 {
-    echo "WordPress/reprint ${REPRINT_TAG} ($(git rev-parse --short HEAD) after patches)"
+    echo "WordPress/reprint ${REPRINT_TAG} ($(git rev-parse --short=8 HEAD) after patches)"
     [ -f "${PATCHES}/SERIES" ] && sed 's/^/  patch: /' "${PATCHES}/SERIES"
 } > "${DEST}/VERSION"
 

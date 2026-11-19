@@ -1,5 +1,7 @@
 <?php
 
+defined('ABSPATH') || exit;
+
 /**
  * Maps every released Site Export constant to its Reprint Server name.
  *
