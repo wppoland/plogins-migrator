@@ -59,7 +59,7 @@ class DatabaseRowsReader {
 
     /**
      * Last candidate ID in the open selected-user query, or null without one.
-     * For example, a metadata batch may check IDs 1–250 but return only row 7.
+     * For example, a metadata batch may check IDs 1-250 but return only row 7.
      * After returning row 7, consume the query before moving the cursor to 250.
      * This value stays in memory only. Resume reads a new bounded batch after
      * the last returned row; it must not skip candidates that were not consumed.
@@ -1671,7 +1671,7 @@ class DatabaseRowsReader {
             throw new \RuntimeException(
                 "No column type info for '{$column}' in table " .
                 $this->quote_identifier($this->current_table) .
-                ". This is a bug — SHOW FULL COLUMNS should have returned it."
+                ". This is a bug - SHOW FULL COLUMNS should have returned it."
             );
         }
         return $this->current_column_types[$column];

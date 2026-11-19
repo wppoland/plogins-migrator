@@ -245,6 +245,19 @@ s = s.replace(anchor, anchor + guard, 1)
 open(p, "w", encoding="utf-8").write(s)
 PY2
 
+# No en or em dash ships in anything we publish, UI included. Byte-level, so it
+# is safe on any file: digit ranges and the empty-date placeholder in the keys
+# table become a hyphen, a spaced en dash a colon, a spaced em dash " - ".
+find "${SERVER}" -type f -print0 | xargs -0 perl -pi -e '
+    s/(\d)\xe2\x80[\x93\x94](\d)/$1-$2/g;
+    s/ \xe2\x80\x93 /: /g;
+    s/ \xe2\x80\x94 / - /g;
+    s/\xe2\x80[\x93\x94]/-/g;
+'
+if grep -rlF -e $'\xe2\x80\x93' -e $'\xe2\x80\x94' "${SERVER}"; then
+    echo "en/em dash left in lib/reprint-server-wp" >&2; exit 1
+fi
+
 {
     echo "WordPress/reprint ${REPRINT_TAG} ($(git rev-parse --short=8 HEAD) after patches)"
     [ -f "${PATCHES}/SERIES" ] && sed 's/^/  patch: /' "${PATCHES}/SERIES"

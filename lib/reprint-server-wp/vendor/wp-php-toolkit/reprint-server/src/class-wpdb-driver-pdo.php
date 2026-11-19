@@ -2,12 +2,12 @@
 /**
  * wpdb-backed PDO adapter for MySQL exports on PDO-less hosts.
  *
- * MySQLDumpProducer expects a PDO connection — prepare(), query(), and the
+ * MySQLDumpProducer expects a PDO connection - prepare(), query(), and the
  * statement methods fetch(), fetchAll(), fetchColumn(), execute().
  * On hosts without ext-pdo / ext-pdo_mysql, this adapter wraps WordPress's
  * global $wpdb so the dump producer can run unchanged.
  *
- * Surface area mirrors SqliteDriverPDO 1:1 — only the methods MySQLDumpProducer
+ * Surface area mirrors SqliteDriverPDO 1:1 - only the methods MySQLDumpProducer
  * and the export endpoints actually call. Behavior parity with real PDO is the
  * bar; behavioral divergence (wpdb's HTML error rendering, sticky last_error,
  * get_results null ambiguity) is normalized inside the adapter.
@@ -60,7 +60,7 @@ class WpdbDriverPDO
     /**
      * Quotes a string for safe inclusion in a query.
      *
-     * Calls $wpdb->_real_escape() — a public method on wpdb (and its
+     * Calls $wpdb->_real_escape() - a public method on wpdb (and its
      * subclasses); the leading underscore is naming convention only, not
      * visibility. Calling it directly keeps the adapter free of any global
      * function dependency and HyperDB / LudicrousDB / SQLite-drop-in safe.
@@ -75,7 +75,7 @@ class WpdbDriverPDO
  * PDOStatement-shaped wrapper around a wpdb query result set.
  *
  * Substitutes positional (?) and named (:name) placeholders manually rather
- * than calling $wpdb->prepare() — wpdb's prepare uses %s/%d and adds quoting
+ * than calling $wpdb->prepare() - wpdb's prepare uses %s/%d and adds quoting
  * itself, which would conflict with how MySQLDumpProducer builds queries.
  */
 class WpdbDriverPDOStatement
@@ -152,7 +152,7 @@ class WpdbDriverPDOStatement
 
     /**
      * Honors FETCH_ASSOC (default) and FETCH_COLUMN. Other PDO modes are
-     * unsupported — MySQLDumpProducer never asks for any other mode.
+     * unsupported - MySQLDumpProducer never asks for any other mode.
      */
     public function fetchAll($mode = null): array
     {

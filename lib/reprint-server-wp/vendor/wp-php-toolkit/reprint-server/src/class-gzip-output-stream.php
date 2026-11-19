@@ -32,7 +32,7 @@ class GzipOutputStream
             $this->deflate_ctx = deflate_init(ZLIB_ENCODING_GZIP, ["level" => 6]);
             if ($this->deflate_ctx === false) {
                 throw new \RuntimeException(
-                    "deflate_init() failed — zlib may be misconfigured"
+                    "deflate_init() failed - zlib may be misconfigured"
                 );
             }
             if (!headers_sent()) {
@@ -47,7 +47,7 @@ class GzipOutputStream
      * Uses ZLIB_NO_FLUSH so the compressor can build back-references across
      * multiple write() calls, producing significantly better compression
      * ratios than ZLIB_SYNC_FLUSH on every call.  Data still flows out
-     * whenever zlib's internal buffer fills — the decompressor on the other
+     * whenever zlib's internal buffer fills - the decompressor on the other
      * end will decompress incrementally.
      *
      * Call sync() after each complete multipart part to guarantee the client

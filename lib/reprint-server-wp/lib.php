@@ -3,7 +3,7 @@
 namespace WordPress\Reprint\Server\Plugin;
 
 /**
- * Pull and Push access library – constants and function declarations, no request handling.
+ * Pull and Push access library: constants and function declarations, no request handling.
  *
  * Require this file to get access to the Pull and Push access API functions without
  * triggering any HTTP dispatch.
@@ -553,7 +553,7 @@ function handle_api_request(array $options = []): void {
     }
 
     // Emit CORS headers and short-circuit OPTIONS preflight before
-    // authentication runs — browsers send preflight OPTIONS without
+    // authentication runs - browsers send preflight OPTIONS without
     // credentials, so we must not require auth before CORS passes.
     // The class is loaded by the Composer autoloader on demand, but
     // load it eagerly in case the autoloader hasn't been required yet.

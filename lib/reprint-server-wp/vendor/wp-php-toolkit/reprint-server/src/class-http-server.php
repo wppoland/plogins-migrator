@@ -121,12 +121,12 @@ final class HTTPServer {
     /**
      * Emits CORS headers and terminates OPTIONS preflight requests.
      *
-     * Must be called BEFORE authentication runs — browsers send
+     * Must be called BEFORE authentication runs - browsers send
      * preflight OPTIONS without credentials, so the consumer must not
      * require auth headers before this check passes.
      *
      * A wildcard origin ('*') is safe when authentication happens
-     * out-of-band (e.g., HMAC with a pre-shared secret) — an attacker
+     * out-of-band (e.g., HMAC with a pre-shared secret) - an attacker
      * without the secret cannot export anything regardless of origin.
      *
      * For OPTIONS requests this terminates the process. For all other
@@ -196,7 +196,7 @@ final class HTTPServer {
      * @throws \Exception If request parsing or endpoint dispatch fails.
      */
     public static function serve(array $options = []): void {
-        // endpoint_preflight is defined by export.php — use it as a
+        // endpoint_preflight is defined by export.php - use it as a
         // cheap sentinel to detect whether the runtime is already
         // loaded. require_once would be safe either way, but this
         // avoids re-running the stat() on hot paths.

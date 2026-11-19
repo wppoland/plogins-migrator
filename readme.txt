@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.11.4
+Stable tag: 1.11.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -243,6 +243,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 == Changelog ==
 
+= 1.11.5 =
+* Fixed: the Pull and Push keys table showed a long dash when a key had no added date; it now shows a plain hyphen, and the bundled server carries no long dashes.
+
 = 1.11.4 =
 * Fixed: two files of the Pull and Push server did not refuse a direct request. The shared one now runs only inside WordPress, and the standalone transfer route answers "not configured" before doing anything else unless the host set it up.
 
@@ -480,6 +483,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.11.5 =
+Plain hyphen in the Pull and Push keys table.
 
 = 1.11.4 =
 Pull and Push files refuse direct requests.

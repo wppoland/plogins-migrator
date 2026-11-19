@@ -97,7 +97,7 @@ function begin_multipart_stream(bool $require_headers = false, bool $gzip = true
      * > https://www.rfc-editor.org/rfc/rfc2046.html
      *
      * But in practice, we're okay. We use 128 bits of randomness. The chance of
-     * it appearing in the data is about 1 in 2^128 — effectively zero. Curl does
+     * it appearing in the data is about 1 in 2^128 - effectively zero. Curl does
      * the same here:
      *
      *    https://github.com/curl/curl/blob/462244447e8ba3a53b1ba9f0ba7baa52d8777daa/lib/mime.c#L1179-L1236
@@ -127,7 +127,7 @@ function begin_multipart_stream(bool $require_headers = false, bool $gzip = true
 /**
  * Resolves database credentials from PHP constants and environment variables.
  *
- * Never reads from $config / HTTP parameters — credentials must come from
+ * Never reads from $config / HTTP parameters - credentials must come from
  * the server environment (PHP constants or environment variables).
  *
  * @return array {
@@ -249,7 +249,7 @@ function create_db_connection(array $creds, array $options = [])
     if (!extension_loaded('pdo_mysql')) {
         $mysql = create_wpdb_pdo_adapter();
     } else {
-        // MySQL path (also works for HyperDB — wp-config.php credentials
+        // MySQL path (also works for HyperDB - wp-config.php credentials
         // point to the write master).
         $default_options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -536,10 +536,10 @@ register_shutdown_function(function () {
                 $message
             );
         } catch (Exception $ignored) {
-            // Stream is too broken to write to — nothing more we can do.
+            // Stream is too broken to write to - nothing more we can do.
             return;
         } catch (Throwable $ignored) {
-            // Stream is too broken to write to — nothing more we can do.
+            // Stream is too broken to write to - nothing more we can do.
             return;
         }
         return;
@@ -845,7 +845,7 @@ function endpoint_sql_chunk(
                     $server_statement_size = (int) ((int) $row["v"] * 0.8);
                 }
             } catch (Exception $e) {
-                // Ignore — producer will auto-detect
+                // Ignore - producer will auto-detect
             }
             if ($server_statement_size !== null) {
                 $producer_options["max_statement_size"] = min(
@@ -1257,7 +1257,7 @@ function endpoint_sql_chunk(
         emit_error_chunk($gz, $boundary, $stream_failure->getMessage());
     }
 
-    // Best-effort completion chunk — the client already has the data chunks.
+    // Best-effort completion chunk - the client already has the data chunks.
     $status = $aborted
         ? "partial"
         : ($reader->is_finished() && $deferred_fragment === null ? "complete" : "partial");
@@ -2424,7 +2424,7 @@ function endpoint_preflight(array $config): array
                     }
                 }
 
-                // MySQL server variables — these don't apply to SQLite,
+                // MySQL server variables - these don't apply to SQLite,
                 // so wrap in a separate try/catch to avoid losing WP data
                 // gathered earlier if the query fails.
                 try {
@@ -2459,7 +2459,7 @@ function endpoint_preflight(array $config): array
                             : null;
                     }
                 } catch (Exception $e) {
-                    // Expected for SQLite — these MySQL system variables
+                    // Expected for SQLite - these MySQL system variables
                     // don't exist. The null defaults are correct.
                 }
 
@@ -3148,7 +3148,7 @@ function stream_file_producer(
         ];
     }
 
-    // Best-effort error and completion chunks — the client already has the
+    // Best-effort error and completion chunks - the client already has the
     // data chunks. If the stream is broken at this point, log and move on.
     $completion_failure = null;
     try {
@@ -3664,7 +3664,7 @@ function endpoint_file_fetch(
  *
  * Encoding is set per response (Content-Encoding is a response-level header),
  * so we have to commit before any byte is sent. The trade-off:
- *   - Text-y bodies (PHP/JS/CSS/JSON/SQL/HTML/etc.) compress 5–60×. Gzip is
+ *   - Text-y bodies (PHP/JS/CSS/JSON/SQL/HTML/etc.) compress 5-60×. Gzip is
  *     a clear win on wire size and total wall time.
  *   - Image/video/audio/font/archive bodies are already compressed; passing
  *     them through gzip costs ~4 ms per 200 KB and produces ~0% size
@@ -3675,7 +3675,7 @@ function endpoint_file_fetch(
  * Rule: gzip the response if **any** file in the batch is compressible.
  *
  * The previous all-or-nothing rule ("gzip only if every file is compressible")
- * was over-conservative — a single PNG in a 200-CSS batch flipped the whole
+ * was over-conservative - a single PNG in a 200-CSS batch flipped the whole
  * response to identity, losing ~50 % of wire size that would have compressed.
  * The wasted CPU on the small binary portion of mixed batches is bounded by
  * request size (capped server-side), so this trade-off favors smaller wire
@@ -3714,7 +3714,7 @@ function file_fetch_paths_should_gzip(array $paths): bool
             }
             continue;
         }
-        // 'no' — known binary. Skip; doesn't disqualify the batch.
+        // 'no' - known binary. Skip; doesn't disqualify the batch.
     }
     return $any_compressible;
 }
@@ -3732,14 +3732,14 @@ function path_extension_compressibility(string $path): string
     if ($basename === '') {
         return 'no';
     }
-    // Dotfiles like .htaccess / .env / .gitignore have no "real" extension —
+    // Dotfiles like .htaccess / .env / .gitignore have no "real" extension -
     // pathinfo() reports the part after the leading dot as the extension,
     // but they're text by convention. Treat the whole class as compressible.
     if ($basename[0] === '.' && strpos($basename, '.', 1) === false) {
         return 'yes';
     }
     $ext = strtolower((string) pathinfo($basename, PATHINFO_EXTENSION));
-    // Files with truly no extension (LICENSE, README, Makefile) — treat as text.
+    // Files with truly no extension (LICENSE, README, Makefile) - treat as text.
     if ($ext === '') {
         return 'yes';
     }
@@ -3796,7 +3796,7 @@ function path_extension_compressibility(string $path): string
  * (outside tab/newline/CR/form-feed) means binary, and the head must also
  * decode as valid UTF-8. UTF-8 happens to reject most random binary
  * sequences naturally because high-bit bytes only validate in well-formed
- * multi-byte runs — so PNG, JPEG, ZIP, etc. fail this within a handful of
+ * multi-byte runs - so PNG, JPEG, ZIP, etc. fail this within a handful of
  * bytes even when their headers look ASCII.
  */
 function path_head_looks_like_text(string $path): bool
@@ -3827,7 +3827,7 @@ function path_head_looks_like_text(string $path): bool
     }
     // Must decode cleanly as UTF-8. mb_check_encoding handles the case where
     // a multi-byte sequence is sliced by our 64-byte window: it returns false,
-    // which we treat as "not obviously text" — biased toward identity, which
+    // which we treat as "not obviously text" - biased toward identity, which
     // is the safe direction.
     if (function_exists('mb_check_encoding') && !mb_check_encoding($head, 'UTF-8')) {
         return false;
