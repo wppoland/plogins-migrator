@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.11.3
+Stable tag: 1.11.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -243,6 +243,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 
 == Changelog ==
 
+= 1.11.4 =
+* Fixed: two files of the Pull and Push server did not refuse a direct request. The shared one now runs only inside WordPress, and the standalone transfer route answers "not configured" before doing anything else unless the host set it up.
+
 = 1.11.3 =
 * Fixed: the Pull and Push access screen and its messages could not be translated. Their strings sat in a folder translate.wordpress.org does not read, so they never reached the translators; they now do, and translated sites will show them in their language once the translations land.
 
@@ -477,6 +480,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.11.4 =
+Pull and Push files refuse direct requests.
 
 = 1.11.3 =
 The Pull and Push access screen can now be translated.

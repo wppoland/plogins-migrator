@@ -19,6 +19,13 @@ $reject_configuration = static function (string $detail): void {
     exit;
 };
 
+// The route is off unless the host named its private configuration, which defines ABSPATH.
+if (!defined('ABSPATH')) {
+    if (getenv('REPRINT_SERVER_CONFIG') === false) {
+        $reject_configuration('The standalone transfer route requires a readable private configuration file and token file.');
+    }
+}
+
 $require_private_file = static function ($path, string $docroot) use ($reject_configuration): string {
     $resolved = is_string($path) && $path !== '' ? realpath($path) : false;
     if ($resolved === false || !is_file($resolved) || !is_readable($resolved)) {
