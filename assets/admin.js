@@ -21,7 +21,6 @@ function migratorRestoreParts() {
 
 	var progress = document.getElementById( 'migrator-export-progress' );
 	var bar = progress.querySelector( '.migrator-progress__bar' );
-	var fill = document.getElementById( 'migrator-export-fill' );
 	var status = document.getElementById( 'migrator-export-status' );
 	var result = document.getElementById( 'migrator-export-result' );
 	var resultMsg = document.getElementById( 'migrator-export-result-msg' );
@@ -48,8 +47,7 @@ function migratorRestoreParts() {
 	}
 
 	function setProgress( percent, message ) {
-		fill.style.width = percent + '%';
-		bar.setAttribute( 'aria-valuenow', String( percent ) );
+		bar.value = percent;
 		status.textContent = message + ' ' + percent + '%';
 	}
 
@@ -352,15 +350,13 @@ function migratorRestoreParts() {
 	var nameEl = document.getElementById( 'migrator-file-name' );
 	var progress = document.getElementById( 'migrator-import-progress' );
 	var bar = progress.querySelector( '.migrator-progress__bar' );
-	var fill = document.getElementById( 'migrator-import-fill' );
 	var status = document.getElementById( 'migrator-import-status' );
 	var result = document.getElementById( 'migrator-import-result' );
 	var resultMsg = document.getElementById( 'migrator-import-result-msg' );
 	var chosen = null;
 
 	function setProgress( percent, message ) {
-		fill.style.width = percent + '%';
-		bar.setAttribute( 'aria-valuenow', String( Math.round( percent ) ) );
+		bar.value = percent;
 		status.textContent = message;
 	}
 
@@ -570,7 +566,7 @@ function migratorRestoreParts() {
 					return;
 				}
 				var root = res.data;
-				treeEl.innerHTML = '';
+				treeEl.replaceChildren();
 				( root.children || [] ).forEach( function ( c ) {
 					treeEl.appendChild( buildNode( c, 0 ) );
 				} );

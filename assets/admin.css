@@ -23,19 +23,29 @@
 .migrator-progress { margin-top: 18px; }
 
 .migrator-progress__bar {
+	appearance: none;
+	display: block;
+	width: 100%;
 	height: 14px;
+	border: 0 solid;
 	background: #f0f0f1;
 	border-radius: 999px;
-	overflow: hidden;
+	overflow: clip;
 }
 
-.migrator-progress__fill {
-	display: block;
-	height: 100%;
-	width: 0;
+.migrator-progress__bar::-webkit-progress-bar {
+	background: transparent;
+}
+
+.migrator-progress__bar::-webkit-progress-value {
 	background: linear-gradient(90deg, #2271b1, #72aee6);
 	border-radius: 999px;
-	transition: width .25s ease;
+	transition: inline-size .25s ease;
+}
+
+.migrator-progress__bar::-moz-progress-bar {
+	background: linear-gradient(90deg, #2271b1, #72aee6);
+	border-radius: 999px;
 }
 
 .migrator-progress__status { margin: 8px 0 0; color: #50575e; font-variant-numeric: tabular-nums; }
@@ -97,7 +107,7 @@
 .migrator-card__cli { margin-top: 18px; font-size: 12px; }
 
 @media (prefers-reduced-motion: reduce) {
-	.migrator-progress__fill { transition: none; }
+	.migrator-progress__bar::-webkit-progress-value { transition: none; }
 	.migrator-drop { transition: none; }
 }
 

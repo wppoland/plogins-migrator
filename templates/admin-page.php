@@ -137,16 +137,12 @@ defined('ABSPATH') || exit;
 			</button>
 
 			<div class="migrator-progress" id="migrator-export-progress" hidden>
-				<div
+				<progress
 					class="migrator-progress__bar"
-					role="progressbar"
-					aria-valuemin="0"
-					aria-valuemax="100"
-					aria-valuenow="0"
+					max="100"
+					value="0"
 					aria-label="<?php esc_attr_e('Backup progress', 'plogins-migrator'); ?>"
-				>
-					<span class="migrator-progress__fill" id="migrator-export-fill"></span>
-				</div>
+				></progress>
 				<p class="migrator-progress__status" id="migrator-export-status" aria-live="polite"></p>
 			</div>
 
@@ -214,9 +210,7 @@ defined('ABSPATH') || exit;
 			</button>
 
 			<div class="migrator-progress" id="migrator-import-progress" hidden>
-				<div class="migrator-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="<?php esc_attr_e('Restore progress', 'plogins-migrator'); ?>">
-					<span class="migrator-progress__fill" id="migrator-import-fill"></span>
-				</div>
+				<progress class="migrator-progress__bar" max="100" value="0" aria-label="<?php esc_attr_e('Restore progress', 'plogins-migrator'); ?>"></progress>
 				<p class="migrator-progress__status" id="migrator-import-status" aria-live="polite"></p>
 			</div>
 
