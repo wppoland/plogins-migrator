@@ -22,8 +22,8 @@ defined('ABSPATH') || exit;
  */
 final class TreeScanner
 {
-    /** Basenames never walked (also pruned by the exporter). */
-    private const PRUNE = ['node_modules', '.git', '.DS_Store'];
+    /** @var string[] Basenames never walked, the same ones the exporter prunes. */
+    private array $prune = [];
 
     /**
      * @param string[] $skipAbs        Absolute paths to skip entirely (e.g. the backup workspace).
@@ -35,6 +35,8 @@ final class TreeScanner
     {
         $base = rtrim(str_replace('\\', '/', $base), '/');
         $skip = array_map(static fn (string $p): string => rtrim(str_replace('\\', '/', $p), '/'), $skipAbs);
+
+        $this->prune = \Migrator\Engine\Export\ExportOptions::defaultExcludes()['names'];
 
         [$size, $nodes, $children] = $this->walk($base, '', 1, $maxDepth, $fileThreshold, $skip);
 
@@ -64,7 +66,7 @@ final class TreeScanner
         }
 
         foreach ($entries as $entry) {
-            if ('.' === $entry || '..' === $entry || in_array($entry, self::PRUNE, true)) {
+            if ('.' === $entry || '..' === $entry || in_array($entry, $this->prune, true)) {
                 continue;
             }
 

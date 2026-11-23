@@ -8,6 +8,7 @@ use Migrator\Engine\Db\Dumper;
 use Migrator\Engine\Db\SearchReplace;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\Exporter;
+use Migrator\Engine\Files\FileScanner;
 use Migrator\Engine\Import\Importer;
 use Migrator\Engine\Transform\SerializedReplacer;
 use Migrator\Reprint\Client;
@@ -95,6 +96,14 @@ final class Command
         $flags['max_file_mb']      = (int) ($assoc_args['max-file-size'] ?? 0);
         $options = ExportOptions::fromArray($flags);
 
+        // Named before the export, never blocking it: credentials or dumps
+        // that would travel with the backup, and files likely to cause trouble.
+        if (! $options->is('no_files')) {
+            foreach ($options->scanner([$workspace->path(), $destination])->findings(untrailingslashit((string) WP_CONTENT_DIR)) as $finding) {
+                \WP_CLI::warning(FileScanner::describe($finding));
+            }
+        }
+
         \WP_CLI::log('Exporting site…');
         $result = $exporter->export($destination, static function (string $message): void {
             \WP_CLI::log('  ' . $message);
@@ -135,12 +144,21 @@ final class Command
      * : Restore only these parts, comma separated: database, plugins, themes,
      * uploads, other. Leaving out database keeps this site's database as it is.
      *
+     * [--safe-mode]
+     * : After the restore, deactivate every plugin except Migrator. The list is
+     * kept, and wp-admin offers to reactivate them in one click.
+     *
+     * [--admin-user=<login-or-email>]
+     * : After the restore, set a new password for this user. The password is
+     * read from the MIGRATOR_ADMIN_PASSWORD environment variable, or asked for.
+     *
      * [--yes]
      * : Skip the confirmation prompt.
      *
      * ## EXAMPLES
      *
      *     wp migrator import /tmp/my-site.migrator
+     *     wp migrator import /tmp/my-site.migrator --safe-mode --admin-user=admin
      *     wp migrator import /tmp/db-only.migrator --skip-files --yes
      *     wp migrator import /tmp/my-site.migrator --only=plugins,themes --yes
      *
@@ -167,6 +185,25 @@ final class Command
 
         \WP_CLI::confirm('This overwrites the current ' . implode(', ', $parts) . '. Continue?', $assoc_args);
 
+        $after = ['safe_mode' => isset($assoc_args['safe-mode'])];
+        if (isset($assoc_args['admin-user'])) {
+            // Never from argv: a command line shows up in the process list
+            // and in the shell history.
+            $password = (string) getenv('MIGRATOR_ADMIN_PASSWORD');
+            if ('' === $password) {
+                try {
+                    $password = (string) \cli\prompt('New password for ' . $assoc_args['admin-user'], false, ': ', true);
+                } catch (\Exception $e) {
+                    $password = ''; // No terminal to ask on (input closed).
+                }
+            }
+            if ('' === $password) {
+                \WP_CLI::error('No password given. Set MIGRATOR_ADMIN_PASSWORD or type it at the prompt.');
+            }
+            $after['admin_user']     = (string) $assoc_args['admin-user'];
+            $after['admin_password'] = $password;
+        }
+
         $workspace = new Workspace();
         $workspace->ensure();
         $importer = new Importer($workspace, $wpdb);
@@ -178,7 +215,8 @@ final class Command
                 $parts,
                 static function (string $message): void {
                     \WP_CLI::log('  ' . $message);
-                }
+                },
+                $after
             );
         } catch (\Throwable $e) {
             // A refused or failed restore is an expected outcome with a message

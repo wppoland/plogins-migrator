@@ -12,6 +12,7 @@ use Migrator\Engine\Archive\TarExport;
 use Migrator\Engine\Db\SearchReplace;
 use Migrator\Engine\Export\ExportOptions;
 use Migrator\Engine\Export\ExportPipeline;
+use Migrator\Engine\Files\FileScanner;
 use Migrator\Engine\Import\Importer;
 use Migrator\Engine\Import\Preflight;
 use Migrator\Engine\Transform\SerializedReplacer;
@@ -60,6 +61,101 @@ final class Ajax implements HasHooks
         add_action('wp_ajax_migrator_delete_backup', [$this, 'deleteBackup']);
         add_action('wp_ajax_migrator_inspect', [$this, 'inspect']);
         add_action('wp_ajax_migrator_search_replace', [$this, 'searchReplace']);
+        add_action('wp_ajax_migrator_export_check', [$this, 'exportCheck']);
+        add_action('admin_notices', [$this, 'safeModeNotice']);
+        add_action('admin_post_migrator_safe_mode', [$this, 'safeModeAction']);
+    }
+
+    /**
+     * Walk the files the export would take, with the options as chosen, and
+     * name the ones worth a second look: credentials and dumps, very large
+     * files, long or non UTF-8 names, unreadable files. Nothing is blocked.
+     */
+    public function exportCheck(): void
+    {
+        $this->guard();
+
+        $options = $this->readExportOptions();
+        if ($options->is('no_files')) {
+            wp_send_json_success(['items' => []]);
+        }
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, Squiz.PHP.DiscouragedFunctions.Discouraged
+        }
+
+        $items = [];
+        foreach ($options->scanner([$this->workspace->path()])->findings(untrailingslashit((string) WP_CONTENT_DIR)) as $finding) {
+            $items[] = [
+                'kind'    => $finding['kind'],
+                'path'    => FileScanner::printable($finding['path']),
+                'message' => FileScanner::describe($finding),
+            ];
+        }
+
+        wp_send_json_success(['items' => $items]);
+    }
+
+    /**
+     * After a safe-mode restore, offer to switch the restored site's plugins
+     * back on, or to leave them off and stop asking.
+     */
+    public function safeModeNotice(): void
+    {
+        $off = get_option(Importer::SAFE_MODE_OPTION);
+        if (! is_array($off) || [] === $off || ! Access::allowed()) {
+            return;
+        }
+
+        $url = wp_nonce_url(admin_url('admin-post.php?action=migrator_safe_mode'), 'migrator_safe_mode');
+        printf(
+            '<div class="notice notice-warning"><p>%1$s</p><p><code>%2$s</code></p><p><a class="button button-primary" href="%3$s">%4$s</a> <a class="button" href="%5$s">%6$s</a></p></div>',
+            esc_html(sprintf(
+                /* translators: %d: number of plugins */
+                _n(
+                    'Migrator restored this site in safe mode, so %d plugin from the backup is inactive. Check the site, then turn it back on.',
+                    'Migrator restored this site in safe mode, so %d plugins from the backup are inactive. Check the site, then turn them back on.',
+                    count($off),
+                    'plogins-migrator'
+                ),
+                count($off)
+            )),
+            esc_html(implode(', ', array_map('strval', $off))),
+            esc_url($url),
+            esc_html__('Reactivate the previous plugins', 'plogins-migrator'),
+            esc_url(add_query_arg('keep', '1', $url)),
+            esc_html__('Keep them inactive', 'plogins-migrator')
+        );
+    }
+
+    /**
+     * Reactivate the plugins a safe-mode restore left off, or forget them.
+     * Activation is silent: they were active before, so their activation hooks
+     * already ran; a plugin that fatals on load still stays off.
+     */
+    public function safeModeAction(): void
+    {
+        if (! Access::allowed()) {
+            wp_die(esc_html__('Not allowed.', 'plogins-migrator'), '', ['response' => 403]);
+        }
+        check_admin_referer('migrator_safe_mode');
+
+        $off = (array) get_option(Importer::SAFE_MODE_OPTION, []);
+        if (empty($_GET['keep'])) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+            $valid = array_values(array_filter(array_map('strval', $off), static fn (string $p): bool => 0 === validate_plugin($p)));
+            activate_plugins($valid, '', false, true);
+            // Plugins that failed to activate stay listed, so the notice keeps offering them.
+            $off = array_values(array_filter($valid, static fn (string $p): bool => ! is_plugin_active($p)));
+        }
+        if (empty($_GET['keep']) && [] !== $off) {
+            update_option(Importer::SAFE_MODE_OPTION, $off, false);
+        } else {
+            delete_option(Importer::SAFE_MODE_OPTION);
+        }
+
+        wp_safe_redirect(admin_url('plugins.php'));
+        exit;
     }
 
     /**
@@ -149,7 +245,7 @@ final class Ajax implements HasHooks
             }
 
             $importer = new Importer($this->workspace, $wpdb);
-            $result   = $importer->import($importPath, $files);
+            $result   = $importer->import($importPath, $files, null, $this->restoreAfter());
         } catch (\Throwable $e) {
             $result = $e;
         } finally {
@@ -279,7 +375,7 @@ final class Ajax implements HasHooks
 
         $importer = new Importer($this->workspace, $wpdb);
         try {
-            $result = $importer->import($path, $files);
+            $result = $importer->import($path, $files, null, $this->restoreAfter());
             wp_delete_file($path);
             wp_send_json_success($result);
         } catch (\Throwable $e) {
@@ -306,6 +402,24 @@ final class Ajax implements HasHooks
         }
 
         return $components;
+    }
+
+    /**
+     * Safe mode and a new password for one user, from the restore form. The
+     * password is taken as typed: sanitize_text_field() would strip characters
+     * and set a password nobody typed. It is never stored or echoed.
+     *
+     * @return array{safe_mode: bool, admin_user: string, admin_password: string}
+     */
+    private function restoreAfter(): array
+    {
+        // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified by the caller; the password is deliberately unsanitized.
+        return [
+            'safe_mode'      => ! empty($_POST['safe_mode']),
+            'admin_user'     => isset($_POST['admin_user']) ? sanitize_text_field(wp_unslash((string) $_POST['admin_user'])) : '',
+            'admin_password' => isset($_POST['admin_password']) ? (string) wp_unslash((string) $_POST['admin_password']) : '',
+        ];
+        // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
     }
 
     /**

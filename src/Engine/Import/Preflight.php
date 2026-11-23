@@ -28,17 +28,28 @@ final class Preflight
         global $wpdb;
         $out = [];
 
-        // 1) Table prefix. Importer refuses a prefix mismatch (it would leave a
-        //    silently broken site), so surface it here before the attempt.
+        // 1) Table prefix. A single site's tables are moved to this site's
+        //    prefix on import; a multisite restore is refused instead.
         $sourcePrefix = (string) $manifest->get('tablePrefix');
         $targetPrefix = (string) $wpdb->prefix;
-        if ('' !== $sourcePrefix && $sourcePrefix !== $targetPrefix) {
+        if ('' !== $sourcePrefix && $sourcePrefix !== $targetPrefix && ((bool) $manifest->get('multisite') || is_multisite())) {
             $out[] = [
                 'level'   => self::ERROR,
                 'label'   => __('Table prefix', 'plogins-migrator'),
                 'message' => sprintf(
                     /* translators: 1: source prefix, 2: this site's prefix */
-                    __('Archive uses "%1$s" but this site uses "%2$s". The restore will be refused until this site\'s $table_prefix in wp-config.php matches.', 'plogins-migrator'),
+                    __('Archive uses "%1$s" but this site uses "%2$s". A multisite restore cannot move tables to another prefix, so it will be refused until this site\'s $table_prefix in wp-config.php matches.', 'plogins-migrator'),
+                    $sourcePrefix,
+                    $targetPrefix
+                ),
+            ];
+        } elseif ('' !== $sourcePrefix && $sourcePrefix !== $targetPrefix) {
+            $out[] = [
+                'level'   => self::WARN,
+                'label'   => __('Table prefix', 'plogins-migrator'),
+                'message' => sprintf(
+                    /* translators: 1: source prefix, 2: this site's prefix */
+                    __('Archive uses "%1$s" and this site uses "%2$s". The tables, user roles and user capabilities will be remapped to "%2$s" during the restore.', 'plogins-migrator'),
                     $sourcePrefix,
                     $targetPrefix
                 ),

@@ -136,6 +136,13 @@ defined('ABSPATH') || exit;
 				<?php esc_html_e('Create backup', 'plogins-migrator'); ?>
 			</button>
 
+			<div class="migrator-export-check" id="migrator-export-check" hidden>
+				<p class="migrator-export-check__lead"><?php esc_html_e('Check these files before the backup is made. Nothing is left out unless you choose to.', 'plogins-migrator'); ?></p>
+				<ul class="migrator-inspect__checks" id="migrator-export-check-list"></ul>
+				<button type="button" class="button button-primary" id="migrator-export-exclude-sensitive" hidden><?php esc_html_e('Leave the sensitive files out and back up', 'plogins-migrator'); ?></button>
+				<button type="button" class="button" id="migrator-export-continue"><?php esc_html_e('Back up anyway', 'plogins-migrator'); ?></button>
+			</div>
+
 			<div class="migrator-progress" id="migrator-export-progress" hidden>
 				<progress
 					class="migrator-progress__bar"
@@ -203,6 +210,23 @@ defined('ABSPATH') || exit;
 					<p class="migrator-card__desc"><?php esc_html_e('This site sets DISALLOW_FILE_MODS, which stops wp-admin from changing plugins, themes and other code files, so only the database and uploads can be restored here. To restore code files, run the restore with WP-CLI.', 'plogins-migrator'); ?></p>
 				<?php endif; ?>
 				<p class="migrator-card__desc"><?php esc_html_e('Applies to the upload above and to the stored backups below. Untick the database to roll back files without losing orders or posts made since the backup.', 'plogins-migrator'); ?></p>
+			</fieldset>
+
+			<fieldset class="migrator-restore-parts" id="migrator-restore-after">
+				<legend><?php esc_html_e('After the database is restored', 'plogins-migrator'); ?></legend>
+				<label class="migrator-drop__opt">
+					<input type="checkbox" id="migrator-safe-mode">
+					<?php esc_html_e('Safe mode: deactivate the restored plugins (Migrator stays active)', 'plogins-migrator'); ?>
+				</label>
+				<p class="migrator-field">
+					<label for="migrator-admin-user"><?php esc_html_e('Set a new password for (username or email)', 'plogins-migrator'); ?></label>
+					<input type="text" id="migrator-admin-user" class="regular-text" autocomplete="off" value="<?php echo esc_attr(wp_get_current_user()->user_login); ?>">
+				</p>
+				<p class="migrator-field">
+					<label for="migrator-admin-password"><?php esc_html_e('New password', 'plogins-migrator'); ?></label>
+					<input type="password" id="migrator-admin-password" class="regular-text" autocomplete="new-password">
+					<span class="migrator-hint"><?php esc_html_e('Optional. Use it when you do not know the password stored in the backup. Leave it empty to keep the passwords from the backup.', 'plogins-migrator'); ?></span>
+				</p>
 			</fieldset>
 
 			<button type="button" class="button button-primary" id="migrator-import-start" disabled>

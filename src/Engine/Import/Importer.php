@@ -59,14 +59,8 @@ final class Importer
     {
         $prefixes = ['wp-content/' . Workspace::DIR_NAME . '/'];
 
-        foreach (['Migrator\\PLUGIN_FILE', 'Migrator\\Pro\\PLUGIN_FILE'] as $constant) {
-            $file = defined($constant) ? constant($constant) : null;
-
-            if (! is_string($file) || '' === $file) {
-                continue;
-            }
-
-            $dir = dirname(plugin_basename($file));
+        foreach (self::ownPlugins() as $basename) {
+            $dir = dirname($basename);
             if ('' !== $dir && '.' !== $dir) {
                 $prefixes[] = 'wp-content/plugins/' . $dir . '/';
             }
@@ -74,6 +68,27 @@ final class Importer
 
         return $prefixes;
     }
+
+    /**
+     * Plugin basenames of Migrator and its PRO add-on as installed on this site.
+     *
+     * @return list<string>
+     */
+    private static function ownPlugins(): array
+    {
+        $own = [];
+        foreach (['Migrator\\PLUGIN_FILE', 'Migrator\\Pro\\PLUGIN_FILE'] as $constant) {
+            $file = defined($constant) ? constant($constant) : null;
+            if (is_string($file) && '' !== $file) {
+                $own[] = plugin_basename($file);
+            }
+        }
+
+        return $own;
+    }
+
+    /** Holds the plugins a safe-mode restore switched off, until they are reactivated. */
+    public const SAFE_MODE_OPTION = 'migrator_safe_mode_plugins';
 
     /** What a restore can bring back, each on its own. */
     public const COMPONENTS = ['database', 'plugins', 'themes', 'uploads', 'other'];
@@ -137,10 +152,13 @@ final class Importer
     /**
      * @param bool|array<int, string>    $components True for everything, false for the database only, or a list of COMPONENTS.
      * @param callable(string):void|null $log
+     * @param array{safe_mode?: bool, admin_user?: string, admin_password?: string} $after
+     *        What to do once the database is in: switch the restored plugins off,
+     *        and give one user a new password. The password is never logged.
      *
      * @return array{tables: int, statements: int, replaced: int, files: int, warnings: list<string>}
      */
-    public function import(string $archivePath, bool|array $components = true, ?callable $log = null): array
+    public function import(string $archivePath, bool|array $components = true, ?callable $log = null, array $after = []): array
     {
         $log ??= static function (string $m): void {};
         $components = self::components($components);
@@ -169,7 +187,7 @@ final class Importer
                 $archivePath = $temp;
             }
 
-            return $this->runImport($archivePath, $components, $log);
+            return $this->runImport($archivePath, $components, $log, $after);
         } finally {
             if (null !== $temp) {
                 wp_delete_file($temp);
@@ -180,9 +198,10 @@ final class Importer
     /**
      * @param list<string>          $components
      * @param callable(string):void $log
+     * @param array{safe_mode?: bool, admin_user?: string, admin_password?: string} $after
      * @return array{tables: int, statements: int, replaced: int, files: int, warnings: list<string>}
      */
-    private function runImport(string $archivePath, array $components, callable $log): array
+    private function runImport(string $archivePath, array $components, callable $log, array $after): array
     {
         // Open first: the constructor checks the signature, so a file that is
         // not a Migrator archive at all is called that, rather than "never
@@ -219,21 +238,6 @@ final class Importer
             throw new \RuntimeException(__('Migrator: this archive was made by a newer version of Migrator. Update the plugin on this site and try again.', 'plogins-migrator'));
         }
 
-        // The dump uses the source's literal table names. If this site's prefix
-        // differs, the imported tables would not be the ones WordPress reads,
-        // leaving a silently broken site, so refuse rather than corrupt.
-        $sourcePrefix = (string) $manifest->get('tablePrefix');
-        if ('' !== $sourcePrefix && $sourcePrefix !== $this->db->prefix) {
-            // No esc_html() in these messages: the screen shows them with
-            // textContent, so entities appeared literally ("&quot;wp_&quot;").
-            throw new \RuntimeException(sprintf(
-                /* translators: 1: the archive's table prefix, 2: this site's table prefix */
-                __('Migrator: table prefix mismatch. This archive uses "%1$s" but this site uses "%2$s". Set this site\'s $table_prefix to "%1$s" in wp-config.php and try again.', 'plogins-migrator'),
-                $sourcePrefix,
-                $this->db->prefix
-            ));
-        }
-
         // Multisite has its own table layout and URL handling; importing across a
         // single-site/multisite boundary silently corrupts. A companion add-on can
         // declare support for a matched network-to-network restore; otherwise refuse.
@@ -257,6 +261,29 @@ final class Importer
             }
         }
 
+        // The dump uses the source's literal table names. On a single site they
+        // are moved to this site's prefix on the way in; a network keeps one set
+        // of tables per subsite, which a plain prefix swap does not cover.
+        $sourcePrefix = (string) $manifest->get('tablePrefix');
+        $targetPrefix = (string) $this->db->prefix;
+        $rename       = null;
+        $map          = [];
+        if ('' !== $sourcePrefix && $sourcePrefix !== $targetPrefix) {
+            if ($archiveMultisite || is_multisite()) {
+                // No esc_html() in these messages: the screen shows them with
+                // textContent, so entities appeared literally ("&quot;wp_&quot;").
+                throw new \RuntimeException(sprintf(
+                    /* translators: 1: the archive's table prefix, 2: this site's table prefix */
+                    __('Migrator: table prefix mismatch. This archive uses "%1$s" but this site uses "%2$s", and a multisite restore cannot move tables to another prefix. Set this site\'s $table_prefix to "%1$s" in wp-config.php and try again.', 'plogins-migrator'),
+                    $sourcePrefix,
+                    $targetPrefix
+                ));
+            }
+            $map    = self::prefixMap(array_map('strval', (array) $manifest->get('tables')), $sourcePrefix, $targetPrefix);
+            $rename = static fn (string $sql, bool $strict = true): string => self::renameTables($sql, $map, $sourcePrefix, $targetPrefix, $strict);
+            $log(sprintf('Tables move from prefix %s to %s.', $sourcePrefix, $targetPrefix));
+        }
+
         // Capture the target's identity BEFORE the DB import overwrites it.
         $target = [
             'home'    => (string) get_option('home'),
@@ -276,6 +303,7 @@ final class Importer
         $replaced   = 0;
         $tablesRepl = 0;
         $files      = 0;
+        $dbImported = false;
 
         // The dump of the database as it was, kept until the WHOLE restore is
         // through. Deleting it the moment the SQL was in left anything that
@@ -299,12 +327,18 @@ final class Importer
                     $siteBound = $this->siteBoundOptions();
 
                     try {
-                        $statements = $this->importDatabase($reader, $log, $this->dumpCharset($manifest));
+                        $statements = $this->importDatabase($reader, $log, $this->dumpCharset($manifest), $rename);
+
+                        if (null !== $rename) {
+                            $keys = $this->remapPrefixKeys($sourcePrefix, $targetPrefix);
+                            $log(sprintf('Moved %d option and user meta keys to the new prefix.', $keys));
+                        }
 
                         [$from, $to] = $this->replacements($source, $target);
                         if ([] !== $from) {
                             /** @var string[] $tables */
                             $tables     = array_map('strval', (array) $manifest->get('tables'));
+                            $tables     = array_map(static fn (string $t): string => $map[$t] ?? $t, $tables);
                             $search     = new SearchReplace($this->db, new SerializedReplacer($from, $to));
                             $result     = $search->run($tables);
                             $replaced   = $result['changes'];
@@ -379,8 +413,9 @@ final class Importer
                     }
 
                     $replacedDbDump = $rollback;
+                    $dbImported     = true;
                 } elseif (Exporter::ROUTINES_ENTRY === $entry->path) {
-                    $this->importRoutines($reader->readContents(), $log);
+                    $this->importRoutines($reader->readContents(), $log, $rename);
                 } elseif (str_starts_with($entry->path, 'wp-content/')) {
                     if (in_array(self::componentOf($entry->path), $components, true) && $this->extract($entry->path, $reader)) {
                         $files++;
@@ -423,6 +458,10 @@ final class Importer
         $reader->close();
         wp_cache_flush();
 
+        if ($dbImported) {
+            $warnings = array_merge($warnings, $this->afterImport($after, $log));
+        }
+
         return [
             'tables'     => $tablesRepl,
             'statements' => $statements,
@@ -430,6 +469,191 @@ final class Importer
             'files'      => $files,
             'warnings'   => $warnings,
         ];
+    }
+
+    /**
+     * The archive's tables under this site's prefix. Built from exact names, so
+     * when one prefix starts with the other (wp_ and wp_2_) no name is rewritten
+     * twice.
+     *
+     * @param list<string> $tables
+     *
+     * @return array<string, string> archive name => name on this site
+     */
+    public static function prefixMap(array $tables, string $from, string $to): array
+    {
+        $map = [];
+        foreach ($tables as $table) {
+            if (str_starts_with($table, $from)) {
+                $map[$table] = $to . substr($table, strlen($from));
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * One dump statement with its table names moved to the new prefix.
+     *
+     * The table a DROP, CREATE or INSERT acts on is renamed by prefix. Inside a
+     * CREATE (foreign keys, view bodies, triggers) only exact archive table names
+     * are renamed, so a column that happens to start with the prefix is left
+     * alone. An INSERT keeps its row data byte for byte. A statement acting on a
+     * table outside the archive's prefix is refused: on a shared database it
+     * could drop another site's table. With $strict, so is any statement the
+     * dump does not write (only SET, DROP, CREATE and INSERT pass); routines are
+     * read with $strict off, as their bodies are free-form.
+     *
+     * @param array<string, string> $map From prefixMap().
+     */
+    public static function renameTables(string $sql, array $map, string $from, string $to, bool $strict = true): string
+    {
+        // The executor keeps "-- " comment lines glued to the statement after them.
+        preg_match('/^(?:\s*--[^\n]*\n)*\s*/', $sql, $lead);
+        $prefix = $lead[0];
+        $sql    = substr($sql, strlen($prefix));
+
+        $head = '/^(?:INSERT\s+INTO|DROP\s+(?:TABLE|VIEW)(?:\s+IF\s+EXISTS)?|CREATE\s+TABLE|CREATE\s+(?:[^;]*?\s)?VIEW)\s+`((?:[^`]|``)+)`/i';
+        if (preg_match($head, $sql, $m)) {
+            $name = str_replace('``', '`', $m[1]);
+            if (! str_starts_with($name, $from)) {
+                throw new \RuntimeException(sprintf(
+                    /* translators: 1: table name, 2: the archive's table prefix */
+                    __('Migrator: the archive names the table "%1$s", which does not use its prefix "%2$s", so it cannot be moved to this site\'s prefix safely.', 'plogins-migrator'),
+                    $name,
+                    $from
+                ));
+            }
+            $start = substr($m[0], 0, -strlen($m[1]) - 2) . self::tick($to . substr($name, strlen($from)));
+            $rest  = substr($sql, strlen($m[0]));
+            if (0 === stripos($sql, 'INSERT')) {
+                return $prefix . $start . $rest;
+            }
+        } elseif (preg_match('/^SET\s/i', $sql) || '' === $sql) {
+            return $prefix . $sql;
+        } elseif (! $strict && preg_match('/^(?:CREATE|DROP)\s/i', $sql)) {
+            $start = '';
+            $rest  = $sql;
+        } else {
+            // Anything else in a dump could act on a table under the old name.
+            throw new \RuntimeException(sprintf(
+                /* translators: %s: start of the SQL statement */
+                __('Migrator: the archive holds a statement that cannot be moved to this site\'s prefix safely: %s', 'plogins-migrator'),
+                substr($sql, 0, 80)
+            ));
+        }
+
+        return $prefix . $start . preg_replace_callback(
+            '/`((?:[^`]|``)+)`/',
+            static function (array $id) use ($map): string {
+                $name = str_replace('``', '`', $id[1]);
+
+                return isset($map[$name]) ? self::tick($map[$name]) : $id[0];
+            },
+            $rest
+        );
+    }
+
+    private static function tick(string $identifier): string
+    {
+        return '`' . str_replace('`', '``', $identifier) . '`';
+    }
+
+    /**
+     * Move the keys WordPress names after the table prefix: the roles option
+     * and every user meta key that starts with the prefix (capabilities,
+     * user_level, dashboard and screen settings). In options only
+     * {prefix}user_roles moves, because core also keeps options literally
+     * named wp_* (wp_page_for_privacy_policy) that a blanket rule would break.
+     *
+     * A row already under the new name is dropped first, so the archive's
+     * value wins instead of leaving two rows for the same key.
+     *
+     * @return int Keys moved.
+     */
+    public function remapPrefixKeys(string $from, string $to, ?string $options = null, ?string $usermeta = null): int
+    {
+        $options  ??= $this->db->options;
+        $usermeta ??= $this->db->usermeta;
+        $moved      = 0;
+
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery
+        if (null !== $this->db->get_var($this->db->prepare('SELECT option_id FROM %i WHERE option_name = %s', $options, $from . 'user_roles'))) {
+            $this->db->delete($options, ['option_name' => $to . 'user_roles']);
+            $moved += (int) $this->db->update($options, ['option_name' => $to . 'user_roles'], ['option_name' => $from . 'user_roles']);
+        }
+
+        $fromLike = $this->db->esc_like($from) . '%';
+        $toLike   = $this->db->esc_like($to) . '%';
+        $this->db->query($this->db->prepare(
+            'DELETE t FROM %i t JOIN %i s ON s.user_id = t.user_id AND s.meta_key = CONCAT(%s, SUBSTRING(t.meta_key, %d)) WHERE t.meta_key LIKE BINARY %s AND t.meta_key NOT LIKE BINARY %s',
+            $usermeta,
+            $usermeta,
+            $from,
+            strlen($to) + 1,
+            $toLike,
+            $fromLike
+        ));
+        $moved += (int) $this->db->query($this->db->prepare(
+            'UPDATE %i SET meta_key = CONCAT(%s, SUBSTRING(meta_key, %d)) WHERE meta_key LIKE BINARY %s',
+            $usermeta,
+            $to,
+            strlen($from) + 1,
+            $fromLike
+        ));
+        // phpcs:enable WordPress.DB.DirectDatabaseQuery
+
+        if ('' !== $this->db->last_error) {
+            throw new \RuntimeException(sprintf(
+                /* translators: %s: database error */
+                __('Migrator: could not move the user roles and capabilities to the new prefix: %s', 'plogins-migrator'),
+                $this->db->last_error
+            ));
+        }
+
+        return $moved;
+    }
+
+    /**
+     * Steps that need the restored database in place: safe mode and a new
+     * password. Neither fails the restore; a problem comes back as a warning.
+     *
+     * @param array{safe_mode?: bool, admin_user?: string, admin_password?: string} $after
+     * @param callable(string):void                                               $log
+     *
+     * @return list<string> Warnings.
+     */
+    private function afterImport(array $after, callable $log): array
+    {
+        $warnings = [];
+
+        if (! empty($after['safe_mode'])) {
+            $own = self::ownPlugins();
+            $off = array_values(array_diff(array_map('strval', (array) get_option('active_plugins', [])), $own));
+            update_option('active_plugins', $own);
+            if ([] !== $off) {
+                update_option(self::SAFE_MODE_OPTION, $off, false);
+            }
+            $log(sprintf('Safe mode: plugins left inactive: %d.', count($off)));
+        }
+
+        $who      = trim((string) ($after['admin_user'] ?? ''));
+        $password = (string) ($after['admin_password'] ?? '');
+        if ('' !== $who && '' !== $password) {
+            $user = get_user_by(is_email($who) ? 'email' : 'login', $who);
+            if ($user instanceof \WP_User) {
+                wp_set_password($password, $user->ID);
+                $log(sprintf('New password set for %s.', $user->user_login));
+            } else {
+                $warnings[] = sprintf(
+                    /* translators: %s: user login or email typed in the restore form */
+                    __('The user %s is not in the restored database, so no password was changed.', 'plogins-migrator'),
+                    $who
+                );
+            }
+        }
+
+        return $warnings;
     }
 
     /**
@@ -577,7 +801,10 @@ final class Importer
         return '' !== $declared ? $declared : 'utf8mb4';
     }
 
-    private function importDatabase(Reader $reader, callable $log, string $charset = 'utf8mb4'): int
+    /**
+     * @param (\Closure(string, bool):string)|null $rename Moves table names to this site's prefix.
+     */
+    private function importDatabase(Reader $reader, callable $log, string $charset = 'utf8mb4', ?\Closure $rename = null): int
     {
         $tmp    = $this->workspace->path('import-' . wp_generate_password(8, false) . '.sql');
         $handle = fopen($tmp, 'wb');
@@ -609,7 +836,7 @@ final class Importer
         $collation = Collation::forServer($this->db);
         $transform = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql)
             ? 'SET NAMES ' . $charset
-            : $collation->normalise($sql);
+            : $collation->normalise(null === $rename ? $sql : $rename($sql, true));
         try {
             $count = (new SqlExecutor($this->db, $transform))->runFile($tmp);
         } finally {
@@ -628,8 +855,10 @@ final class Importer
      * is a single statement, so it runs whole with no DELIMITER handling.
      * Best-effort: a routine that cannot be created (e.g. lacking privilege) is
      * skipped rather than failing the whole restore.
+     *
+     * @param (\Closure(string, bool):string)|null $rename Moves table names to this site's prefix.
      */
-    private function importRoutines(string $json, callable $log): void
+    private function importRoutines(string $json, callable $log, ?\Closure $rename = null): void
     {
         $routines = json_decode($json, true);
         if (! is_array($routines)) {
@@ -641,12 +870,16 @@ final class Importer
             if (! is_array($routine) || ! isset($routine['create'])) {
                 continue;
             }
+            $create = (string) $routine['create'];
+            if (null !== $rename) {
+                $create = $rename($create, false);
+            }
             if (isset($routine['drop'])) {
                 // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
                 $this->db->query((string) $routine['drop']);
             }
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
-            if (false !== $this->db->query((string) $routine['create'])) {
+            if (false !== $this->db->query($create)) {
                 $count++;
             }
         }
