@@ -52,6 +52,7 @@ $migrator_clean_site = static function () use ($wpdb, $migrator_legacy_options, 
         'migrator_offsite',
         'migrator_last_backup',
         'migrator_last_db_backup',
+        'migrator_safe_mode_plugins',
     ] as $migrator_option) {
         delete_option($migrator_option);
     }

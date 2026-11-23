@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Migrator\Engine\Export;
 
+use Migrator\Engine\Files\FileScanner;
+
 defined('ABSPATH') || exit;
 
 /**
@@ -165,6 +167,60 @@ final class ExportOptions
         return $this->flags;
     }
 
+    /**
+     * What every backup leaves out unless a site filters it back in: folder
+     * names skipped anywhere, wp-content-relative folders (a * matches any
+     * characters), and log files above a size. Caches rebuild themselves, other
+     * backup plugins' archives would nest whole backups inside this one, and a
+     * temporary folder is stale the moment it is copied.
+     *
+     * @return array{names: list<string>, paths: list<string>, log_mb: int}
+     */
+    public static function defaultExcludes(): array
+    {
+        $defaults = [
+            'names'  => ['node_modules', '.git', '.DS_Store'],
+            'paths'  => [
+                'cache', 'et-cache', 'litespeed', 'wfcache', 'w3tc', 'wpo-cache', 'upgrade', 'upgrade-temp-backup', 'tmp',
+                'updraft', 'ai1wm-backups', 'backups-dup-lite', 'backups-dup-pro', 'wpvividbackups', 'backup-db', 'backwpup-*',
+                'uploads/backwpup-*', 'uploads/backupbuddy_backups', 'uploads/wp-staging/backups',
+            ],
+            'log_mb' => 10,
+        ];
+
+        /**
+         * Filters what every backup leaves out by default. Remove an entry to
+         * back it up again, for example 'cache' from paths.
+         *
+         * @param array{names: list<string>, paths: list<string>, log_mb: int} $defaults
+         */
+        $filtered = (array) apply_filters('migrator/default_excludes', $defaults);
+
+        return [
+            'names'  => self::cleanList($filtered['names'] ?? []),
+            'paths'  => self::cleanList($filtered['paths'] ?? []),
+            'log_mb' => max(0, (int) ($filtered['log_mb'] ?? 0)),
+        ];
+    }
+
+    /**
+     * The scanner that walks wp-content for this export.
+     *
+     * @param string[] $skipAbs Absolute paths left out as well (the backups folder, the archive itself).
+     */
+    public function scanner(array $skipAbs = []): FileScanner
+    {
+        $defaults = self::defaultExcludes();
+
+        return new FileScanner(
+            $defaults['names'],
+            array_merge($skipAbs, $this->fileExcludePaths()),
+            $this->fileExcludePatterns(),
+            $this->maxFileBytes(),
+            $defaults['log_mb'] * 1024 * 1024,
+        );
+    }
+
     public function excludeDatabase(): bool
     {
         return $this->is('no_database');
@@ -267,9 +323,17 @@ final class ExportOptions
             $paths[] = untrailingslashit((string) WP_CONTENT_DIR) . '/cache';
         }
 
+        $content = untrailingslashit((string) WP_CONTENT_DIR);
+        foreach (self::defaultExcludes()['paths'] as $rel) {
+            $rel = ltrim($rel, '/');
+            if (str_contains($rel, '..')) {
+                continue;
+            }
+            $paths = array_merge($paths, str_contains($rel, '*') ? (glob($content . '/' . $rel, GLOB_ONLYDIR) ?: []) : [$content . '/' . $rel]);
+        }
+
         // Paths the user picked explicitly, resolved under wp-content. Anything
         // that tries to climb out with ".." or an absolute path is ignored.
-        $content = untrailingslashit((string) WP_CONTENT_DIR);
         foreach ($this->paths as $rel) {
             $rel = ltrim(str_replace('\\', '/', $rel), '/');
             if ('' === $rel || str_contains($rel, '..')) {

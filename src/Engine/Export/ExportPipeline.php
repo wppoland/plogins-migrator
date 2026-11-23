@@ -8,7 +8,6 @@ use Migrator\Engine\Archive\Entry;
 use Migrator\Engine\Archive\Manifest;
 use Migrator\Engine\Archive\Writer;
 use Migrator\Engine\Db\Dumper;
-use Migrator\Engine\Files\FileScanner;
 use Migrator\Engine\Pipeline\TimeBudget;
 use Migrator\Support\Workspace;
 
@@ -116,7 +115,7 @@ final class ExportPipeline
             throw new \RuntimeException('Migrator: cannot open file list.');
         }
         $total = 0;
-        $found = $options->is('no_files') ? [] : $this->scanner($options)->scan($this->contentDir());
+        $found = $options->is('no_files') ? [] : $options->scanner([$this->workspace->path()])->scan($this->contentDir());
         foreach ($found as $file) {
             $line = $file['rel'] . "\n";
             // The list IS the backup's contents. A short write here drops files
@@ -441,16 +440,6 @@ final class ExportPipeline
         $outside = $options->is('no_media') || $options->is('no_files') ? null : Exporter::uploadsOutsideContent();
 
         return null === $outside ? [] : [sprintf('The media library is outside wp-content (%s) and is not in this backup.', $outside)];
-    }
-
-    private function scanner(ExportOptions $options): FileScanner
-    {
-        return new FileScanner(
-            ['node_modules', '.git', '.DS_Store'],
-            array_merge([$this->workspace->path()], $options->fileExcludePaths()),
-            $options->fileExcludePatterns(),
-            $options->maxFileBytes(),
-        );
     }
 
     private function contentDir(): string

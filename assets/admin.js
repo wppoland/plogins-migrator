@@ -8,6 +8,23 @@ function migratorRestoreParts() {
 		function ( el ) { return el.value; }
 	).join( ',' );
 }
+
+/* Restore request fields: the parts, safe mode and an optional new password. */
+function migratorRestoreFields() {
+	'use strict';
+	var safe = document.getElementById( 'migrator-safe-mode' );
+	var user = document.getElementById( 'migrator-admin-user' );
+	var pass = document.getElementById( 'migrator-admin-password' );
+	var out = { components: migratorRestoreParts() };
+	if ( safe && safe.checked ) {
+		out.safe_mode = '1';
+	}
+	if ( pass && pass.value ) {
+		out.admin_user = user ? user.value : '';
+		out.admin_password = pass.value;
+	}
+	return out;
+}
 ( function () {
 	'use strict';
 
@@ -104,13 +121,13 @@ function migratorRestoreParts() {
 		} );
 	}
 
-	startBtn.addEventListener( 'click', function () {
-		startBtn.disabled = true;
-		result.hidden = true;
-		resultMsg.classList.remove( 'is-error' );
-		progress.hidden = false;
-		setProgress( 0, i18n.preparing || 'Preparing…' );
+	var check = document.getElementById( 'migrator-export-check' );
+	var checkList = document.getElementById( 'migrator-export-check-list' );
+	var excludeBtn = document.getElementById( 'migrator-export-exclude-sensitive' );
+	var continueBtn = document.getElementById( 'migrator-export-continue' );
+	var pending = null;
 
+	function exportOptions() {
 		var opts = {};
 		document.querySelectorAll( '.migrator-export-opt:checked' ).forEach( function ( cb ) {
 			opts[ 'options[' + cb.value + ']' ] = '1';
@@ -131,6 +148,23 @@ function migratorRestoreParts() {
 		if ( maxMb && parseInt( maxMb.value, 10 ) > 0 ) {
 			opts[ 'options[max_file_mb]' ] = String( parseInt( maxMb.value, 10 ) );
 		}
+		return opts;
+	}
+
+	function runExport( opts, extraPaths ) {
+		if ( check ) {
+			check.hidden = true;
+		}
+		progress.hidden = false;
+		setProgress( 0, i18n.preparing || 'Preparing…' );
+
+		var pi = 0;
+		while ( opts[ 'options[exclude_paths][' + pi + ']' ] !== undefined ) {
+			pi++;
+		}
+		( extraPaths || [] ).forEach( function ( p ) {
+			opts[ 'options[exclude_paths][' + pi++ + ']' ] = p;
+		} );
 		var comp = document.querySelector( 'input[name="migrator-compress"]:checked' );
 		if ( comp && comp.value === 'gzip' ) {
 			opts.compress = '1';
@@ -151,6 +185,70 @@ function migratorRestoreParts() {
 			loop();
 		} ).catch( function () {
 			fail();
+		} );
+	}
+
+	// Named before the backup is made: credentials and dumps that would travel
+	// with it, and files that tend to cause trouble. A failed check never
+	// stands in the way of the backup.
+	function showCheck( opts, items ) {
+		checkList.replaceChildren();
+		var sensitive = [];
+		items.forEach( function ( it ) {
+			var li = document.createElement( 'li' );
+			li.className = 'migrator-check migrator-check--' + ( 'sensitive' === it.kind ? 'error' : 'warn' );
+			li.textContent = it.message;
+			checkList.appendChild( li );
+			if ( 'sensitive' === it.kind ) {
+				sensitive.push( it.path );
+			}
+		} );
+		excludeBtn.hidden = ! sensitive.length;
+		pending = { opts: opts, sensitive: sensitive };
+		check.hidden = false;
+		startBtn.disabled = false;
+	}
+
+	if ( excludeBtn && continueBtn ) {
+		excludeBtn.addEventListener( 'click', function () {
+			if ( pending ) {
+				startBtn.disabled = true;
+				runExport( pending.opts, pending.sensitive );
+				pending = null;
+			}
+		} );
+		continueBtn.addEventListener( 'click', function () {
+			if ( pending ) {
+				startBtn.disabled = true;
+				runExport( pending.opts, [] );
+				pending = null;
+			}
+		} );
+	}
+
+	startBtn.addEventListener( 'click', function () {
+		startBtn.disabled = true;
+		result.hidden = true;
+		resultMsg.classList.remove( 'is-error' );
+		var opts = exportOptions();
+		if ( ! check ) {
+			runExport( opts, [] );
+			return;
+		}
+		check.hidden = true;
+		status.textContent = i18n.scanning || 'Scanning...';
+		progress.hidden = false;
+		bar.value = 0;
+		post( 'migrator_export_check', opts ).then( function ( res ) {
+			var items = res && res.success && res.data ? res.data.items || [] : [];
+			if ( items.length ) {
+				progress.hidden = true;
+				showCheck( opts, items );
+			} else {
+				runExport( opts, [] );
+			}
+		} ).catch( function () {
+			runExport( opts, [] );
 		} );
 	} );
 
@@ -268,7 +366,9 @@ function migratorRestoreParts() {
 		var label = btn.textContent;
 		btn.disabled = true;
 		btn.textContent = i18n.restoring || 'Restoring…';
-		post( 'migrator_restore_backup', { file: file, components: migratorRestoreParts() } ).then( function ( res ) {
+		var fields = migratorRestoreFields();
+		fields.file = file;
+		post( 'migrator_restore_backup', fields ).then( function ( res ) {
 			btn.disabled = false;
 			btn.textContent = label;
 			var done = ( i18n.restoreDone || 'Restore complete.' ) + ( res && res.success && res.data && res.data.warnings && res.data.warnings.length ? ' ' + res.data.warnings.join( ' ' ) : '' );
@@ -437,7 +537,10 @@ function migratorRestoreParts() {
 		body.set( 'action', 'migrator_import_run' );
 		body.set( 'nonce', data.nonce );
 		body.set( 'upload_id', id );
-		body.set( 'components', migratorRestoreParts() );
+		var fields = migratorRestoreFields();
+		Object.keys( fields ).forEach( function ( k ) {
+			body.set( k, fields[ k ] );
+		} );
 
 		fetch( data.ajaxUrl, {
 			method: 'POST',

@@ -8,7 +8,6 @@ use Migrator\Engine\Archive\Entry;
 use Migrator\Engine\Archive\Manifest;
 use Migrator\Engine\Archive\Writer;
 use Migrator\Engine\Db\Dumper;
-use Migrator\Engine\Files\FileScanner;
 use Migrator\Support\Workspace;
 
 defined('ABSPATH') || exit;
@@ -98,12 +97,7 @@ final class Exporter
         // The archive itself is excluded too: `wp migrator export --output`
         // pointed inside wp-content otherwise copied the growing archive into
         // itself.
-        $scanner = new FileScanner(
-            ['node_modules', '.git', '.DS_Store'],
-            array_merge([$this->workspace->path(), $working, $destination], $options->fileExcludePaths()),
-            $options->fileExcludePatterns(),
-            $options->maxFileBytes(),
-        );
+        $scanner = $options->scanner([$this->workspace->path(), $working, $destination]);
 
         $fileCount = 0;
         $fileBytes = 0;

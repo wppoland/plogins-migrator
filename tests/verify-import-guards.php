@@ -33,20 +33,20 @@ $baseManifest = [
     'tables'        => [],
 ];
 
-// 1. Prefix mismatch must hard-fail before touching the DB.
+// 1. A prefix mismatch on a single site is no longer refused: the tables are
+// moved to this site's prefix (covered in verify-prefix-remap.php). An archive
+// with no database entry restores with nothing to move.
 $mPath = $ws->path('guard-prefix.migrator');
 $w = new Writer($mPath);
 $w->addString(Manifest::NAME, (string) wp_json_encode(array_merge($baseManifest, ['tablePrefix' => 'zz_'])), Entry::TYPE_MANIFEST);
 $w->finish();
-$rejected = false;
+$error = '';
 try {
     (new Importer($ws, $wpdb))->import($mPath, false);
 } catch (\Throwable $e) {
-    $rejected = str_contains($e->getMessage(), 'prefix mismatch');
-    $plain    = str_contains($e->getMessage(), '"zz_"') && ! str_contains($e->getMessage(), '&quot;');
+    $error = $e->getMessage();
 }
-$check('prefix mismatch is rejected (no silent broken site)', $rejected);
-$check('and the message is plain text, not HTML entities the screen would show literally', $plain ?? false);
+$check('prefix mismatch on a single site is accepted (' . $error . ')', '' === $error);
 @unlink($mPath);
 
 // 2. Zip-slip: an entry path escaping wp-content must NOT be written.
