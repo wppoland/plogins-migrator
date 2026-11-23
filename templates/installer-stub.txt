@@ -1,0 +1,1589 @@
+<?php
+/**
+ * Migrator installer (standalone).
+ *
+ * Restores a Migrator backup onto a server that has no WordPress yet, or over
+ * one that does: fetches the backup from a link if asked, downloads WordPress
+ * core, extracts wp-content, imports the database, rewrites the old URLs and
+ * paths, optionally moves the tables to a new prefix, sets an admin password,
+ * switches plugins off (safe mode) and writes or reuses wp-config.php.
+ *
+ * HOW TO USE
+ *   1. Create an empty database on the new server (or reuse the site's own).
+ *   2. Upload this file and your ".migrator" (or ".migrator.gz") backup into the
+ *      folder WordPress should live in.
+ *   3. Open this file in your browser, enter the access key shown on the Deploy
+ *      screen when you downloaded it, and follow the form.
+ *   4. When it finishes it deletes itself, its state files and the backup.
+ *
+ * The work is split into short steps (about 20 seconds each) that save their
+ * place in a state file, so a timeout, a closed tab or a reload resumes where
+ * it stopped instead of starting over.
+ *
+ * Dependency-free on purpose: it needs neither WordPress, the Migrator plugin
+ * nor Composer, only PHP 8.1 with mysqli.
+ *
+ * @package Migrator
+ */
+
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+@ini_set('display_errors', '0');
+@ini_set('memory_limit', '512M');
+ignore_user_abort(true);
+if (function_exists('mysqli_report')) {
+    mysqli_report(MYSQLI_REPORT_OFF);
+}
+
+const MIG_SIGNATURE = "MIGR\x01";
+const MIG_CHUNK     = 1048576;
+
+// sha256 of the access key. The Deploy screen writes it in when you download
+// this file; left as it is, the installer makes a key on first open instead.
+const MIG_KEY_HASH = '__MIGRATOR_ACCESS_KEY_HASH__';
+
+// The installer's own files start with this line, so a web server that serves
+// them as PHP prints nothing, and one that serves them as text never sees a
+// .json or .sql name worth requesting.
+const MIG_GUARD = "<?php exit; ?>\n";
+
+// Where safe mode keeps the plugin list it switched off.
+const MIG_SAFE_MODE_OPTION = 'migrator_safe_mode_plugins';
+
+const MIG_PHASES = ['fetch', 'gunzip', 'core', 'files', 'sql', 'routines', 'prefix', 'replace', 'finish'];
+
+define('MIG_DIR', __DIR__);
+define('MIG_STATE', __DIR__ . '/.migrator-installer-state.php');
+define('MIG_STATE_TMP', __DIR__ . '/.migrator-installer-state-tmp.php');
+define('MIG_LOCK', __DIR__ . '/.migrator-installer.lock');
+
+class Mig_Error extends RuntimeException
+{
+}
+
+function mig_h(string $s): string
+{
+    return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+/** The moment this request must hand back: 70% of max_execution_time, 5 to 20 s. */
+function mig_deadline(): float
+{
+    $max = (int) ini_get('max_execution_time');
+
+    return microtime(true) + ($max > 0 ? max(5.0, min(20.0, $max * 0.7)) : 20.0);
+}
+
+// ---------------------------------------------------------------------------
+// State file.
+// ---------------------------------------------------------------------------
+
+function mig_state_load(): ?array
+{
+    $raw = @file_get_contents(MIG_STATE);
+    if ($raw === false) {
+        return null;
+    }
+    $state = json_decode(substr($raw, strlen(MIG_GUARD)), true);
+
+    return is_array($state) ? $state : null;
+}
+
+/** Written to a temp file and renamed, so a killed request never leaves half a state. */
+function mig_state_save(array &$s): void
+{
+    $s['seen'] = time();
+    $json      = json_encode($s, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    if (! is_string($json) || file_put_contents(MIG_STATE_TMP, MIG_GUARD . $json) === false || ! rename(MIG_STATE_TMP, MIG_STATE)) {
+        throw new Mig_Error('Cannot write the installer state file in this folder. Check its permissions.');
+    }
+}
+
+function mig_log(array &$s, string $line): void
+{
+    $s['log'][] = $line;
+    $s['log']   = array_slice($s['log'], -60);
+}
+
+// ---------------------------------------------------------------------------
+// Archive reading (a standalone port of the Migrator Reader).
+// ---------------------------------------------------------------------------
+
+/** @return resource */
+function mig_open_at(string $path, int $offset)
+{
+    $h = @fopen($path, 'rb');
+    if (! $h) {
+        throw new Mig_Error('Cannot open the backup archive: ' . basename($path));
+    }
+    fseek($h, $offset);
+
+    return $h;
+}
+
+/**
+ * Read the entry header at the handle's position. Null at the end marker.
+ *
+ * @param resource $h
+ */
+function mig_header($h): ?array
+{
+    $len = (string) fread($h, 4);
+    if (strlen($len) < 4) {
+        throw new Mig_Error('The backup ends part way through, so it is not complete. Make a new backup and try again.');
+    }
+    $n = unpack('N', $len)[1];
+    if ($n === 0) {
+        return null;
+    }
+    $header = json_decode((string) fread($h, $n), true);
+    if (! is_array($header)) {
+        throw new Mig_Error('The backup is damaged: an entry header cannot be read.');
+    }
+
+    return ['p' => (string) ($header['p'] ?? ''), 's' => (int) ($header['s'] ?? 0), 't' => (string) ($header['t'] ?? 'file')];
+}
+
+/** Read the manifest. gzopen reads plain files as they are, so this works before gunzip. */
+function mig_manifest(string $path): array
+{
+    $h = @gzopen($path, 'rb');
+    if (! $h) {
+        throw new Mig_Error('Cannot open the backup archive: ' . basename($path));
+    }
+    $ok       = gzread($h, strlen(MIG_SIGNATURE)) === MIG_SIGNATURE;
+    $len      = $ok ? (string) gzread($h, 4) : '';
+    $header   = strlen($len) === 4 ? json_decode((string) gzread($h, max(1, unpack('N', $len)[1])), true) : null;
+    $manifest = is_array($header) && ($header['t'] ?? '') === 'manifest' ? json_decode((string) gzread($h, max(1, (int) $header['s'])), true) : null;
+    gzclose($h);
+    if (! is_array($manifest)) {
+        throw new Mig_Error('That file is not a Migrator backup (no signature or manifest).');
+    }
+
+    return $manifest;
+}
+
+function mig_is_gz(string $path): bool
+{
+    $h = @fopen($path, 'rb');
+    $magic = $h ? (string) fread($h, 2) : '';
+    if ($h) {
+        fclose($h);
+    }
+
+    return $magic === "\x1f\x8b";
+}
+
+/** Backups sitting next to this installer. */
+function mig_find_archives(): array
+{
+    $found = array_merge(glob(MIG_DIR . '/*.migrator') ?: [], glob(MIG_DIR . '/*.migrator.gz') ?: []);
+
+    return array_values(array_filter($found, static fn (string $p): bool => strpos(basename($p), '.part') === false));
+}
+
+/** Where an archive entry goes, or null when it is not restored here. */
+function mig_target(string $path): ?string
+{
+    if (strncmp($path, 'wp-content/', 11) !== 0 || strncmp($path, 'wp-content/migrator-backups/', 28) === 0) {
+        return null;
+    }
+    if (in_array('..', explode('/', $path), true) || strpos($path, "\0") !== false) {
+        return null;
+    }
+
+    return MIG_DIR . '/' . $path;
+}
+
+// ---------------------------------------------------------------------------
+// Serialization-safe search/replace (a standalone port of SerializedReplacer).
+// ---------------------------------------------------------------------------
+
+class Mig_Replacer
+{
+    /** @var string[] */
+    public array $from;
+    /** @var string[] */
+    public array $to;
+    public int $count = 0;
+
+    public function __construct(array $from, array $to)
+    {
+        $this->from = array_values($from);
+        $this->to   = array_values($to);
+    }
+
+    public function replace($data)
+    {
+        return $this->process($data, false);
+    }
+
+    private function process($data, bool $serialised)
+    {
+        if (is_string($data) && $data !== '' && $this->isSerialized($data)
+            && false !== ($un = @unserialize($data, ['allowed_classes' => ['stdClass']]))) {
+            if (! $this->hasIncomplete($un)) {
+                $data = $this->process($un, true);
+            }
+        } elseif (is_array($data)) {
+            $tmp = [];
+            foreach ($data as $k => $v) {
+                $tmp[$k] = $this->process($v, false);
+            }
+            $data = $tmp;
+        } elseif (is_object($data)) {
+            if (! ($data instanceof __PHP_Incomplete_Class)) {
+                $clone = clone $data;
+                foreach (get_object_vars($data) as $k => $v) {
+                    $clone->$k = $this->process($v, false);
+                }
+                $data = $clone;
+            }
+        } elseif (is_string($data)) {
+            $data = $this->replaceInString($data);
+        }
+
+        return $serialised ? serialize($data) : $data;
+    }
+
+    private function replaceInString(string $data): string
+    {
+        $trimmed = ltrim($data);
+        if ($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) {
+            $decoded = json_decode($data, true);
+            if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) {
+                $before = $this->count;
+                $proc   = $this->process($decoded, false);
+                if ($this->count > $before) {
+                    $enc = json_encode($proc, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                    if (is_string($enc)) {
+                        return $enc;
+                    }
+                }
+            }
+        }
+        $n   = 0;
+        $out = str_replace($this->from, $this->to, $data, $n);
+        $this->count += $n;
+
+        return $out;
+    }
+
+    private function hasIncomplete($data): bool
+    {
+        if ($data instanceof __PHP_Incomplete_Class) {
+            return true;
+        }
+        if (is_array($data) || is_object($data)) {
+            foreach (is_array($data) ? $data : get_object_vars($data) as $v) {
+                if ($this->hasIncomplete($v)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function isSerialized(string $data): bool
+    {
+        $data = trim($data);
+        if ($data === 'N;') {
+            return true;
+        }
+        if (strlen($data) < 4 || $data[1] !== ':') {
+            return false;
+        }
+        $semicolon = strpos($data, ';');
+        $brace     = strpos($data, '}');
+        if ($semicolon === false && $brace === false) {
+            return false;
+        }
+        if (($semicolon !== false && $semicolon < 3) || ($brace !== false && $brace < 4)) {
+            return false;
+        }
+        $token = $data[0];
+        switch ($token) {
+            case 's':
+                if (substr($data, -2, 1) !== '"') {
+                    return false;
+                }
+                // fall through.
+            case 'a':
+            case 'O':
+            case 'E':
+                return (bool) preg_match("/^{$token}:[0-9]+:/s", $data);
+            case 'b':
+            case 'i':
+            case 'd':
+                return (bool) preg_match("/^{$token}:[0-9.E+-]+;/", $data);
+        }
+
+        return false;
+    }
+}
+
+/**
+ * The URL and path pairs to rewrite, in the order the plugin's importer uses:
+ * full values first, then scheme-relative and URL-encoded leftovers.
+ */
+function mig_pairs(array $manifest, string $url, string $abspath): array
+{
+    $from = [];
+    $to   = [];
+    foreach (['homeUrl' => $url, 'siteUrl' => $url, 'contentDir' => $abspath . '/wp-content', 'abspath' => $abspath] as $key => $target) {
+        $src = rtrim((string) ($manifest[$key] ?? ''), '/');
+        // One pair per source: home and site URL are usually equal, and a second
+        // pass over an already rewritten value would turn /sub into /sub/sub.
+        if ($src !== '' && $src !== $target && ! in_array($src, $from, true)) {
+            $from[] = $src;
+            $to[]   = $target;
+        }
+    }
+    $full = count($from);
+    for ($i = 0; $i < $full; $i++) {
+        $pos = strpos($from[$i], '://');
+        $new = strpos($to[$i], '://');
+        if ($pos === false || $new === false) {
+            continue;
+        }
+        $old = substr($from[$i], $pos + 1);
+        // Skipped when it would match something a full pair already wrote.
+        foreach ($to as $written) {
+            if (strpos($written, $old) !== false) {
+                continue 2;
+            }
+        }
+        if (! in_array($old, $from, true)) {
+            $from[] = $old;
+            $to[]   = substr($to[$i], $new + 1);
+        }
+    }
+    for ($i = 0; $i < $full; $i++) {
+        if (strpos($from[$i], '://') !== false && ! in_array(rawurlencode($from[$i]), $from, true)) {
+            $from[] = rawurlencode($from[$i]);
+            $to[]   = rawurlencode($to[$i]);
+        }
+    }
+
+    return [$from, $to];
+}
+
+// ---------------------------------------------------------------------------
+// Database.
+// ---------------------------------------------------------------------------
+
+function mig_db(array $creds): mysqli
+{
+    static $cache = [];
+    $id = md5(json_encode($creds));
+    if (isset($cache[$id])) {
+        return $cache[$id];
+    }
+    if (! class_exists('mysqli')) {
+        throw new Mig_Error('This server\'s PHP has no mysqli extension, which WordPress needs too. Ask the host to enable it.');
+    }
+    $host   = (string) $creds['host'];
+    $port   = null;
+    $socket = null;
+    if (preg_match('/^(.*):(\d+)$/', $host, $m)) {
+        [$host, $port] = [$m[1], (int) $m[2]];
+    } elseif (preg_match('/^(.*):(\/.+)$/', $host, $m)) {
+        [$host, $socket] = [$m[1] !== '' ? $m[1] : 'localhost', $m[2]];
+    }
+    $db = mysqli_init();
+    $db->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
+    if (! @$db->real_connect($host, (string) $creds['user'], (string) $creds['pass'], (string) $creds['name'], $port, $socket)) {
+        throw new Mig_Error('Database connection failed: ' . mysqli_connect_error());
+    }
+    $db->set_charset('utf8mb4');
+
+    return $cache[$id] = $db;
+}
+
+function mig_q(mysqli $db, string $s): string
+{
+    return "'" . $db->real_escape_string($s) . "'";
+}
+
+/** Table names in a statement, old prefix to new. INSERT values are data and stay untouched. */
+function mig_remap(array $map, string $sql): string
+{
+    if ($map === []) {
+        return $sql;
+    }
+    if (strncasecmp($sql, 'INSERT', 6) === 0) {
+        return (string) preg_replace_callback(
+            '/^INSERT\s+(?:IGNORE\s+)?INTO\s+(`(?:[^`]|``)+`)/i',
+            static fn (array $m): string => str_replace($m[1], $map[$m[1]] ?? $m[1], $m[0]),
+            $sql,
+            1
+        );
+    }
+
+    return strtr($sql, $map);
+}
+
+/** Read the DB settings out of a wp-config.php without running it. */
+function mig_read_wpconfig(string $file): ?array
+{
+    $src = @file_get_contents($file);
+    if (! is_string($src)) {
+        return null;
+    }
+    $out = [];
+    foreach (['name' => 'DB_NAME', 'user' => 'DB_USER', 'pass' => 'DB_PASSWORD', 'host' => 'DB_HOST'] as $key => $const) {
+        if (! preg_match('/define\(\s*[\'"]' . $const . '[\'"]\s*,\s*([\'"])(.*?)\1\s*\)/s', $src, $m)) {
+            return null;
+        }
+        $out[$key] = stripcslashes($m[2]);
+    }
+    $out['prefix'] = preg_match('/\$table_prefix\s*=\s*[\'"]([A-Za-z0-9_]+)[\'"]/', $src, $m) ? $m[1] : 'wp_';
+
+    return $out;
+}
+
+// ---------------------------------------------------------------------------
+// Phases. Each returns true when finished, false when it ran out of time.
+// ---------------------------------------------------------------------------
+
+/** Download the backup from a link, resuming with a Range request after a timeout. */
+function mig_phase_fetch(array &$s, float $deadline): bool
+{
+    $url = (string) $s['opts']['archive_url'];
+    if ($url === '') {
+        return true;
+    }
+    $dest = $s['archive'];
+    $have = is_file($dest) ? (int) filesize($dest) : 0;
+    $out  = fopen($dest, 'ab');
+    if (! $out) {
+        throw new Mig_Error('Cannot write the backup into this folder. Check its permissions.');
+    }
+
+    if (! function_exists('curl_init')) {
+        $in = @fopen($url, 'rb');
+        if (! $in) {
+            fclose($out);
+            throw new Mig_Error('Download failed: this server cannot open remote links (no curl, and allow_url_fopen is off).');
+        }
+        // shortcut: without curl there is no Range request, so the download runs in one request; install curl for large files.
+        ftruncate($out, 0);
+        stream_copy_to_stream($in, $out);
+        fclose($in);
+        fclose($out);
+
+        return true;
+    }
+
+    // A server without Range support gets the whole file in one long request.
+    $noRange = ! empty($s['noRange']);
+    if ($noRange) {
+        ftruncate($out, 0);
+        $have = 0;
+        @set_time_limit(0);
+    }
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_FILE           => $out,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS      => 5,
+        CURLOPT_FAILONERROR    => true,
+        CURLOPT_CONNECTTIMEOUT => 15,
+        CURLOPT_TIMEOUT        => $noRange ? 0 : max(5, (int) ($deadline - microtime(true))),
+        CURLOPT_RESUME_FROM    => $have,
+    ]);
+    $ok    = curl_exec($ch);
+    $errno = curl_errno($ch);
+    $error = curl_error($ch);
+    $code  = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    fclose($out);
+    clearstatcache();
+
+    if ($ok || ($code === 416 && $have > 0)) {
+        if ((int) filesize($dest) === 0) {
+            throw new Mig_Error('The downloaded backup is empty. Check that the link has not expired.');
+        }
+        mig_log($s, 'Downloaded the backup (' . number_format(filesize($dest) / 1048576, 1) . ' MB).');
+
+        return true;
+    }
+    if ($errno === 28 || $errno === 33) {
+        $s['noRange'] = $noRange || $errno === 33;
+
+        return false;
+    }
+
+    throw new Mig_Error('Download failed' . ($code ? ' (HTTP ' . $code . ')' : '') . ($error !== '' ? ': ' . $error : '.'));
+}
+
+/** Unpack a .gz backup to a plain copy, appending from where the last request stopped. */
+function mig_phase_gunzip(array &$s, float $deadline): bool
+{
+    if (! mig_is_gz($s['archive'])) {
+        $s['source'] = $s['archive'];
+
+        return true;
+    }
+    if (! isset($s['plain'])) {
+        $s['plain'] = $s['archive'] . '.' . bin2hex(random_bytes(6)) . '.tmp';
+        mig_state_save($s);
+    }
+    clearstatcache();
+    $done = is_file($s['plain']) ? (int) filesize($s['plain']) : 0;
+    $in   = gzopen($s['archive'], 'rb');
+    $out  = fopen($s['plain'], 'ab');
+    if (! $in || ! $out) {
+        throw new Mig_Error('Cannot unpack the compressed backup. Check the folder permissions and free space.');
+    }
+    // shortcut: gzseek inflates from the start again on every request, so each resume costs more on a very large archive; a resumable inflate context would remove that.
+    if ($done > 0 && gzseek($in, $done) !== 0) {
+        throw new Mig_Error('Cannot resume unpacking the compressed backup.');
+    }
+    $finished = true;
+    while (! gzeof($in)) {
+        $chunk = gzread($in, MIG_CHUNK);
+        if ($chunk === false) {
+            throw new Mig_Error('The compressed backup is damaged.');
+        }
+        if (fwrite($out, $chunk) !== strlen($chunk)) {
+            throw new Mig_Error('Cannot write the unpacked backup (disk full?).');
+        }
+        if (microtime(true) >= $deadline) {
+            $finished = gzeof($in);
+            break;
+        }
+    }
+    gzclose($in);
+    fclose($out);
+    if ($finished) {
+        $s['source'] = $s['plain'];
+        mig_log($s, 'Unpacked the compressed backup.');
+    }
+
+    return $finished;
+}
+
+/** Download and extract WordPress core. */
+function mig_phase_core(array &$s): bool
+{
+    if (empty($s['opts']['install_core'])) {
+        return true;
+    }
+    if (! class_exists('ZipArchive')) {
+        mig_log($s, 'Skipped the WordPress download: the ZipArchive extension is missing. Upload the WordPress files yourself.');
+
+        return true;
+    }
+    $version = (string) ($s['manifest']['wpVersion'] ?? '');
+    $url     = $version !== '' ? 'https://wordpress.org/wordpress-' . rawurlencode($version) . '.zip' : 'https://wordpress.org/latest.zip';
+    $tmp     = MIG_DIR . '/.migrator-core-' . bin2hex(random_bytes(6)) . '.zip';
+    // shortcut: core (about 30 MB) downloads and unpacks in one request; split it if a host cuts requests shorter than that takes.
+    $ok = false;
+    if (function_exists('curl_init')) {
+        $fh = fopen($tmp, 'wb');
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_FILE => $fh, CURLOPT_FOLLOWLOCATION => true, CURLOPT_FAILONERROR => true, CURLOPT_TIMEOUT => 120]);
+        $ok = (bool) curl_exec($ch);
+        curl_close($ch);
+        fclose($fh);
+    } elseif ($in = @fopen($url, 'rb')) {
+        $ok = file_put_contents($tmp, $in) > 0;
+        fclose($in);
+    }
+    $zip = new ZipArchive();
+    if (! $ok || $zip->open($tmp) !== true) {
+        @unlink($tmp);
+        mig_log($s, 'Could not download WordPress ' . ($version !== '' ? $version : '') . ' from wordpress.org. Upload the WordPress files yourself.');
+
+        return true;
+    }
+    $stage = MIG_DIR . '/.migrator-core-' . bin2hex(random_bytes(6));
+    $zip->extractTo($stage);
+    $zip->close();
+    @unlink($tmp);
+    // The zip holds a top-level "wordpress/" folder. Its wp-content is left out:
+    // the backup provides that.
+    foreach (scandir($stage . '/wordpress') ?: [] as $item) {
+        if ($item === '.' || $item === '..' || $item === 'wp-content') {
+            continue;
+        }
+        if (file_exists(MIG_DIR . '/' . $item)) {
+            mig_rrmdir(MIG_DIR . '/' . $item);
+        }
+        rename($stage . '/wordpress/' . $item, MIG_DIR . '/' . $item);
+    }
+    mig_rrmdir($stage);
+    if (! is_dir(MIG_DIR . '/wp-content')) {
+        mkdir(MIG_DIR . '/wp-content', 0755);
+    }
+    mig_log($s, 'Installed WordPress ' . ($version !== '' ? $version : '(latest)') . '.');
+
+    return true;
+}
+
+function mig_rrmdir(string $path): void
+{
+    if (is_dir($path) && ! is_link($path)) {
+        foreach (scandir($path) ?: [] as $item) {
+            if ($item !== '.' && $item !== '..') {
+                mig_rrmdir($path . '/' . $item);
+            }
+        }
+        @rmdir($path);
+    } else {
+        @unlink($path);
+    }
+}
+
+/**
+ * Extract wp-content, one chunk at a time. The state holds the archive offset
+ * of the next header, or the file being written and how much of it is done, so
+ * a resumed request truncates that file back to the checkpoint and goes on.
+ */
+function mig_phase_files(array &$s, float $deadline): bool
+{
+    $h         = mig_open_at($s['source'], (int) $s['pos']);
+    $lastSave  = microtime(true);
+    $finished  = false;
+    $out       = null;
+
+    try {
+        while (microtime(true) < $deadline) {
+            if ($s['cur'] === null) {
+                $entry = mig_header($h);
+                if ($entry === null) {
+                    $finished = true;
+                    break;
+                }
+                $at = (int) ftell($h);
+                if ($entry['p'] === 'database.sql') {
+                    $s['sql']    = ['start' => $at, 'end' => $at + $entry['s']];
+                    $s['sqlPos'] = $at;
+                } elseif ($entry['p'] === 'migrator-routines.json') {
+                    $s['routinesAt'] = [$at, $entry['s']];
+                }
+                $target = $entry['t'] === 'file' ? mig_target($entry['p']) : null;
+                if ($target === null) {
+                    fseek($h, $entry['s'], SEEK_CUR);
+                    $s['pos'] = $at + $entry['s'];
+                    continue;
+                }
+                $s['cur'] = ['target' => $target, 'at' => $at, 'size' => $entry['s'], 'done' => 0];
+            }
+
+            $cur = &$s['cur'];
+            if ($out === null) {
+                if (! is_dir(dirname($cur['target']))) {
+                    @mkdir(dirname($cur['target']), 0755, true);
+                }
+                $out = @fopen($cur['target'], 'c');
+                if (! $out) {
+                    throw new Mig_Error('Cannot write ' . substr($cur['target'], strlen(MIG_DIR) + 1) . '. Check the folder permissions.');
+                }
+                ftruncate($out, $cur['done']);
+                fseek($out, $cur['done']);
+                fseek($h, $cur['at'] + $cur['done']);
+            }
+            $left = $cur['size'] - $cur['done'];
+            if ($left > 0) {
+                $chunk = (string) fread($h, (int) min(MIG_CHUNK, $left));
+                if ($chunk === '') {
+                    throw new Mig_Error('The backup ends part way through a file, so it is not complete.');
+                }
+                if (fwrite($out, $chunk) !== strlen($chunk)) {
+                    throw new Mig_Error('Cannot write files (disk full?).');
+                }
+                $cur['done'] += strlen($chunk);
+            }
+            if ($cur['done'] >= $cur['size']) {
+                fclose($out);
+                $out      = null;
+                $s['pos'] = $cur['at'] + $cur['size'];
+                $s['files']++;
+                unset($cur);
+                $s['cur'] = null;
+            } else {
+                unset($cur);
+            }
+            if (microtime(true) - $lastSave > 2) {
+                mig_state_save($s);
+                $lastSave = microtime(true);
+            }
+        }
+    } finally {
+        if ($out !== null) {
+            fclose($out);
+        }
+        fclose($h);
+    }
+    if ($finished) {
+        mig_log($s, 'Extracted ' . $s['files'] . ' files.');
+    }
+
+    return $finished;
+}
+
+/**
+ * Import the dump straight from the archive, statement by statement, saving
+ * the offset after each one. SET statements are per connection, so they are
+ * kept and replayed at the start of every request.
+ */
+function mig_phase_sql(array &$s, float $deadline): bool
+{
+    if (! isset($s['sql'])) {
+        mig_log($s, 'The backup holds no database.');
+
+        return true;
+    }
+    $db = mig_db($s['db']);
+    foreach ($s['sqlSession'] as $set) {
+        $db->query($set);
+    }
+    $end    = (int) $s['sql']['end'];
+    $pos    = (int) $s['sqlPos'];
+    $h      = mig_open_at($s['source'], $pos);
+    $buf    = '';
+    $inStr  = false;
+    $skip   = 0;
+    $resume = $pos > (int) $s['sql']['start'];
+
+    try {
+        while ($pos < $end) {
+            $chunk = (string) fread($h, (int) min(MIG_CHUNK, $end - $pos));
+            if ($chunk === '') {
+                throw new Mig_Error('The backup ends part way through the database.');
+            }
+            $len  = strlen($chunk);
+            $i    = $skip;
+            $skip = 0;
+            $from = 0;
+            while ($i < $len) {
+                if ($inStr) {
+                    $j = $i + strcspn($chunk, "\\'", $i);
+                    if ($j >= $len) {
+                        break;
+                    }
+                    if ($chunk[$j] === '\\') {
+                        $i    = $j + 2;
+                        $skip = max(0, $i - $len);
+                        continue;
+                    }
+                    $inStr = false;
+                    $i     = $j + 1;
+                    continue;
+                }
+                $j = $i + strcspn($chunk, "';", $i);
+                if ($j >= $len) {
+                    break;
+                }
+                if ($chunk[$j] === "'") {
+                    $inStr = true;
+                    $i     = $j + 1;
+                    continue;
+                }
+                $stmt = $buf . substr($chunk, $from, $j - $from + 1);
+                $buf  = '';
+                $from = $j + 1;
+                $i    = $j + 1;
+                mig_sql_run($db, $s, $stmt, $resume);
+                $resume      = false;
+                $s['sqlPos'] = $pos + $j + 1;
+                mig_state_save($s);
+                if (microtime(true) >= $deadline) {
+                    return false;
+                }
+            }
+            $buf .= substr($chunk, $from);
+            $pos += $len;
+        }
+    } finally {
+        fclose($h);
+    }
+    if (trim($buf) !== '') {
+        mig_sql_run($db, $s, $buf, $resume);
+    }
+    $s['sqlPos'] = $end;
+    mig_log($s, 'Imported the database (' . $s['statements'] . ' statements).');
+
+    return true;
+}
+
+function mig_sql_run(mysqli $db, array &$s, string $stmt, bool $afterResume): void
+{
+    // Leading "-- " comment lines belong to no statement.
+    $sql = rtrim(trim((string) preg_replace('/\A(\s*--[^\n]*\n)+/', '', $stmt)), "; \t\r\n");
+    if ($sql === '' || strncmp($sql, '--', 2) === 0) {
+        return;
+    }
+    if (strncasecmp($sql, 'SET ', 4) === 0 && ! in_array($sql, $s['sqlSession'], true)) {
+        $s['sqlSession'][] = $sql;
+    }
+    $sql = mig_remap($s['tableMap'], $sql);
+    // A request killed after a statement ran but before its offset was saved
+    // replays that statement: an INSERT may have landed in full (InnoDB) or in
+    // part (MyISAM), so IGNORE fills in what is missing; a CREATE finds its table.
+    if ($afterResume) {
+        $sql = (string) preg_replace('/^INSERT\s+INTO\b/i', 'INSERT IGNORE INTO', $sql);
+    }
+    if ($db->query($sql) === false) {
+        if ($afterResume && $db->errno === 1050) {
+            return;
+        }
+        throw new Mig_Error('Database import failed: ' . $db->error . ' (near: ' . substr($sql, 0, 120) . ')');
+    }
+    $s['statements']++;
+}
+
+function mig_phase_routines(array &$s): bool
+{
+    if (! isset($s['routinesAt'])) {
+        return true;
+    }
+    $h        = mig_open_at($s['source'], (int) $s['routinesAt'][0]);
+    $routines = json_decode((string) fread($h, max(1, (int) $s['routinesAt'][1])), true);
+    fclose($h);
+    $db     = mig_db($s['db']);
+    $failed = 0;
+    foreach (is_array($routines) ? $routines : [] as $r) {
+        if (! is_array($r) || ! isset($r['create'])) {
+            continue;
+        }
+        // shortcut: only back-ticked table names in a trigger or routine body follow a prefix change; bare names keep the old prefix.
+        if (isset($r['drop'])) {
+            $db->query(mig_remap($s['tableMap'], (string) $r['drop']));
+        }
+        if ($db->query(mig_remap($s['tableMap'], (string) $r['create'])) === false) {
+            $failed++;
+        }
+    }
+    if ($failed > 0) {
+        mig_log($s, $failed . ' triggers or routines could not be created (the database user may lack the privilege).');
+    }
+
+    return true;
+}
+
+/**
+ * After a prefix change, WordPress looks up roles and capabilities under keys
+ * that carry the prefix: {prefix}user_roles in options, {prefix}capabilities,
+ * {prefix}user_level and friends in usermeta.
+ */
+function mig_phase_prefix(array &$s): bool
+{
+    $old = (string) $s['oldPrefix'];
+    $new = (string) $s['prefix'];
+    if ($old === $new) {
+        return true;
+    }
+    $db = mig_db($s['db']);
+    $n  = strlen($old);
+    foreach (array_values($s['tableMap']) as $table) {
+        $name = trim($table, '`');
+        if ($name === $new . 'usermeta') {
+            $col = 'meta_key';
+        } elseif (preg_match('/^' . preg_quote($new, '/') . '(\d+_)?options$/', $name)) {
+            $col = 'option_name';
+        } else {
+            continue;
+        }
+        $where = "LEFT(`$col`, $n) = " . mig_q($db, $old);
+        // Re-running after a kill must not prefix a key twice when the new prefix starts with the old one.
+        if (strncmp($new, $old, $n) === 0) {
+            $where .= ' AND LEFT(`' . $col . '`, ' . strlen($new) . ') <> ' . mig_q($db, $new);
+        }
+        if ($col === 'option_name') {
+            $where .= " AND `option_name` LIKE '%user\\_roles'";
+        }
+        $db->query("UPDATE $table SET `$col` = CONCAT(" . mig_q($db, $new) . ", SUBSTRING(`$col`, " . ($n + 1) . ")) WHERE $where");
+    }
+    mig_log($s, 'Moved the tables from prefix ' . $old . ' to ' . $new . '.');
+
+    return true;
+}
+
+/** Rewrite URLs and paths, a page of rows at a time, in primary key order. */
+function mig_phase_replace(array &$s, float $deadline): bool
+{
+    [$from, $to] = $s['pairs'];
+    if ($from === []) {
+        return true;
+    }
+    $db       = mig_db($s['db']);
+    $replacer = new Mig_Replacer($from, $to);
+    $tables   = $s['replaceTables'];
+    if ($tables === []) {
+        $res = $db->query('SHOW TABLES LIKE ' . mig_q($db, addcslashes($s['prefix'], '_%\\') . '%'));
+        while ($res && ($row = $res->fetch_row())) {
+            $tables[] = $row[0];
+        }
+        $s['replaceTables'] = $tables;
+    }
+
+    while ($s['rt'] < count($tables)) {
+        $table = '`' . str_replace('`', '``', (string) $tables[$s['rt']]) . '`';
+        $pk    = null;
+        $cols  = [];
+        $res   = $db->query("SHOW COLUMNS FROM $table");
+        while ($res && ($row = $res->fetch_assoc())) {
+            if ($row['Key'] === 'PRI') {
+                $pk = $pk === null ? $row['Field'] : false;
+            }
+            if (preg_match('/char|text|blob|json|enum|set/i', (string) $row['Type'])) {
+                $cols[] = $row['Field'];
+            }
+        }
+        // Without a single-column primary key a row cannot be updated or paged safely.
+        if (! is_string($pk) || $cols === []) {
+            $s['rt']++;
+            $s['rlast'] = null;
+            continue;
+        }
+        $qpk   = '`' . str_replace('`', '``', $pk) . '`';
+        $where = $s['rlast'] === null ? '' : " WHERE $qpk > " . mig_q($db, (string) $s['rlast']);
+        $res   = $db->query("SELECT * FROM $table$where ORDER BY $qpk LIMIT 500");
+        if (! $res) {
+            throw new Mig_Error('Cannot read ' . $tables[$s['rt']] . ': ' . $db->error);
+        }
+        $rows = 0;
+        while ($row = $res->fetch_assoc()) {
+            $rows++;
+            $set = [];
+            foreach ($cols as $col) {
+                if ($col === $pk || $row[$col] === null) {
+                    continue;
+                }
+                $replacer->count = 0;
+                $new             = $replacer->replace($row[$col]);
+                if ($replacer->count > 0 && $new !== $row[$col]) {
+                    $set[] = '`' . str_replace('`', '``', $col) . '` = ' . mig_q($db, (string) $new);
+                }
+            }
+            if ($set !== []) {
+                $db->query("UPDATE $table SET " . implode(', ', $set) . " WHERE $qpk = " . mig_q($db, (string) $row[$pk]));
+                $s['rewritten']++;
+            }
+            $s['rlast'] = $row[$pk];
+            if ($set !== []) {
+                mig_state_save($s);
+            }
+            if (microtime(true) >= $deadline) {
+                $res->free();
+                return false;
+            }
+        }
+        $res->free();
+        if ($rows < 500) {
+            $s['rt']++;
+            $s['rlast'] = null;
+        }
+        mig_state_save($s);
+    }
+    mig_log($s, 'Rewrote URLs and paths in ' . $s['rewritten'] . ' rows.');
+
+    return true;
+}
+
+/** Safe mode, admin password, wp-config.php and .htaccess. wp-config comes last. */
+function mig_phase_finish(array &$s): bool
+{
+    $db  = mig_db($s['db']);
+    $p   = (string) $s['prefix'];
+    $opt = '`' . $p . 'options`';
+
+    if (! empty($s['opts']['safe_mode'])) {
+        $res  = $db->query("SELECT option_value FROM $opt WHERE option_name = 'active_plugins'");
+        $list = ($res && ($row = $res->fetch_row())) ? @unserialize((string) $row[0], ['allowed_classes' => false]) : [];
+        $list = is_array($list) ? array_values(array_map('strval', $list)) : [];
+        // Migrator itself stays on: it shows the notice that switches the rest back on.
+        $own = array_values(array_filter($list, static fn (string $p): bool => (bool) preg_match('#/plogins-migrator(-pro)?\.php$#', $p)));
+        $off = array_values(array_diff($list, $own));
+        // Kept only the first time, so a re-run after a kill does not save the emptied list over it.
+        $kept = $db->query("SELECT 1 FROM $opt WHERE option_name = '" . MIG_SAFE_MODE_OPTION . "'");
+        if ($off !== [] && $kept && $kept->num_rows === 0) {
+            $db->query("INSERT INTO $opt (option_name, option_value, autoload) VALUES ('" . MIG_SAFE_MODE_OPTION . "', " . mig_q($db, serialize($off)) . ", 'no')");
+        }
+        $db->query("UPDATE $opt SET option_value = " . mig_q($db, serialize($own)) . " WHERE option_name = 'active_plugins'");
+        mig_log($s, 'Safe mode: switched off ' . count($off) . ' plugins. Migrator offers to switch them back on after you log in.');
+    }
+
+    if (! empty($s['admin'])) {
+        mig_set_admin($db, $p, $s['admin']);
+        mig_log($s, 'Set the password for ' . $s['admin']['login'] . '.');
+    }
+
+    $config = MIG_DIR . '/wp-config.php';
+    if (! empty($s['opts']['keep_config'])) {
+        $src = (string) file_get_contents($config);
+        $new = (string) preg_replace('/(\$table_prefix\s*=\s*)[\'"][A-Za-z0-9_]*[\'"]/', '${1}' . var_export($p, true), $src, 1);
+        if ($new !== $src && file_put_contents($config, $new) === false) {
+            throw new Mig_Error('Could not update the table prefix in wp-config.php (check its permissions).');
+        }
+        mig_log($s, 'Kept the existing wp-config.php' . ($new !== $src ? ' and set its table prefix to ' . $p : '') . '.');
+    } else {
+        if (is_file($config)) {
+            // A config the form could not read (values from getenv, say) is moved aside, never lost.
+            $aside = MIG_DIR . '/wp-config-before-migrator-' . bin2hex(random_bytes(4)) . '.php';
+            if (! rename($config, $aside)) {
+                throw new Mig_Error('Could not move the existing wp-config.php aside (check its permissions).');
+            }
+            mig_log($s, 'Moved the previous wp-config.php to ' . basename($aside) . '.');
+        }
+        mig_write_wpconfig($config, $s['db'], $p);
+        mig_log($s, 'Wrote wp-config.php.');
+    }
+    if (function_exists('opcache_invalidate')) {
+        @opcache_invalidate($config, true);
+    }
+
+    $server = (string) ($_SERVER['SERVER_SOFTWARE'] ?? '');
+    if (! is_file(MIG_DIR . '/.htaccess') && (stripos($server, 'apache') !== false || stripos($server, 'litespeed') !== false)) {
+        $base = rtrim((string) parse_url((string) $s['opts']['url'], PHP_URL_PATH), '/') . '/';
+        @file_put_contents(MIG_DIR . '/.htaccess', "# BEGIN WordPress\n<IfModule mod_rewrite.c>\nRewriteEngine On\nRewriteBase $base\nRewriteRule ^index\\.php$ - [L]\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule . {$base}index.php [L]\n</IfModule>\n# END WordPress\n");
+    }
+
+    return true;
+}
+
+/** Set an administrator's password, creating the user when the login is new. */
+function mig_set_admin(mysqli $db, string $p, array $admin): void
+{
+    $users = '`' . $p . 'users`';
+    $meta  = '`' . $p . 'usermeta`';
+    $res   = $db->query("SELECT ID FROM $users WHERE user_login = " . mig_q($db, $admin['login']));
+    $id    = ($res && ($row = $res->fetch_row())) ? (int) $row[0] : 0;
+    if ($id > 0) {
+        $db->query("UPDATE $users SET user_pass = " . mig_q($db, $admin['hash']) . ", user_activation_key = '' WHERE ID = $id");
+        // Old logins for this user stop working with the old password.
+        $db->query("DELETE FROM $meta WHERE user_id = $id AND meta_key = 'session_tokens'");
+
+        return;
+    }
+    $nice = strtolower((string) preg_replace('/[^A-Za-z0-9_-]/', '-', $admin['login']));
+    $ok   = $db->query("INSERT INTO $users (user_login, user_pass, user_nicename, user_email, user_registered, display_name) VALUES ("
+        . mig_q($db, $admin['login']) . ', ' . mig_q($db, $admin['hash']) . ', ' . mig_q($db, $nice) . ', '
+        . mig_q($db, $admin['email']) . ', UTC_TIMESTAMP(), ' . mig_q($db, $admin['login']) . ')');
+    if (! $ok) {
+        throw new Mig_Error('Could not create the administrator: ' . $db->error);
+    }
+    $id = (int) $db->insert_id;
+    // shortcut: on a multisite network the new user is an admin of the main site only, not a super admin.
+    $db->query("INSERT INTO $meta (user_id, meta_key, meta_value) VALUES ($id, " . mig_q($db, $p . 'capabilities') . ", 'a:1:{s:13:\"administrator\";b:1;}'), ($id, " . mig_q($db, $p . 'user_level') . ", '10')");
+}
+
+function mig_write_wpconfig(string $file, array $db, string $prefix): void
+{
+    $salts = '';
+    foreach (['AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT'] as $k) {
+        $salts .= "define('$k', '" . bin2hex(random_bytes(32)) . "');\n";
+    }
+    $tpl = "<?php\n"
+        . 'define(\'DB_NAME\', ' . var_export((string) $db['name'], true) . ");\n"
+        . 'define(\'DB_USER\', ' . var_export((string) $db['user'], true) . ");\n"
+        . 'define(\'DB_PASSWORD\', ' . var_export((string) $db['pass'], true) . ");\n"
+        . 'define(\'DB_HOST\', ' . var_export((string) $db['host'], true) . ");\n"
+        . "define('DB_CHARSET', 'utf8mb4');\n"
+        . "define('DB_COLLATE', '');\n"
+        . $salts
+        . '$table_prefix = ' . var_export($prefix, true) . ";\n"
+        . "define('WP_DEBUG', false);\n"
+        . "if ( ! defined('ABSPATH') ) { define('ABSPATH', __DIR__ . '/'); }\n"
+        . "require_once ABSPATH . 'wp-settings.php';\n";
+
+    if (file_put_contents($file, $tpl) === false) {
+        throw new Mig_Error('Could not write wp-config.php (check folder permissions).');
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Driver.
+// ---------------------------------------------------------------------------
+
+/** Validate the form (or CLI flags) and build a fresh state. Throws on bad input. */
+function mig_build_state(array $in, string $keyHash): array
+{
+    $url = rtrim(trim((string) ($in['url'] ?? '')), '/');
+    if (! preg_match('#^https?://[^/\s]+#i', $url)) {
+        throw new Mig_Error('Enter the new site address, starting with http:// or https://.');
+    }
+    $prefix = trim((string) ($in['prefix'] ?? ''));
+    if ($prefix !== '' && ! preg_match('/^[A-Za-z0-9_]+$/', $prefix)) {
+        throw new Mig_Error('The table prefix may only hold letters, digits and underscores.');
+    }
+
+    $archiveUrl = trim((string) ($in['archive_url'] ?? ''));
+    if ($archiveUrl !== '') {
+        $parts = parse_url($archiveUrl);
+        if (! in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)) {
+            throw new Mig_Error('The backup link must start with http:// or https://.');
+        }
+        $name    = (string) preg_replace('/[^A-Za-z0-9._-]/', '', basename((string) ($parts['path'] ?? ''))) ?: 'download';
+        $archive = MIG_DIR . '/' . (preg_match('/\.migrator(\.gz)?$/', $name) ? $name : $name . '.migrator');
+    } else {
+        $archives = mig_find_archives();
+        $chosen   = basename((string) ($in['archive'] ?? ''));
+        $archive  = $chosen !== '' && in_array(MIG_DIR . '/' . $chosen, $archives, true) ? MIG_DIR . '/' . $chosen : ($archives[0] ?? '');
+        if ($archive === '') {
+            throw new Mig_Error('No backup found. Upload a .migrator file next to this installer, or paste a link to one.');
+        }
+    }
+
+    $keep = ! empty($in['keep_config']) && is_file(MIG_DIR . '/wp-config.php');
+    if ($keep) {
+        $db = mig_read_wpconfig(MIG_DIR . '/wp-config.php');
+        if ($db === null) {
+            throw new Mig_Error('The database settings in the existing wp-config.php could not be read. Untick "Keep wp-config.php" and enter them.');
+        }
+        unset($db['prefix']);
+    } else {
+        $db = ['host' => trim((string) ($in['db_host'] ?? '')) ?: 'localhost', 'name' => trim((string) ($in['db_name'] ?? '')), 'user' => trim((string) ($in['db_user'] ?? '')), 'pass' => (string) ($in['db_pass'] ?? '')];
+        if ($db['name'] === '' || $db['user'] === '') {
+            throw new Mig_Error('Enter the database name and user.');
+        }
+    }
+    mig_db($db);
+
+    $admin = null;
+    $login = trim((string) ($in['admin_user'] ?? ''));
+    if ($login !== '') {
+        $pass = (string) ($in['admin_pass'] ?? '');
+        if (strlen($pass) < 8 || strlen($login) > 60) {
+            throw new Mig_Error('The new admin password needs at least 8 characters, and the login at most 60.');
+        }
+        // Hashed now; the password itself is never written to the state file.
+        $admin = ['login' => $login, 'hash' => password_hash($pass, PASSWORD_BCRYPT), 'email' => trim((string) ($in['admin_email'] ?? ''))];
+    }
+
+    return [
+        'keyHash'       => $keyHash,
+        'owner'         => '',
+        'pi'            => 0,
+        'done'          => false,
+        'error'         => '',
+        'archive'       => $archive,
+        'db'            => $db,
+        'admin'         => $admin,
+        'opts'          => [
+            'archive_url'  => $archiveUrl,
+            'url'          => $url,
+            'prefix'       => $prefix,
+            'install_core' => ! empty($in['install_core']),
+            'safe_mode'    => ! empty($in['safe_mode']),
+            'keep_config'  => $keep,
+        ],
+        'pos'           => strlen(MIG_SIGNATURE),
+        'cur'           => null,
+        'files'         => 0,
+        'statements'    => 0,
+        'sqlSession'    => [],
+        'rt'            => 0,
+        'rlast'         => null,
+        'rewritten'     => 0,
+        'log'           => [],
+    ];
+}
+
+/** Read the manifest once the archive is local and plain, and settle prefix and rewrite pairs. */
+function mig_prepare(array &$s): void
+{
+    $s['manifest']  = mig_manifest($s['source']);
+    $s['oldPrefix'] = (string) ($s['manifest']['tablePrefix'] ?? 'wp_');
+    $s['prefix']    = $s['opts']['prefix'] !== '' ? $s['opts']['prefix'] : $s['oldPrefix'];
+    $s['tableMap']  = [];
+    $tables         = array_map('strval', (array) ($s['manifest']['tables'] ?? []));
+    foreach ($tables as $t) {
+        if ($s['prefix'] !== $s['oldPrefix'] && strncmp($t, $s['oldPrefix'], strlen($s['oldPrefix'])) === 0) {
+            $s['tableMap']['`' . $t . '`'] = '`' . $s['prefix'] . substr($t, strlen($s['oldPrefix'])) . '`';
+        }
+    }
+    $s['replaceTables'] = array_map(static fn (string $t): string => trim($s['tableMap']['`' . $t . '`'] ?? $t, '`'), $tables);
+    $s['pairs']         = mig_pairs($s['manifest'], $s['opts']['url'], MIG_DIR);
+    mig_log($s, 'Backup of ' . ($s['manifest']['homeUrl'] ?? '?') . ', WordPress ' . ($s['manifest']['wpVersion'] ?? '?') . '.');
+}
+
+/** Run phases until the deadline. */
+function mig_step(array &$s, float $deadline): void
+{
+    $s['error'] = '';
+    while (! $s['done'] && microtime(true) < $deadline) {
+        $phase = MIG_PHASES[$s['pi']];
+        if (! isset($s['manifest']) && ! in_array($phase, ['fetch', 'gunzip'], true)) {
+            mig_prepare($s);
+        }
+        $finished = match ($phase) {
+            'fetch'    => mig_phase_fetch($s, $deadline),
+            'gunzip'   => mig_phase_gunzip($s, $deadline),
+            'core'     => mig_phase_core($s),
+            'files'    => mig_phase_files($s, $deadline),
+            'sql'      => mig_phase_sql($s, $deadline),
+            'routines' => mig_phase_routines($s),
+            'prefix'   => mig_phase_prefix($s),
+            'replace'  => mig_phase_replace($s, $deadline),
+            'finish'   => mig_phase_finish($s),
+        };
+        if ($finished) {
+            $s['pi']++;
+            $s['done'] = $s['pi'] >= count(MIG_PHASES);
+        }
+        mig_state_save($s);
+        if (! $finished) {
+            break;
+        }
+    }
+}
+
+function mig_progress(array $s): int
+{
+    $within = 0.0;
+    $phase  = MIG_PHASES[min($s['pi'], count(MIG_PHASES) - 1)];
+    if ($phase === 'files' && isset($s['source']) && is_file($s['source'])) {
+        $within = $s['pos'] / max(1, filesize($s['source']));
+    } elseif ($phase === 'sql' && isset($s['sql'])) {
+        $within = ($s['sqlPos'] - $s['sql']['start']) / max(1, $s['sql']['end'] - $s['sql']['start']);
+    } elseif ($phase === 'replace' && ! empty($s['replaceTables'])) {
+        $within = $s['rt'] / count($s['replaceTables']);
+    }
+
+    return (int) min(100, floor(($s['pi'] + $within) * 100 / count(MIG_PHASES)));
+}
+
+/**
+ * Delete the installer, its state files and the backup. What PHP cannot delete
+ * is handed to a one-shot must-use plugin that removes it, and itself, on the
+ * site's first request.
+ */
+function mig_cleanup(array $s): array
+{
+    // The globs catch temp files a killed request or a "Start over" left unnamed in the state.
+    foreach (glob(MIG_DIR . '/.migrator-core-*') ?: [] as $stale) {
+        mig_rrmdir($stale);
+    }
+    $paths = array_unique(array_filter(array_merge(
+        [__FILE__, MIG_STATE, MIG_STATE_TMP, MIG_LOCK, $s['archive'] ?? '', $s['plain'] ?? ''],
+        glob(MIG_DIR . '/*.migrator*.tmp') ?: []
+    )));
+    $left  = [];
+    foreach ($paths as $path) {
+        if (is_file($path) && ! @unlink($path)) {
+            $left[] = $path;
+        }
+    }
+    if ($left === []) {
+        return [];
+    }
+    if (in_array(__FILE__, $left, true)) {
+        // Still here, so stay inert: a finished state blocks a second run.
+        $s['done'] = true;
+        @mig_state_save($s);
+    }
+    $dir = MIG_DIR . '/wp-content/mu-plugins';
+    if (! is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    @file_put_contents($dir . '/migrator-installer-cleanup.php', "<?php\n/**\n * Plugin Name: Migrator installer cleanup\n * Description: Deletes the files the Migrator installer could not remove, then itself.\n */\n\ndefined('ABSPATH') || exit;\n\nforeach (" . var_export(array_values($left), true) . " as \$migrator_leftover) {\n\tif (is_file(\$migrator_leftover)) {\n\t\t@unlink(\$migrator_leftover);\n\t}\n}\n@unlink(__FILE__);\n");
+
+    return $left;
+}
+
+// Lets tests/installer-stub.php load the functions without running anything.
+if (defined('MIG_LIBRARY')) {
+    return;
+}
+
+// ---------------------------------------------------------------------------
+// CLI: php installer.php --db-name=... --url=... (no key; shell access is enough).
+// ---------------------------------------------------------------------------
+
+if (PHP_SAPI === 'cli') {
+    $in = ['db_host' => '127.0.0.1'];
+    foreach (array_slice($argv, 1) as $arg) {
+        if (preg_match('/^--([^=]+)=(.*)$/s', $arg, $m)) {
+            $in[str_replace('-', '_', $m[1])] = $m[2];
+        }
+    }
+    try {
+        $s = mig_state_load();
+        if ($s === null || ! isset($s['pi'])) {
+            $s = mig_build_state($in, '');
+            mig_state_save($s);
+        }
+        $shown = 0;
+        while (! $s['done']) {
+            mig_step($s, mig_deadline());
+            foreach (array_slice($s['log'], $shown) as $line) {
+                fwrite(STDOUT, $line . "\n");
+            }
+            $shown = count($s['log']);
+        }
+        mig_cleanup($s);
+        fwrite(STDOUT, "DONE\n");
+        exit(0);
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'ERROR: ' . $e->getMessage() . "\n");
+        exit(1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Web.
+// ---------------------------------------------------------------------------
+
+function mig_page(string $title, string $body, string $head = ''): never
+{
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        . '<meta name="robots" content="noindex"><title>' . mig_h($title) . '</title>' . $head
+        . '<style>body{font:15px/1.55 system-ui,sans-serif;color:#1d2327;background:#f0f0f1;margin:0}main{max-width:680px;margin:3em auto;background:#fff;padding:2em 2.4em;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1)}'
+        . 'h1{font-size:1.5em;margin-top:0}label{display:block;margin:.9em 0 .2em;font-weight:600}label.check{font-weight:400}input[type=text],input[type=url],input[type=password],input[type=email],select{width:100%;box-sizing:border-box;padding:.5em;border:1px solid #8c8f94;border-radius:4px;font:inherit}'
+        . 'fieldset{border:1px solid #dcdcde;border-radius:6px;margin:1.2em 0;padding:.4em 1em 1em}legend{font-weight:600;padding:0 .4em}.hint{color:#50575e;font-size:.9em;margin:.2em 0}'
+        . 'button{font:inherit;padding:.6em 1.3em;border:0;border-radius:4px;background:#2271b1;color:#fff;cursor:pointer}button.secondary{background:#f6f7f7;color:#2271b1;border:1px solid #2271b1}'
+        . '.error{color:#b32d2e;font-weight:600}.key{font:1.4em monospace;background:#f6f7f7;padding:.6em;border-radius:4px;user-select:all;word-break:break-all}'
+        . 'progress{width:100%;height:1.2em}ul.log{font-size:.9em;color:#3c434a;padding-left:1.2em}</style></head><body><main><h1>'
+        . mig_h($title) . '</h1>' . $body . '</main></body></html>';
+    exit;
+}
+
+function mig_json(array $data, int $code = 200): never
+{
+    http_response_code($code);
+    header('Content-Type: application/json');
+    echo json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+}
+
+function mig_self(string $query = ''): string
+{
+    return mig_h(basename(__FILE__) . ($query !== '' ? '?' . $query : ''));
+}
+
+function mig_cookie(string $name, string $value): void
+{
+    $https = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    setcookie($name, $value, ['path' => rtrim(dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/')), '/') . '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => $https]);
+    $_COOKIE[$name] = $value;
+}
+
+/** True when a WordPress site already answers from here (this folder or the one above). */
+function mig_site_installed(): bool
+{
+    return is_file(MIG_DIR . '/wp-config.php')
+        // @: the parent can sit outside open_basedir, which only means no config there.
+        || (@is_file(dirname(MIG_DIR) . '/wp-config.php') && ! @is_file(dirname(MIG_DIR) . '/wp-settings.php'));
+}
+
+function mig_log_html(array $s): string
+{
+    $out = '<ul class="log">';
+    foreach ($s['log'] as $line) {
+        $out .= '<li>' . mig_h((string) $line) . '</li>';
+    }
+
+    return $out . '</ul>';
+}
+
+function mig_done_html(array $s, array $left): string
+{
+    $login = mig_h($s['opts']['url'] . '/wp-login.php');
+    $note  = $left === []
+        ? '<p>The installer, its state files and the backup have been deleted.</p>'
+        : '<p class="error">Some files could not be deleted: ' . mig_h(implode(', ', array_map('basename', $left))) . '. A one-time cleanup runs on the first visit to the site; check that they are gone.</p>';
+
+    return mig_log_html($s) . $note . '<p><a href="' . $login . '"><button type="button">Log in to the site</button></a></p>';
+}
+
+header('Cache-Control: no-store');
+header('X-Robots-Tag: noindex');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+
+$mig_action = (string) ($_GET['mig'] ?? '');
+$mig_post   = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
+$mig_state  = mig_state_load();
+
+if ($mig_state !== null && ! empty($mig_state['done'])) {
+    $left = mig_cleanup($mig_state);
+    mig_page('Already finished', '<p>This installer has already restored the site.</p>' . ($left !== [] ? '<p class="error">Delete ' . mig_h(implode(', ', array_map('basename', $left))) . ' from the server.</p>' : ''));
+}
+
+// Access key. One baked in at download wins; otherwise the first visitor gets a
+// fresh one, which is only safe while no site lives here yet.
+$mig_hash = strlen(MIG_KEY_HASH) === 64 ? MIG_KEY_HASH : (string) ($mig_state['keyHash'] ?? '');
+if ($mig_hash === '') {
+    if (mig_site_installed()) {
+        mig_page('Installer disabled', '<p class="error">This folder already holds a site (wp-config.php exists) and this installer has no access key, so it will not run. Download the installer again from the Deploy screen, which adds a key, or delete this file.</p>');
+    }
+    $key       = bin2hex(random_bytes(16));
+    $mig_state = ['keyHash' => hash('sha256', $key)];
+    mig_state_save($mig_state);
+    mig_cookie('mig_key', $key);
+    mig_page('Your access key', '<p>Every step of this installer asks for this key. It is shown only now, so copy it somewhere safe.</p><p class="key">' . mig_h($key) . '</p><p><a href="' . mig_self() . '"><button type="button">Continue</button></a></p>');
+}
+$mig_given = (string) ($_POST['key'] ?? $_COOKIE['mig_key'] ?? '');
+if (! hash_equals($mig_hash, hash('sha256', $mig_given))) {
+    if ($mig_action === 'step') {
+        mig_json(['error' => 'The access key is missing or wrong. Reload the page and enter it.'], 403);
+    }
+    if (isset($_POST['key'])) {
+        sleep(2);
+    }
+    mig_page('Migrator installer', (isset($_POST['key']) ? '<p class="error">That key is not right.</p>' : '')
+        . '<p>Enter the access key shown on the Deploy screen when you downloaded this installer.</p>'
+        . '<form method="post" action="' . mig_self() . '"><label for="key">Access key</label><input type="password" id="key" name="key" autocomplete="off" required autofocus><p><button>Continue</button></p></form>');
+}
+if (isset($_POST['key'])) {
+    mig_cookie('mig_key', $mig_given);
+    header('Location: ' . basename(__FILE__), true, 303);
+    exit;
+}
+
+$mig_started = $mig_state !== null && isset($mig_state['pi']);
+
+// One request at a time (flock goes away when PHP dies, so a killed step never
+// blocks the next), and one browser at a time unless the other went quiet.
+$mig_lock = fopen(MIG_LOCK, 'c');
+if ($mig_lock === false) {
+    mig_page('Migrator installer', '<p class="error">Cannot create a lock file in this folder. Check its permissions.</p>');
+}
+$mig_locked = flock($mig_lock, LOCK_EX | LOCK_NB);
+if (! isset($_COOKIE['mig_owner']) || ! preg_match('/^[a-f0-9]{32}$/', (string) $_COOKIE['mig_owner'])) {
+    mig_cookie('mig_owner', bin2hex(random_bytes(16)));
+}
+$mig_owner = (string) $_COOKIE['mig_owner'];
+$mig_other = $mig_started && $mig_state['owner'] !== '' && ! hash_equals($mig_state['owner'], $mig_owner) && time() - (int) $mig_state['seen'] < 60;
+
+if ($mig_post && $mig_action === 'reset' && $mig_locked && ! $mig_other) {
+    $mig_state = ['keyHash' => $mig_state['keyHash'] ?? hash('sha256', $mig_given)];
+    mig_state_save($mig_state);
+    header('Location: ' . basename(__FILE__), true, 303);
+    exit;
+}
+
+if ($mig_action === 'step' || ($mig_action === 'run' && isset($_GET['step']))) {
+    $isJson = $mig_action === 'step';
+    if (! $mig_started) {
+        $isJson ? mig_json(['error' => 'Nothing to run. Reload the page.'], 409) : mig_page('Migrator installer', '<p><a href="' . mig_self() . '">Start</a></p>');
+    }
+    if (! $mig_locked || $mig_other) {
+        $msg = $mig_other ? 'Another browser is running this install. It can be taken over here after a minute without activity.' : 'A step is still running.';
+        $isJson ? mig_json(['busy' => true, 'message' => $msg, 'progress' => mig_progress($mig_state)]) : null;
+    } else {
+        $mig_state['owner'] = $mig_owner;
+        try {
+            mig_step($mig_state, mig_deadline());
+        } catch (Throwable $e) {
+            $mig_state['error'] = $e->getMessage();
+            mig_state_save($mig_state);
+        }
+        if ($mig_state['done']) {
+            $left = mig_cleanup($mig_state);
+            $html = mig_done_html($mig_state, $left);
+            $isJson ? mig_json(['done' => true, 'html' => $html, 'progress' => 100]) : mig_page('Site restored', $html);
+        }
+        if ($isJson) {
+            mig_json(['progress' => mig_progress($mig_state), 'log' => array_slice($mig_state['log'], -12), 'error' => $mig_state['error']]);
+        }
+    }
+}
+
+if ($mig_started) {
+    $err  = (string) $mig_state['error'];
+    $body = '<progress id="bar" max="100" value="' . mig_progress($mig_state) . '"></progress>'
+        . '<p id="msg" class="' . ($err !== '' ? 'error' : '') . '">' . mig_h($err !== '' ? $err : 'Working. Keep this page open; if it stops, reload it to resume.') . '</p>'
+        . '<div id="log">' . mig_log_html($mig_state) . '</div>'
+        . '<p id="actions"' . ($err !== '' ? '' : ' hidden') . '><a href="' . mig_self('mig=run&step=1') . '"><button type="button" id="retry">Retry</button></a> '
+        . '<form method="post" action="' . mig_self('mig=reset') . '" style="display:inline" onsubmit="return confirm(\'Start over with new settings?\')"><button class="secondary">Start over</button></form></p>';
+    $head = $err !== '' ? '' : '<noscript><meta http-equiv="refresh" content="1;url=' . mig_self('mig=run&step=1') . '"></noscript>';
+    $js   = '<script>(function(){var fails=0,bar=document.getElementById("bar"),msg=document.getElementById("msg"),log=document.getElementById("log"),act=document.getElementById("actions");'
+        . 'function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML;}'
+        . 'function stop(t){msg.textContent=t;msg.className="error";act.hidden=false;}'
+        . 'function tick(){fetch(' . json_encode(basename(__FILE__) . '?mig=step') . ',{method:"POST",credentials:"same-origin"}).then(function(r){return r.json();}).then(function(d){fails=0;'
+        . 'if(d.progress!==undefined){bar.value=d.progress;}'
+        . 'if(d.done){document.querySelector("h1").textContent="Site restored";msg.textContent="";log.innerHTML=d.html;act.hidden=true;return;}'
+        . 'if(d.error){stop(d.error);return;}'
+        . 'if(d.busy){msg.textContent=d.message;setTimeout(tick,3000);return;}'
+        . 'msg.className="";msg.textContent="Working. Keep this page open; if it stops, reload it to resume.";log.innerHTML="<ul class=\"log\">"+d.log.map(function(l){return "<li>"+esc(l)+"</li>";}).join("")+"</ul>";setTimeout(tick,100);'
+        . '}).catch(function(){if(++fails>5){stop("The server stopped answering. Reload the page to resume.");return;}msg.textContent="The server cut a step short. Resuming...";setTimeout(tick,3000);});}'
+        . ($err !== '' ? 'document.getElementById("retry").addEventListener("click",function(e){e.preventDefault();act.hidden=true;msg.className="";tick();});' : 'tick();')
+        . '})();</script>';
+    mig_page('Restoring the site', $body . $js, $head);
+}
+
+// Settings form.
+$mig_error = '';
+if ($mig_post && $mig_action === 'start') {
+    if (! $mig_locked) {
+        $mig_error = 'Another request is starting the install.';
+    } else {
+        try {
+            $mig_state          = mig_build_state($_POST, $mig_hash);
+            $mig_state['owner'] = $mig_owner;
+            mig_state_save($mig_state);
+            header('Location: ' . basename(__FILE__) . '?mig=run', true, 303);
+            exit;
+        } catch (Throwable $e) {
+            $mig_error = $e->getMessage();
+        }
+    }
+}
+
+$mig_archives = mig_find_archives();
+$mig_manifest = [];
+try {
+    $mig_manifest = $mig_archives !== [] ? mig_manifest($mig_archives[0]) : [];
+} catch (Throwable $e) {
+    $mig_error = $mig_error !== '' ? $mig_error : $e->getMessage();
+}
+$mig_config = is_file(MIG_DIR . '/wp-config.php') ? mig_read_wpconfig(MIG_DIR . '/wp-config.php') : null;
+$mig_v      = static fn (string $k, string $d = ''): string => mig_h((string) ($_POST[$k] ?? $d));
+$mig_https  = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+$mig_guess  = ($mig_https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+$mig_checked = static fn (string $k, bool $d): string => ($mig_post ? ! empty($_POST[$k]) : $d) ? ' checked' : '';
+
+ob_start();
+?>
+<?php if ($mig_error !== '') : ?><p class="error"><?php echo mig_h($mig_error); ?></p><?php endif; ?>
+<form method="post" action="<?php echo mig_self('mig=start'); ?>">
+	<fieldset><legend>Backup</legend>
+	<?php if ($mig_archives !== []) : ?>
+		<label for="archive">Backup file in this folder</label>
+		<select id="archive" name="archive">
+			<?php foreach ($mig_archives as $a) : ?><option value="<?php echo mig_h(basename($a)); ?>"><?php echo mig_h(basename($a)); ?> (<?php echo mig_h(number_format(filesize($a) / 1048576, 1)); ?> MB)</option><?php endforeach; ?>
+		</select>
+		<?php if ($mig_manifest !== []) : ?><p class="hint">From <?php echo mig_h((string) ($mig_manifest['homeUrl'] ?? '?')); ?>, WordPress <?php echo mig_h((string) ($mig_manifest['wpVersion'] ?? '?')); ?>, table prefix <code><?php echo mig_h((string) ($mig_manifest['tablePrefix'] ?? 'wp_')); ?></code>.</p><?php endif; ?>
+	<?php endif; ?>
+	<label for="archive_url">Backup link <?php echo $mig_archives !== [] ? '(optional, used instead of the file above)' : ''; ?></label>
+	<input type="url" id="archive_url" name="archive_url" placeholder="https://example.com/site.migrator" value="<?php echo $mig_v('archive_url'); ?>"<?php echo $mig_archives === [] ? ' required' : ''; ?>>
+	<p class="hint">A presigned Amazon S3, Cloudflare R2 or Dropbox link works; this server downloads it directly.</p>
+	</fieldset>
+
+	<fieldset><legend>Database</legend>
+	<?php if ($mig_config === null && is_file(MIG_DIR . '/wp-config.php')) : ?>
+		<p class="error">This folder has a wp-config.php whose database settings cannot be read here. It will be replaced; the old file is kept as wp-config-before-migrator-*.php.</p>
+	<?php elseif ($mig_config !== null) : ?>
+		<label class="check"><input type="checkbox" name="keep_config" value="1"<?php echo $mig_checked('keep_config', true); ?>> Keep the existing wp-config.php and its database settings (<?php echo mig_h($mig_config['user'] . '@' . $mig_config['host'] . '/' . $mig_config['name']); ?>). The fields below are then ignored.</label>
+	<?php endif; ?>
+	<label for="db_host">Host</label><input type="text" id="db_host" name="db_host" value="<?php echo $mig_v('db_host', 'localhost'); ?>">
+	<label for="db_name">Name</label><input type="text" id="db_name" name="db_name" value="<?php echo $mig_v('db_name'); ?>">
+	<label for="db_user">User</label><input type="text" id="db_user" name="db_user" value="<?php echo $mig_v('db_user'); ?>" autocomplete="off">
+	<label for="db_pass">Password</label><input type="password" id="db_pass" name="db_pass" autocomplete="new-password">
+	<label for="prefix">Table prefix</label><input type="text" id="prefix" name="prefix" value="<?php echo $mig_v('prefix', $mig_config['prefix'] ?? ''); ?>" placeholder="<?php echo mig_h((string) ($mig_manifest['tablePrefix'] ?? 'wp_')); ?>" pattern="[A-Za-z0-9_]*">
+	<p class="hint">Leave empty to keep the backup's prefix. A different one renames every table and the keys that carry the prefix.</p>
+	</fieldset>
+
+	<fieldset><legend>Site</legend>
+	<label for="url">New site address</label><input type="url" id="url" name="url" required value="<?php echo $mig_v('url', $mig_guess); ?>">
+	<label class="check"><input type="checkbox" name="install_core" value="1"<?php echo $mig_checked('install_core', ! is_file(MIG_DIR . '/wp-settings.php')); ?>> Download WordPress core into this folder</label>
+	<label class="check"><input type="checkbox" name="safe_mode" value="1"<?php echo $mig_checked('safe_mode', false); ?>> Safe mode: restore with every plugin switched off (the list is kept so they can be switched back on)</label>
+	</fieldset>
+
+	<fieldset><legend>Administrator (optional)</legend>
+	<p class="hint">Set a new password for an existing login, or create a new administrator.</p>
+	<label for="admin_user">Login</label><input type="text" id="admin_user" name="admin_user" value="<?php echo $mig_v('admin_user'); ?>" autocomplete="off">
+	<label for="admin_pass">New password (8 characters or more)</label><input type="password" id="admin_pass" name="admin_pass" autocomplete="new-password">
+	<label for="admin_email">Email (used only when the login is new)</label><input type="email" id="admin_email" name="admin_email" value="<?php echo $mig_v('admin_email'); ?>">
+	</fieldset>
+
+	<p><button>Restore the site</button></p>
+</form>
+<?php
+mig_page('Restore a Migrator backup', (string) ob_get_clean());
