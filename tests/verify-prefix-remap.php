@@ -40,8 +40,20 @@ $check(
         === $r('CREATE ALGORITHM=UNDEFINED SQL SECURITY INVOKER VIEW `wp_v` AS select `wp_posts`.`ID` AS `ID` from `wp_posts`')
 );
 $check('DROP VIEW', 'DROP VIEW IF EXISTS `wp_2_v`' === $r('DROP VIEW IF EXISTS `wp_v`'));
-$check('a trigger body is renamed', 'CREATE TRIGGER `t` AFTER INSERT ON `wp_2_posts` FOR EACH ROW DELETE FROM `wp_2_wc_orders`' === $r('CREATE TRIGGER `t` AFTER INSERT ON `wp_posts` FOR EACH ROW DELETE FROM `wp_wc_orders`'));
+$check('a trigger body is renamed', 'CREATE TRIGGER `t` AFTER INSERT ON `wp_2_posts` FOR EACH ROW DELETE FROM `wp_2_wc_orders`' === Importer::renameTables('CREATE TRIGGER `t` AFTER INSERT ON `wp_posts` FOR EACH ROW DELETE FROM `wp_wc_orders`', $map, 'wp_', 'wp_2_', false));
 $check('SET lines pass untouched', 'SET FOREIGN_KEY_CHECKS=0' === $r('SET FOREIGN_KEY_CHECKS=0'));
+$check('comment lines glued to a statement are kept and the statement renamed', "-- Migrator SQL dump\nDROP TABLE IF EXISTS `wp_2_posts`" === $r("-- Migrator SQL dump\nDROP TABLE IF EXISTS `wp_posts`"));
+$check('a view that kept its DEFINER is still renamed', 'CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`%` SQL SECURITY DEFINER VIEW `wp_2_v` AS select 1' === $r('CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`%` SQL SECURITY DEFINER VIEW `wp_v` AS select 1'));
+foreach (['INSERT IGNORE INTO `wp_posts` VALUES (1)', 'REPLACE INTO `wp_posts` VALUES (1)', 'ALTER TABLE `wp_posts` ADD KEY k (ID)', 'TRUNCATE TABLE `wp_posts`', "-- note\nDELETE FROM `wp_posts`"] as $odd) {
+    $thrown = false;
+    try {
+        $r($odd);
+    } catch (\RuntimeException $e) {
+        $thrown = true;
+    }
+    $check('a statement the dump never writes is refused: ' . str_replace("\n", ' ', strtok($odd, '`')), $thrown);
+}
+$check('routines are read leniently', 'CREATE PROCEDURE `p`() SELECT * FROM `wp_2_posts`' === Importer::renameTables('CREATE PROCEDURE `p`() SELECT * FROM `wp_posts`', $map, 'wp_', 'wp_2_', false));
 $refused = false;
 try {
     $r('DROP TABLE IF EXISTS `someone_elses_posts`');

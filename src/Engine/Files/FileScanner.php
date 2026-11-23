@@ -47,10 +47,13 @@ final class FileScanner
 
     /**
      * Anything here that a backup should not carry to another host without
-     * someone deciding to: credentials, private keys, copies of wp-config.php,
-     * database dumps and other backups. .env.example and its kin are templates.
+     * someone deciding to: credentials, private keys, copies of wp-config.php
+     * and other backups.
      */
-    private const SENSITIVE = '/^(\.env(\.(?!example$|sample$|dist$|template$)[a-z0-9_.-]+)?|\.htpasswd|id_(rsa|dsa|ecdsa|ed25519)|wp-config\.php(\..+)?|wp-config[-_.].+\.php|backup.*\.zip)$/';
+    private const SENSITIVE = '/^(\.htpasswd|id_(rsa|dsa|ecdsa|ed25519)|wp-config\.php(\..+)?|wp-config[-_.].+\.php|backup.*\.zip)$/';
+
+    /** Suffixes that mark an .env file as a template rather than live settings. */
+    private const ENV_TEMPLATES = ['example', 'sample', 'dist', 'template'];
 
     /**
      * Database dumps and key files. Plugins and themes ship public certificate
@@ -72,7 +75,10 @@ final class FileScanner
         $code = (bool) preg_match('#^(plugins|themes|mu-plugins)/#', $rel);
         $out  = [];
 
-        if ((preg_match(self::SENSITIVE, $name) && 'wp-config-sample.php' !== $name)
+        $env = '.env' === $name || (str_starts_with($name, '.env.') && ! in_array(substr($name, 5), self::ENV_TEMPLATES, true));
+
+        if ($env
+            || (preg_match(self::SENSITIVE, $name) && 'wp-config-sample.php' !== $name)
             || (! $code && preg_match(self::SENSITIVE_DATA, $name))
             || preg_match('#(^|/)\.git/#', $rel)) {
             $out[] = 'sensitive';

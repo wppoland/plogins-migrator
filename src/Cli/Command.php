@@ -191,7 +191,11 @@ final class Command
             // and in the shell history.
             $password = (string) getenv('MIGRATOR_ADMIN_PASSWORD');
             if ('' === $password) {
-                $password = (string) \cli\prompt('New password for ' . $assoc_args['admin-user'], false, ': ', true);
+                try {
+                    $password = (string) \cli\prompt('New password for ' . $assoc_args['admin-user'], false, ': ', true);
+                } catch (\Exception $e) {
+                    $password = ''; // No terminal to ask on (input closed).
+                }
             }
             if ('' === $password) {
                 \WP_CLI::error('No password given. Set MIGRATOR_ADMIN_PASSWORD or type it at the prompt.');

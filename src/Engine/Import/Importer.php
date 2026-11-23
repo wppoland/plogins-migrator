@@ -280,7 +280,7 @@ final class Importer
                 ));
             }
             $map    = self::prefixMap(array_map('strval', (array) $manifest->get('tables')), $sourcePrefix, $targetPrefix);
-            $rename = static fn (string $sql): string => self::renameTables($sql, $map, $sourcePrefix, $targetPrefix);
+            $rename = static fn (string $sql, bool $strict = true): string => self::renameTables($sql, $map, $sourcePrefix, $targetPrefix, $strict);
             $log(sprintf('Tables move from prefix %s to %s.', $sourcePrefix, $targetPrefix));
         }
 
@@ -500,13 +500,20 @@ final class Importer
      * are renamed, so a column that happens to start with the prefix is left
      * alone. An INSERT keeps its row data byte for byte. A statement acting on a
      * table outside the archive's prefix is refused: on a shared database it
-     * could drop another site's table.
+     * could drop another site's table. With $strict, so is any statement the
+     * dump does not write (only SET, DROP, CREATE and INSERT pass); routines are
+     * read with $strict off, as their bodies are free-form.
      *
      * @param array<string, string> $map From prefixMap().
      */
-    public static function renameTables(string $sql, array $map, string $from, string $to): string
+    public static function renameTables(string $sql, array $map, string $from, string $to, bool $strict = true): string
     {
-        $head = '/^(?:INSERT\s+INTO|DROP\s+(?:TABLE|VIEW)(?:\s+IF\s+EXISTS)?|CREATE\s+TABLE|CREATE\s+(?:[^`;]*\s)?VIEW)\s+`((?:[^`]|``)+)`/i';
+        // The executor keeps "-- " comment lines glued to the statement after them.
+        preg_match('/^(?:\s*--[^\n]*\n)*\s*/', $sql, $lead);
+        $prefix = $lead[0];
+        $sql    = substr($sql, strlen($prefix));
+
+        $head = '/^(?:INSERT\s+INTO|DROP\s+(?:TABLE|VIEW)(?:\s+IF\s+EXISTS)?|CREATE\s+TABLE|CREATE\s+(?:[^;]*?\s)?VIEW)\s+`((?:[^`]|``)+)`/i';
         if (preg_match($head, $sql, $m)) {
             $name = str_replace('``', '`', $m[1]);
             if (! str_starts_with($name, $from)) {
@@ -520,16 +527,23 @@ final class Importer
             $start = substr($m[0], 0, -strlen($m[1]) - 2) . self::tick($to . substr($name, strlen($from)));
             $rest  = substr($sql, strlen($m[0]));
             if (0 === stripos($sql, 'INSERT')) {
-                return $start . $rest;
+                return $prefix . $start . $rest;
             }
-        } elseif (preg_match('/^(?:CREATE|DROP)\s/i', $sql)) {
+        } elseif (preg_match('/^SET\s/i', $sql) || '' === $sql) {
+            return $prefix . $sql;
+        } elseif (! $strict && preg_match('/^(?:CREATE|DROP)\s/i', $sql)) {
             $start = '';
             $rest  = $sql;
         } else {
-            return $sql;
+            // Anything else in a dump could act on a table under the old name.
+            throw new \RuntimeException(sprintf(
+                /* translators: %s: start of the SQL statement */
+                __('Migrator: the archive holds a statement that cannot be moved to this site\'s prefix safely: %s', 'plogins-migrator'),
+                substr($sql, 0, 80)
+            ));
         }
 
-        return $start . preg_replace_callback(
+        return $prefix . $start . preg_replace_callback(
             '/`((?:[^`]|``)+)`/',
             static function (array $id) use ($map): string {
                 $name = str_replace('``', '`', $id[1]);
@@ -590,7 +604,11 @@ final class Importer
         // phpcs:enable WordPress.DB.DirectDatabaseQuery
 
         if ('' !== $this->db->last_error) {
-            throw new \RuntimeException('Migrator: could not move the user roles and capabilities to the new prefix: ' . $this->db->last_error);
+            throw new \RuntimeException(sprintf(
+                /* translators: %s: database error */
+                __('Migrator: could not move the user roles and capabilities to the new prefix: %s', 'plogins-migrator'),
+                $this->db->last_error
+            ));
         }
 
         return $moved;
@@ -784,7 +802,7 @@ final class Importer
     }
 
     /**
-     * @param (\Closure(string):string)|null $rename Moves table names to this site's prefix.
+     * @param (\Closure(string, bool):string)|null $rename Moves table names to this site's prefix.
      */
     private function importDatabase(Reader $reader, callable $log, string $charset = 'utf8mb4', ?\Closure $rename = null): int
     {
@@ -818,7 +836,7 @@ final class Importer
         $collation = Collation::forServer($this->db);
         $transform = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql)
             ? 'SET NAMES ' . $charset
-            : $collation->normalise(null === $rename ? $sql : $rename($sql));
+            : $collation->normalise(null === $rename ? $sql : $rename($sql, true));
         try {
             $count = (new SqlExecutor($this->db, $transform))->runFile($tmp);
         } finally {
@@ -838,7 +856,7 @@ final class Importer
      * Best-effort: a routine that cannot be created (e.g. lacking privilege) is
      * skipped rather than failing the whole restore.
      *
-     * @param (\Closure(string):string)|null $rename Moves table names to this site's prefix.
+     * @param (\Closure(string, bool):string)|null $rename Moves table names to this site's prefix.
      */
     private function importRoutines(string $json, callable $log, ?\Closure $rename = null): void
     {
@@ -854,7 +872,7 @@ final class Importer
             }
             $create = (string) $routine['create'];
             if (null !== $rename) {
-                $create = $rename($create);
+                $create = $rename($create, false);
             }
             if (isset($routine['drop'])) {
                 // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
