@@ -145,8 +145,14 @@ final class Ajax implements HasHooks
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
             $valid = array_values(array_filter(array_map('strval', $off), static fn (string $p): bool => 0 === validate_plugin($p)));
             activate_plugins($valid, '', false, true);
+            // Plugins that failed to activate stay listed, so the notice keeps offering them.
+            $off = array_values(array_filter($valid, static fn (string $p): bool => ! is_plugin_active($p)));
         }
-        delete_option(Importer::SAFE_MODE_OPTION);
+        if (empty($_GET['keep']) && [] !== $off) {
+            update_option(Importer::SAFE_MODE_OPTION, $off, false);
+        } else {
+            delete_option(Importer::SAFE_MODE_OPTION);
+        }
 
         wp_safe_redirect(admin_url('plugins.php'));
         exit;
