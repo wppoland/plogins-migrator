@@ -18,5 +18,6 @@ return [
     \Migrator\Admin\Ajax::class,
     \Migrator\Backup\Scheduler::class,
     \Migrator\Admin\Rollback::class,
+    \Migrator\Admin\DeployPage::class,
     \Migrator\Reprint\Source::class,
 ];

@@ -39,10 +39,6 @@ return [
             'pl' => ['title' => 'Transfer serwer-serwer z panelu', 'desc' => 'Przeciągnij witrynę z jednego serwera na drugi z ekranu Site Transfer w wp-admin, kluczem wygenerowanym na starej witrynie, bez ręcznego pobierania pliku. Darmowy Migrator przenosi witrynę między serwerami z WP-CLI; PRO dodaje do tego przycisk w panelu.'],
         ],
         [
-            'en' => ['title' => 'Deploy to a new server', 'desc' => 'A standalone installer downloads WordPress core, extracts the files, imports the database, rewrites URLs and writes wp-config.php. It can also fetch the backup itself from a link, including a presigned S3, R2 or Dropbox URL.'],
-            'pl' => ['title' => 'Wdrożenie na pusty serwer', 'desc' => 'Samodzielny instalator pobiera rdzeń WordPressa, rozpakowuje pliki, importuje bazę, przepisuje adresy i zapisuje wp-config.php. Kopię może też pobrać sam z linku, w tym z podpisanego adresu S3, R2 lub Dropbox.'],
-        ],
-        [
             'en' => ['title' => 'Table sync', 'desc' => 'Pick database tables from a backup and import only those into the live site. Push content from staging without rolling back the orders, customers and comments that arrived in the meantime. Preview what would change first, and the chosen tables are dumped before anything is written.'],
             'pl' => ['title' => 'Synchronizacja tabel', 'desc' => 'Wybierz tabele bazy danych z kopii zapasowej i wgraj do działającej witryny tylko je. Przenieś treści ze środowiska testowego bez cofania zamówień, klientów i komentarzy, które pojawiły się w międzyczasie. Najpierw zobaczysz podgląd zmian, a wybrane tabele są zrzucane, zanim cokolwiek zostanie zapisane.'],
         ],
