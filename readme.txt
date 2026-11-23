@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.11.7
+Stable tag: 1.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,11 @@ For large sites where a browser request would time out, every job also runs from
 * Per-item checksums and an archive check before the database is touched, so a corrupt or unfinished archive is refused, not restored
 * Serialization-safe search and replace across the database, with a dry-run preview and a `wp migrator replace` command, to change a domain, URL or path safely
 * Inspect any stored backup before you restore it: source URL, WordPress and PHP versions, table count, plus pre-restore checks for table prefix, disk space and writability
+* Move to an empty server with the standalone installer from Migrator > Deploy: upload installer.php next to a backup, open it with its access key, and it restores in short steps that pick up again after a timeout. It can reuse an existing wp-config.php, change the table prefix, set a new admin password, start with plugins switched off, and deletes itself when done
+* Restore into a site with a different table prefix: tables and the prefixed user keys are renamed to this site's prefix
+* Safe mode restore: every plugin except Migrator stays off after the restore, and one click switches the previous ones back on
+* Set a new admin password as part of a restore
+* Warnings before a backup: files such as .env, private keys and SQL dumps inside wp-content, files over 100 MB, very long paths and file names that are not UTF-8. Cache folders, other backup plugins' folders, node_modules, .git and large log files are left out by default
 * No account and no service of ours: nothing leaves your server unless you add an off-site destination you own
 
 **Documentation and links**
@@ -99,7 +104,7 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
 
 **Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and put back automatically if the database import fails. No other free tier here documents that rollback. Automation is not the paid tier here: a site that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
 
-**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, Table Sync, multisite restore, deploying to an empty server, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
+**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, Table Sync, multisite restore, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
 
 = All-in-One WP Migration =
 
@@ -134,6 +139,7 @@ Included in Migrator:
 * Move to a new host
 * Exclusions
 * Size explorer
+* Deploy to a new server
 
 Migrator Pro adds:
 
@@ -141,7 +147,6 @@ Migrator Pro adds:
 * Recovery points
 * Cloud destinations
 * Server-to-server transfer from wp-admin
-* Deploy to a new server
 * Table sync
 
 The free edition is not a trial and its features stay available without a time limit.
@@ -180,7 +185,7 @@ The archive is checked before the database is touched, so an unfinished or corru
 
 = Do I need WordPress installed on the new host? =
 
-Yes. Install WordPress and Migrator on the destination, then restore the archive there. The database prefix in the new site's wp-config.php must match the source site's; the restore checks this first and tells you the value to set.
+No. Download the installer from Migrator > Deploy, upload installer.php and a backup to the empty folder, and open installer.php in the browser with the access key shown on the Deploy screen. You can also install WordPress and Migrator there first and restore the archive; a different table prefix is renamed to the new site's prefix during the restore.
 
 = Does it back up WordPress core and wp-config.php? =
 
@@ -244,6 +249,14 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.12.0 =
+* New: the Deploy screen and the standalone installer are now in the free plugin. The installer works in short steps and resumes after a timeout or a reload, needs an access key, runs in one browser at a time, can reuse an existing wp-config.php, change the table prefix, set a new admin password, start with plugins off, and deletes itself and the backup when it finishes.
+* New: a restore into a site with a different table prefix renames the tables and the prefixed user keys instead of stopping.
+* New: safe mode restore leaves every plugin except Migrator off, with a notice that switches the previous ones back on.
+* New: an optional new admin password at restore (wp-admin, or `wp migrator import --admin-user=<login>` with the password from a prompt or the MIGRATOR_ADMIN_PASSWORD variable).
+* New: before a backup, Migrator lists sensitive files (.env, keys, SQL dumps), files over 100 MB, long paths and non UTF-8 names, and can leave the sensitive files out.
+* Changed: cache folders, other backup plugins' folders, node_modules, .git and log files over 10 MB are left out of backups by default (filter `migrator/default_excludes` to bring them back).
 
 = 1.11.7 =
 * The backup and restore progress bars now use the browser's native progress element. They look the same as before.
@@ -491,6 +504,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.12.0 =
+Standalone installer in the free plugin, restore across table prefixes, safe mode and backup warnings.
 
 = 1.11.5 =
 Plain hyphen in the Pull and Push keys table.
