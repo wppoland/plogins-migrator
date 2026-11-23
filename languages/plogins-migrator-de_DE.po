@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Migrator 0.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/plogins-migrator\n"
-"POT-Creation-Date: 2026-11-19T17:57:41+00:00\n"
+"POT-Creation-Date: 2026-11-23T09:47:52+00:00\n"
 "PO-Revision-Date: 2026-06-23T12:59:29+00:00\n"
 "Last-Translator: motylanogha <szatkowski.mariusz@gmail.com>\n"
 "Language-Team: German <de@li.org>\n"
@@ -414,79 +414,122 @@ msgstr ""
 msgid "Migrator requires PHP %1$s or higher. You are running PHP %2$s."
 msgstr "Migrator erfordert PHP %1$s oder höher. Du verwendest PHP %2$s."
 
-#: src/Admin/Ajax.php:193
-msgid "Backup not found."
-msgstr "Sicherung nicht gefunden."
+#. translators: %d: number of plugins
+#: src/Admin/Ajax.php:115
+#, php-format
+msgid ""
+"Migrator restored this site in safe mode, so %d plugin from the backup is "
+"inactive. Check the site, then turn it back on."
+msgid_plural ""
+"Migrator restored this site in safe mode, so %d plugins from the backup are "
+"inactive. Check the site, then turn them back on."
+msgstr[0] ""
+msgstr[1] ""
 
-#: src/Admin/Ajax.php:207 src/Admin/Ajax.php:223 src/Admin/Ajax.php:262
-#: src/Admin/Ajax.php:329 src/Admin/Ajax.php:495 src/Admin/Ajax.php:670
+#: src/Admin/Ajax.php:125
+msgid "Reactivate the previous plugins"
+msgstr ""
+
+#: src/Admin/Ajax.php:127
+msgid "Keep them inactive"
+msgstr ""
+
+#: src/Admin/Ajax.php:139 src/Admin/Ajax.php:303 src/Admin/Ajax.php:319
+#: src/Admin/Ajax.php:358 src/Admin/Ajax.php:443 src/Admin/Ajax.php:609
+#: src/Admin/Ajax.php:784
 msgid "Not allowed."
 msgstr "Nicht erlaubt."
 
-#: src/Admin/Ajax.php:230
+#: src/Admin/Ajax.php:289
+msgid "Backup not found."
+msgstr "Sicherung nicht gefunden."
+
+#: src/Admin/Ajax.php:326
 msgid "Bad upload request."
 msgstr "Fehlerhafte Upload-Anfrage."
 
-#: src/Admin/Ajax.php:235
+#: src/Admin/Ajax.php:331
 msgid "Invalid upload."
 msgstr "Ungültiger Upload."
 
-#: src/Admin/Ajax.php:246
+#: src/Admin/Ajax.php:342
 msgid "Could not store upload."
 msgstr "Der Upload konnte nicht gespeichert werden."
 
-#: src/Admin/Ajax.php:272
+#: src/Admin/Ajax.php:368
 msgid "Uploaded archive not found."
 msgstr "Hochgeladenes Archiv nicht gefunden."
 
-#: src/Admin/Ajax.php:305
+#: src/Admin/Ajax.php:401
 msgid "Choose at least one part of the backup to restore."
 msgstr ""
 
-#: src/Admin/Ajax.php:320
+#: src/Admin/Ajax.php:434
 msgid "Invalid upload id."
 msgstr "Ungültige Upload-ID."
 
-#: src/Admin/Ajax.php:341
+#: src/Admin/Ajax.php:455
 msgid ""
 "Another backup is being made right now, in another tab or by another "
 "administrator. Wait for it to finish, or about ten minutes if that tab was "
 "closed."
 msgstr ""
 
-#: src/Admin/Ajax.php:505
+#: src/Admin/Ajax.php:619
 msgid "File not found."
 msgstr "Datei nicht gefunden."
 
-#: src/Admin/Ajax.php:563
+#: src/Admin/Ajax.php:677
 msgid ""
 "This backup could not be read, so it cannot be converted to .tar.gz. An "
 "encrypted backup can only be restored with Migrator."
 msgstr ""
 
-#: src/Admin/Ajax.php:622
+#: src/Admin/Ajax.php:736
 msgid "Search and replace values are limited to 4096 characters each."
 msgstr ""
 
-#: src/Admin/Ajax.php:626 src/Admin/Page.php:119
+#: src/Admin/Ajax.php:740 src/Admin/Page.php:119
 msgid "Enter the text to search for."
 msgstr "Gib den zu suchenden Text ein."
 
-#: src/Admin/Ajax.php:629
+#: src/Admin/Ajax.php:743
 msgid "Search and replace values are identical."
 msgstr "Such- und Ersetzungswerte sind identisch."
 
 #. translators: 1: number of rows, 2: database error
-#: src/Admin/Ajax.php:657
+#: src/Admin/Ajax.php:771
 #, php-format
 msgid "%1$d rows could not be written (%2$s)."
 msgstr ""
 
-#: src/Admin/Ajax.php:667
+#: src/Admin/Ajax.php:781
 msgid "Security check failed."
 msgstr "Sicherheitsüberprüfung fehlgeschlagen."
 
+#: src/Admin/DeployPage.php:52 templates/deploy-page.php:22
+msgid "Deploy to a new server"
+msgstr ""
+
+#: src/Admin/DeployPage.php:53
+msgid "Deploy"
+msgstr ""
+
+#: src/Admin/DeployPage.php:118 src/Backup/Scheduler.php:122
+#: src/Backup/Scheduler.php:233 src/Reprint/Source.php:156
+msgid "You are not allowed to do this."
+msgstr ""
+
+#: src/Admin/DeployPage.php:124
+msgid "The access key is missing. Reload the Deploy screen and try again."
+msgstr ""
+
+#: src/Admin/DeployPage.php:131
+msgid "Installer template is missing."
+msgstr ""
+
 #: src/Admin/Page.php:61 templates/admin-page.php:13
+#: templates/deploy-page.php:96
 msgid "Migrator"
 msgstr "Migrator"
 
@@ -750,11 +793,6 @@ msgstr ""
 msgid "Scheduled Backups"
 msgstr ""
 
-#: src/Backup/Scheduler.php:122 src/Backup/Scheduler.php:233
-#: src/Reprint/Source.php:156
-msgid "You are not allowed to do this."
-msgstr ""
-
 #. translators: %s: date and time the backup started
 #: src/Backup/Scheduler.php:357
 #, php-format
@@ -868,7 +906,7 @@ msgid "PHP"
 msgstr "PHP"
 
 #: src/Engine/Archive/Inspector.php:56 src/Engine/Import/Preflight.php:38
-#: src/Engine/Import/Preflight.php:49
+#: src/Engine/Import/Preflight.php:49 src/Engine/Import/Preflight.php:60
 msgid "Table prefix"
 msgstr "Tabellenpräfix"
 
@@ -876,7 +914,7 @@ msgstr "Tabellenpräfix"
 msgid "Tables"
 msgstr "Tabellen"
 
-#: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:61
+#: src/Engine/Archive/Inspector.php:58 src/Engine/Import/Preflight.php:72
 msgid "Multisite"
 msgstr "Multisite"
 
@@ -896,14 +934,46 @@ msgstr "WooCommerce"
 msgid "Yes (HPOS)"
 msgstr "Ja (HPOS)"
 
-#: src/Engine/Import/Importer.php:148
+#. translators: %s: file path
+#: src/Engine/Files/FileScanner.php:140
+#, php-format
+msgid "%s may hold passwords, keys or a copy of a database."
+msgstr ""
+
+#. translators: 1: file path, 2: file size
+#: src/Engine/Files/FileScanner.php:142
+#, php-format
+msgid "%1$s is %2$s, which makes the backup slow to create and to upload."
+msgstr ""
+
+#. translators: %s: file path
+#: src/Engine/Files/FileScanner.php:144
+#, php-format
+msgid ""
+"%s has a path longer than 250 characters, which some systems cannot extract."
+msgstr ""
+
+#. translators: %s: file path, with the bytes that are not UTF-8 shown as ?
+#: src/Engine/Files/FileScanner.php:146
+#, php-format
+msgid ""
+"%s has a name that is not valid UTF-8 and may not restore on another server."
+msgstr ""
+
+#. translators: %s: file path
+#: src/Engine/Files/FileScanner.php:148
+#, php-format
+msgid "%s cannot be read by the web server and will be left out."
+msgstr ""
+
+#: src/Engine/Import/Importer.php:166
 msgid ""
 "Migrator: nothing was chosen to restore. Pick the database, plugins, themes, "
 "uploads or other files."
 msgstr ""
 
 #. translators: %s: the parts that cannot be restored, comma separated
-#: src/Engine/Import/Importer.php:155
+#: src/Engine/Import/Importer.php:173
 #, php-format
 msgid ""
 "Migrator: this site sets DISALLOW_FILE_MODS, so it does not let wp-admin "
@@ -911,7 +981,7 @@ msgid ""
 "restore with WP-CLI. Blocked: %s."
 msgstr ""
 
-#: src/Engine/Import/Importer.php:199
+#: src/Engine/Import/Importer.php:218
 msgid ""
 "Migrator: this archive was never finished, so it is not a complete backup. "
 "The run that wrote it was cut short (execution time, memory, or a full "
@@ -919,34 +989,34 @@ msgid ""
 "backup that finished."
 msgstr ""
 
-#: src/Engine/Import/Importer.php:215
+#: src/Engine/Import/Importer.php:234
 msgid "Migrator: archive has no manifest (is this a Migrator archive?)."
 msgstr ""
 
-#: src/Engine/Import/Importer.php:219
+#: src/Engine/Import/Importer.php:238
 msgid ""
 "Migrator: this archive was made by a newer version of Migrator. Update the "
 "plugin on this site and try again."
 msgstr ""
 
-#. translators: 1: the archive's table prefix, 2: this site's table prefix
-#: src/Engine/Import/Importer.php:231
-#, php-format
-msgid ""
-"Migrator: table prefix mismatch. This archive uses \"%1$s\" but this site "
-"uses \"%2$s\". Set this site's $table_prefix to \"%1$s\" in wp-config.php "
-"and try again."
-msgstr ""
-
-#: src/Engine/Import/Importer.php:256
+#: src/Engine/Import/Importer.php:260
 msgid ""
 "Migrator: this restore crosses a multisite boundary. Restoring a network "
 "backup rewrites the network tables to the destination domain, which this "
 "plugin does not do, so the import was stopped rather than left half applied."
 msgstr ""
 
+#. translators: 1: the archive's table prefix, 2: this site's table prefix
+#: src/Engine/Import/Importer.php:277
+#, php-format
+msgid ""
+"Migrator: table prefix mismatch. This archive uses \"%1$s\" but this site "
+"uses \"%2$s\", and a multisite restore cannot move tables to another prefix. "
+"Set this site's $table_prefix to \"%1$s\" in wp-config.php and try again."
+msgstr ""
+
 #. translators: 1: number of rows, 2: database error
-#: src/Engine/Import/Importer.php:316
+#: src/Engine/Import/Importer.php:350
 #, php-format
 msgid ""
 "%1$d rows could not be rewritten and may still point at the old address "
@@ -954,7 +1024,7 @@ msgid ""
 msgstr ""
 
 #. translators: 1: path to the SQL dump of the previous database, 2: the original error
-#: src/Engine/Import/Importer.php:368
+#: src/Engine/Import/Importer.php:402
 #, php-format
 msgid ""
 "Migrator: the import failed AND the rollback failed, so the database is in a "
@@ -963,7 +1033,7 @@ msgid ""
 msgstr ""
 
 #. translators: %s: the original error
-#: src/Engine/Import/Importer.php:376
+#: src/Engine/Import/Importer.php:410
 #, php-format
 msgid ""
 "Migrator: import failed and the database was rolled back to its previous "
@@ -971,7 +1041,7 @@ msgid ""
 msgstr ""
 
 #. translators: 1: number of files restored, 2: path to the SQL dump of the previous database, 3: the original error
-#: src/Engine/Import/Importer.php:412
+#: src/Engine/Import/Importer.php:447
 #, php-format
 msgid ""
 "Migrator: the restore stopped after the database had already been replaced, "
@@ -983,22 +1053,53 @@ msgid ""
 "%3$s"
 msgstr ""
 
+#. translators: 1: table name, 2: the archive's table prefix
+#: src/Engine/Import/Importer.php:522
+#, php-format
+msgid ""
+"Migrator: the archive names the table \"%1$s\", which does not use its "
+"prefix \"%2$s\", so it cannot be moved to this site's prefix safely."
+msgstr ""
+
+#. translators: %s: start of the SQL statement
+#: src/Engine/Import/Importer.php:541
+#, php-format
+msgid ""
+"Migrator: the archive holds a statement that cannot be moved to this site's "
+"prefix safely: %s"
+msgstr ""
+
+#. translators: %s: database error
+#: src/Engine/Import/Importer.php:609
+#, php-format
+msgid ""
+"Migrator: could not move the user roles and capabilities to the new prefix: "
+"%s"
+msgstr ""
+
+#. translators: %s: user login or email typed in the restore form
+#: src/Engine/Import/Importer.php:650
+#, php-format
+msgid ""
+"The user %s is not in the restored database, so no password was changed."
+msgstr ""
+
 #. translators: %s: what was wrong with the archive
-#: src/Engine/Import/Importer.php:451
+#: src/Engine/Import/Importer.php:675
 #, php-format
 msgid ""
 "Migrator: this archive is damaged, so nothing has been imported and this "
 "site is untouched. %s"
 msgstr ""
 
-#: src/Engine/Import/Importer.php:470
+#: src/Engine/Import/Importer.php:694
 msgid ""
 "Migrator: cannot create the pre-import safety backup, so nothing has been "
 "imported. Check that the backups folder is writable."
 msgstr ""
 
 #. translators: %s: path of the temporary SQL file
-#: src/Engine/Import/Importer.php:600
+#: src/Engine/Import/Importer.php:827
 #, php-format
 msgid ""
 "Migrator: could not write the whole SQL dump to %s. The disk is most likely "
@@ -1009,44 +1110,50 @@ msgstr ""
 #: src/Engine/Import/Preflight.php:41
 #, php-format
 msgid ""
-"Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be "
-"refused until this site's $table_prefix in wp-config.php matches."
+"Archive uses \"%1$s\" but this site uses \"%2$s\". A multisite restore "
+"cannot move tables to another prefix, so it will be refused until this "
+"site's $table_prefix in wp-config.php matches."
 msgstr ""
-"Das Archiv verwendet „%1$s“, aber diese Site verwendet „%2$s“. Die "
-"Wiederherstellung wird abgelehnt, bis das $table_prefix dieser Site in wp-"
-"config.php übereinstimmt."
+
+#. translators: 1: source prefix, 2: this site's prefix
+#: src/Engine/Import/Preflight.php:52
+#, php-format
+msgid ""
+"Archive uses \"%1$s\" and this site uses \"%2$s\". The tables, user roles "
+"and user capabilities will be remapped to \"%2$s\" during the restore."
+msgstr ""
 
 #. translators: %s: table prefix
-#: src/Engine/Import/Preflight.php:50
+#: src/Engine/Import/Preflight.php:61
 #, php-format
 msgid "Matches (%s)."
 msgstr "Übereinstimmungen (%s)."
 
-#: src/Engine/Import/Preflight.php:62
+#: src/Engine/Import/Preflight.php:73
 msgid ""
 "This archive or this site is a network. Restoring across a multisite "
 "boundary means rewriting the network tables to this domain, which this "
 "plugin does not do, so the restore will be refused."
 msgstr ""
 
-#: src/Engine/Import/Preflight.php:74
+#: src/Engine/Import/Preflight.php:85
 msgid "Media library"
 msgstr ""
 
 #. translators: %s: uploads folder on the source site
-#: src/Engine/Import/Preflight.php:77
+#: src/Engine/Import/Preflight.php:88
 #, php-format
 msgid ""
 "On the source site the media library was outside wp-content (%s), so this "
 "backup does not contain it. Copy that folder across separately."
 msgstr ""
 
-#: src/Engine/Import/Preflight.php:95 src/Engine/Import/Preflight.php:106
+#: src/Engine/Import/Preflight.php:106 src/Engine/Import/Preflight.php:117
 msgid "Disk space"
 msgstr "Speicherplatz"
 
 #. translators: 1: free space, 2: estimated needed
-#: src/Engine/Import/Preflight.php:98
+#: src/Engine/Import/Preflight.php:109
 #, php-format
 msgid ""
 "About %1$s free, restore may need ~%2$s. Free up space before restoring."
@@ -1055,27 +1162,27 @@ msgstr ""
 "erforderlich. Gib vor der Wiederherstellung Speicherplatz frei."
 
 #. translators: %s: free space
-#: src/Engine/Import/Preflight.php:107
+#: src/Engine/Import/Preflight.php:118
 #, php-format
 msgid "%s free."
 msgstr "%s kostenlos."
 
-#: src/Engine/Import/Preflight.php:116
+#: src/Engine/Import/Preflight.php:127
 msgid "Writable files"
 msgstr "Beschreibbare Dateien"
 
-#: src/Engine/Import/Preflight.php:117
+#: src/Engine/Import/Preflight.php:128
 msgid "wp-content is not writable by the web server. File restore will fail."
 msgstr ""
 "wp-content ist vom Webserver nicht beschreibbar. Die Dateiwiederherstellung "
 "schlägt fehl."
 
-#: src/Engine/Import/Preflight.php:127
+#: src/Engine/Import/Preflight.php:138
 msgid "PHP version"
 msgstr "PHP-Version"
 
 #. translators: 1: source PHP, 2: this PHP
-#: src/Engine/Import/Preflight.php:130
+#: src/Engine/Import/Preflight.php:141
 #, php-format
 msgid ""
 "Backup was made on PHP %1$s; this server runs %2$s. Code relying on newer "
@@ -1213,7 +1320,7 @@ msgstr "Nur Medien"
 msgid "What to leave out (optional)"
 msgstr "Was du weglassen möchtest (optional)"
 
-#: templates/admin-page.php:44 templates/admin-page.php:191
+#: templates/admin-page.php:44 templates/admin-page.php:194
 msgid "Database"
 msgstr "Datenbank"
 
@@ -1276,19 +1383,33 @@ msgstr "GZip (kleinere Datei, etwas langsamer)"
 msgid "Create backup"
 msgstr "Backup erstellen"
 
-#: templates/admin-page.php:146
+#: templates/admin-page.php:140
+msgid ""
+"Check these files before the backup is made. Nothing is left out unless you "
+"choose to."
+msgstr ""
+
+#: templates/admin-page.php:142
+msgid "Leave the sensitive files out and back up"
+msgstr ""
+
+#: templates/admin-page.php:143
+msgid "Back up anyway"
+msgstr ""
+
+#: templates/admin-page.php:151
 msgid "Backup progress"
 msgstr "Sicherungsfortschritt"
 
-#: templates/admin-page.php:156
+#: templates/admin-page.php:159
 msgid "Download backup"
 msgstr "Backup herunterladen"
 
-#: templates/admin-page.php:159
+#: templates/admin-page.php:162
 msgid "Moving a complex store?"
 msgstr "Einen komplexen Shop umziehen?"
 
-#: templates/admin-page.php:160
+#: templates/admin-page.php:163
 msgid ""
 "If the backup is ready but the migration needs staging, checkout checks or "
 "an integration plan, send the scope in writing."
@@ -1297,92 +1418,114 @@ msgstr ""
 "Checkout-Prüfungen oder einen Integrationsplan erfordert, sende den Umfang "
 "schriftlich."
 
-#: templates/admin-page.php:165
+#: templates/admin-page.php:168
 msgid "Request written migration help"
 msgstr "Schriftliche Migrationshilfe anfragen"
 
-#: templates/admin-page.php:172
+#: templates/admin-page.php:175
 msgid "Restore a backup"
 msgstr "Stelle ein Backup wieder her"
 
-#: templates/admin-page.php:175
+#: templates/admin-page.php:178
 msgid ""
 "Drop a Migrator archive here to restore it. This overwrites the parts you "
 "choose below with the copy in the archive, keep a backup of anything you "
 "want to keep."
 msgstr ""
 
-#: templates/admin-page.php:179
+#: templates/admin-page.php:182
 msgid "Drag a .migrator file here, or"
 msgstr "Ziehe eine .migrator-Datei hierher, oder"
 
-#: templates/admin-page.php:181
+#: templates/admin-page.php:184
 msgid "Choose a file"
 msgstr "Wähle eine Datei"
 
-#: templates/admin-page.php:188
+#: templates/admin-page.php:191
 msgid "What to restore"
 msgstr ""
 
-#: templates/admin-page.php:192
+#: templates/admin-page.php:195
 msgid "Plugins"
 msgstr ""
 
-#: templates/admin-page.php:193
+#: templates/admin-page.php:196
 msgid "Themes"
 msgstr ""
 
-#: templates/admin-page.php:194
+#: templates/admin-page.php:197
 msgid "Uploads (media library)"
 msgstr ""
 
-#: templates/admin-page.php:195
+#: templates/admin-page.php:198
 msgid "Other wp-content files"
 msgstr ""
 
-#: templates/admin-page.php:207
+#: templates/admin-page.php:210
 msgid ""
 "This site sets DISALLOW_FILE_MODS, which stops wp-admin from changing "
 "plugins, themes and other code files, so only the database and uploads can "
 "be restored here. To restore code files, run the restore with WP-CLI."
 msgstr ""
 
-#: templates/admin-page.php:209
+#: templates/admin-page.php:212
 msgid ""
 "Applies to the upload above and to the stored backups below. Untick the "
 "database to roll back files without losing orders or posts made since the "
 "backup."
 msgstr ""
 
-#: templates/admin-page.php:213
+#: templates/admin-page.php:216
+msgid "After the database is restored"
+msgstr ""
+
+#: templates/admin-page.php:219
+msgid "Safe mode: deactivate the restored plugins (Migrator stays active)"
+msgstr ""
+
+#: templates/admin-page.php:222
+msgid "Set a new password for (username or email)"
+msgstr ""
+
+#: templates/admin-page.php:226
+msgid "New password"
+msgstr ""
+
+#: templates/admin-page.php:228
+msgid ""
+"Optional. Use it when you do not know the password stored in the backup. "
+"Leave it empty to keep the passwords from the backup."
+msgstr ""
+
+#: templates/admin-page.php:233
 msgid "Restore backup"
 msgstr "Sicherung wiederherstellen"
 
-#: templates/admin-page.php:217
+#: templates/admin-page.php:237
 msgid "Restore progress"
 msgstr "Fortschritt wiederherstellen"
 
-#: templates/admin-page.php:228
+#: templates/admin-page.php:246
 msgid "Or restore one already stored on this site"
 msgstr "Oder stelle eine bereits auf dieser Site gespeicherte Datei wieder her"
 
-#: templates/admin-page.php:229
+#: templates/admin-page.php:247
 msgid "Backups saved on this site. Download, restore or delete them here."
 msgstr ""
 "Auf dieser Website gespeicherte Backups. Lade sie hier herunter, stelle sie "
 "wieder her oder lösche sie."
 
-#: templates/admin-page.php:234
+#: templates/admin-page.php:252
 msgid "Large site? Restore from the command line, it has no time limit:"
 msgstr ""
 "Große Website? Wiederherstellung über die Befehlszeile, es gibt keine "
 "zeitliche Begrenzung:"
 
-#: templates/admin-page.php:240
+#: templates/admin-page.php:258
 msgid "Search & replace"
 msgstr "Suchen und ersetzen"
 
-#: templates/admin-page.php:241
+#: templates/admin-page.php:259
 msgid ""
 "Change a domain, URL or path across this site's database, safely for "
 "serialized data. Run a dry run first to see how many rows would change. Back "
@@ -1392,25 +1535,120 @@ msgstr ""
 "für serialisierte Daten. Führe zunächst einen Probelauf durch, um zu sehen, "
 "wie viele Zeilen sich ändern würden. Sichere vor einem Live-Lauf."
 
-#: templates/admin-page.php:244
+#: templates/admin-page.php:262
 msgid "Find"
 msgstr "Finden"
 
-#: templates/admin-page.php:248
+#: templates/admin-page.php:266
 msgid "Replace with"
 msgstr "Ersetzen durch"
 
-#: templates/admin-page.php:253
+#: templates/admin-page.php:271
 msgid "Dry run (preview only, writes nothing)"
 msgstr "Probelauf (nur Vorschau, schreibt nichts)"
 
-#: templates/admin-page.php:255
+#: templates/admin-page.php:273
 msgid "Run"
 msgstr "Ausführen"
 
-#: templates/admin-page.php:259
+#: templates/admin-page.php:277
 msgid "From the command line:"
 msgstr "Von der Befehlszeile:"
+
+#: templates/deploy-page.php:25
+msgid ""
+"Move this site to a server that has no WordPress yet, or over an existing "
+"site. The standalone installer rebuilds the site from a backup: it can "
+"download WordPress core, extract your files, import the database and write "
+"wp-config.php. It works in short steps, so a slow host or a reload never "
+"makes it start over."
+msgstr ""
+
+#: templates/deploy-page.php:29
+msgid "How it works"
+msgstr ""
+
+#: templates/deploy-page.php:31
+msgid ""
+"On the new server, create an empty database and note its name, user and "
+"password. If a WordPress site is already there, the installer can reuse its "
+"wp-config.php instead."
+msgstr ""
+
+#: templates/deploy-page.php:32
+msgid ""
+"Download the installer below. Download a backup from the Migrator screen as "
+"well, or have a link to one ready."
+msgstr ""
+
+#: templates/deploy-page.php:33
+msgid ""
+"Upload the installer, and the backup if you downloaded it, into the folder "
+"where the site should live (for most hosts that is public_html)."
+msgstr ""
+
+#. translators: %s: installer file name.
+#: templates/deploy-page.php:38
+#, php-format
+msgid ""
+"Open %s in your browser, enter the access key and fill in the form. When it "
+"finishes, it deletes itself and the backup."
+msgstr ""
+
+#: templates/deploy-page.php:45
+msgid ""
+"Options in the installer: a new table prefix, a new administrator password, "
+"and safe mode, which restores the site with every plugin switched off and "
+"keeps the list so they can be switched back on."
+msgstr ""
+
+#: templates/deploy-page.php:48
+msgid ""
+"Large site? Paste a link to the backup into the installer instead of "
+"uploading it, and the new server downloads it directly. A presigned Amazon "
+"S3, Cloudflare R2 or Dropbox link works."
+msgstr ""
+
+#: templates/deploy-page.php:56
+msgid "Access key for this download"
+msgstr ""
+
+#: templates/deploy-page.php:60
+msgid ""
+"Copy the key before you download. The installer asks for it on every visit, "
+"and it is not stored anywhere else, so a new download comes with a new key."
+msgstr ""
+
+#: templates/deploy-page.php:63
+msgid "Download installer.php"
+msgstr ""
+
+#: templates/deploy-page.php:69
+msgid "Backups to deploy"
+msgstr ""
+
+#: templates/deploy-page.php:71
+msgid "No backups yet. Create one from the Migrator screen."
+msgstr ""
+
+#: templates/deploy-page.php:76 templates/schedule-page.php:360
+msgid "Backup"
+msgstr ""
+
+#: templates/deploy-page.php:77 templates/schedule-page.php:361
+msgid "Created"
+msgstr ""
+
+#: templates/deploy-page.php:78 templates/schedule-page.php:362
+msgid "Size"
+msgstr ""
+
+#. translators: %s: link to the Migrator screen.
+#: templates/deploy-page.php:95
+#, php-format
+msgid ""
+"Download a backup from the %s screen, then upload it next to the installer."
+msgstr ""
 
 #: templates/pull-push-page.php:23
 msgid ""
@@ -1728,17 +1966,14 @@ msgstr ""
 msgid "No scheduled backups yet. The first one appears here after a run."
 msgstr ""
 
-#: templates/schedule-page.php:360
-msgid "Backup"
-msgstr ""
-
-#: templates/schedule-page.php:361
-msgid "Created"
-msgstr ""
-
-#: templates/schedule-page.php:362
-msgid "Size"
-msgstr ""
+#, php-format
+#~ msgid ""
+#~ "Archive uses \"%1$s\" but this site uses \"%2$s\". The restore will be "
+#~ "refused until this site's $table_prefix in wp-config.php matches."
+#~ msgstr ""
+#~ "Das Archiv verwendet „%1$s“, aber diese Site verwendet „%2$s“. Die "
+#~ "Wiederherstellung wird abgelehnt, bis das $table_prefix dieser Site in wp-"
+#~ "config.php übereinstimmt."
 
 #~ msgid ""
 #~ "Drop a Migrator archive here to restore it. This overwrites the current "
