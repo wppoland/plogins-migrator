@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.12.0
+Stable tag: 1.12.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -138,8 +138,7 @@ Included in Migrator:
 * In-place restore
 * Move to a new host
 * Exclusions
-* Size explorer
-* Deploy to a new server
+* Deploy to an empty server
 
 Migrator Pro adds:
 
@@ -249,6 +248,9 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.12.1 =
+* Readme: the editions list names Deploy to an empty server under the free plugin.
 
 = 1.12.0 =
 * New: the Deploy screen and the standalone installer are now in the free plugin. The installer works in short steps and resumes after a timeout or a reload, needs an access key, runs in one browser at a time, can reuse an existing wp-config.php, change the table prefix, set a new admin password, start with plugins off, and deletes itself and the backup when it finishes.
