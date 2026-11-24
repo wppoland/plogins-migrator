@@ -18,9 +18,6 @@ defined('WP_UNINSTALL_PLUGIN') || exit;
 
 global $wpdb;
 
-if (! function_exists('get_plugins')) {
-    require_once ABSPATH . 'wp-admin/includes/plugin.php';
-}
 // A bulk delete of both editions uninstalls them in one request, and
 // get_plugins() caches its list for the request: the add-on deleted a moment
 // ago would still be listed.
