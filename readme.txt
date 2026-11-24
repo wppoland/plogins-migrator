@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.12.2
+Stable tag: 1.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,7 +68,7 @@ For large sites where a browser request would time out, every job also runs from
 * Serialization-safe search and replace across the database, with a dry-run preview and a `wp migrator replace` command, to change a domain, URL or path safely
 * Inspect any stored backup before you restore it: source URL, WordPress and PHP versions, table count, plus pre-restore checks for table prefix, disk space and writability
 * Move to an empty server with the standalone installer from Migrator > Deploy: upload installer.php next to a backup, open it with its access key, and it restores in short steps that pick up again after a timeout. It can reuse an existing wp-config.php, change the table prefix, set a new admin password, start with plugins switched off, and deletes itself when done
-* Restore into a site with a different table prefix: tables and the prefixed user keys are renamed to this site's prefix
+* Restore or pull into a site with a different table prefix: tables and the prefixed user keys are renamed to this site's prefix
 * Safe mode restore: every plugin except Migrator stays off after the restore, and one click switches the previous ones back on
 * Set a new admin password as part of a restore
 * Warnings before a backup: files such as .env, private keys and SQL dumps inside wp-content, files over 100 MB, very long paths and file names that are not UTF-8. Cache folders, other backup plugins' folders, node_modules, .git and large log files are left out by default
@@ -206,7 +206,7 @@ If you switch on Pull and Push, a site holding your connection token or an enrol
 
 = How do I copy a live site to another server without downloading a backup? =
 
-Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push. On the new one, run `wp migrator pull https://old-site.example` with WP-CLI. The first run prints a key: paste it on the old site's Pull and Push screen and run the command again. A server without the OpenSSL extension cannot check keys, so there you set a connection token and add `--secret=<token>`. The new site keeps its own WordPress core, wp-config.php and table prefix (the prefixes must match), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
+Install Migrator on both sites. On the old one, switch on Migrator > Pull and Push. On the new one, run `wp migrator pull https://old-site.example` with WP-CLI. The first run prints a key: paste it on the old site's Pull and Push screen and run the command again. A server without the OpenSSL extension cannot check keys, so there you set a connection token and add `--secret=<token>`. The new site keeps its own WordPress core, wp-config.php and table prefix (on a single site, a source with another prefix has its tables and prefixed user keys moved to this site's prefix; a multisite needs matching prefixes), its database is dumped before it is replaced and put back if the import fails, and Migrator's own folder is never overwritten. Running the same command again fetches only what changed.
 
 To bring over only new uploads, for example at the switch-over after plugins and themes were updated on the new site, run `wp migrator pull https://old-site.example --skip-database --only=uploads`. `--only` takes any of uploads, plugins, themes, mu-plugins and languages, comma separated, and `--exclude=uploads/cache` leaves a path out. Files outside the chosen folders are neither overwritten nor removed.
 
@@ -248,6 +248,11 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.13.0 =
+* New: `wp migrator pull` works into a single site with another table prefix. The pulled database goes through the same importer as a restore: tables and the prefixed user keys move to this site's prefix, then the old addresses are rewritten. A multisite still needs matching prefixes.
+* Fix: a restore or pull now also rewrites old addresses stored with JSON-escaped slashes, as in block attributes. The standalone installer does the same.
+* New: the Deploy screen has a hook for add-ons to add their own card.
 
 = 1.12.2 =
 * Uninstall no longer loads a WordPress core file itself; WordPress has already loaded it when it runs the uninstall.
@@ -509,6 +514,9 @@ Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` temp
 * Safety first: a pre-import database snapshot with automatic rollback if a restore fails, per-item checksums, and a refusal to import across a mismatched table prefix.
 
 == Upgrade Notice ==
+
+= 1.13.0 =
+Pull into a site with another table prefix, and old addresses in block attributes are rewritten on restore.
 
 = 1.12.0 =
 Standalone installer in the free plugin, restore across table prefixes, safe mode and backup warnings.

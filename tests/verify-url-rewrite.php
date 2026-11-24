@@ -50,6 +50,7 @@ $dump = "SET FOREIGN_KEY_CHECKS=0;\n"
     . "CREATE TABLE {$safe} (`id` int(11) NOT NULL AUTO_INCREMENT, `val` text, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n"
     . "INSERT INTO {$safe} (`id`, `val`) VALUES (1, '" . esc_sql($source) . "/wp-content/uploads/x.png');\n"
     . "INSERT INTO {$safe} (`id`, `val`) VALUES (2, '[vc_btn link=\"url:" . esc_sql(rawurlencode($source . '/contact/')) . "|title:Contact\"]');\n"
+    . "INSERT INTO {$safe} (`id`, `val`) VALUES (3, '" . esc_sql('<!-- wp:image {"href":"' . str_replace('/', '\\/', $source . '/contact/') . '"} /-->') . "');\n"
     . "SET FOREIGN_KEY_CHECKS=1;\n";
 
 $manifest = [
@@ -85,6 +86,13 @@ $encoded = (string) $wpdb->get_var("SELECT val FROM {$safe} WHERE id = 2");
 $check(
     'a URL-encoded link is rewritten too (got: ' . $encoded . ')',
     str_contains($encoded, 'url:' . rawurlencode($home . '/contact/') . '|')
+);
+
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+$escaped = (string) $wpdb->get_var("SELECT val FROM {$safe} WHERE id = 3");
+$check(
+    'a JSON-escaped link in a block attribute is rewritten too (got: ' . $escaped . ')',
+    str_contains($escaped, '"href":"' . str_replace('/', '\\/', $home . '/contact/') . '"')
 );
 
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
