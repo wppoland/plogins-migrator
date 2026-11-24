@@ -107,6 +107,15 @@ final class Pull
             ($this->log)('Downloading the database…');
             $code = $this->client->run(array_merge(['db-pull', $url], $base, $auth));
             $this->stopOn($code, 'db-pull');
+            // A network source has wp_blogs; its subsite tables are not a prefix swap away from a single site.
+            if ($source['tablePrefix'] !== $this->db->prefix && in_array($source['tablePrefix'] . 'blogs', $this->dumpTables($dirs['state']), true)) {
+                $this->client->run(array_merge(['db-pull', $url, '--abort'], $base, $auth));
+                throw new \RuntimeException(sprintf(
+                    'Table prefix mismatch: the source is a multisite network using "%1$s" and this site uses "%2$s", and a network cannot move tables to another prefix. Set $table_prefix to "%1$s" in wp-config.php and run the pull again; nothing has been changed here.',
+                    $source['tablePrefix'],
+                    $this->db->prefix,
+                ));
+            }
             $this->applyDatabase($url, array_merge($base, [$hostFlag]), $auth, $source, $dirs['state']);
         }
 
