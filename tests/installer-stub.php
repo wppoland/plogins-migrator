@@ -30,6 +30,7 @@ $ok('no map, no change', 'INSERT INTO `wp_posts` VALUES (1)' === mig_remap([], '
 $ok('home and site URL give one pair', 1 === count(array_keys($from, 'https://old.test', true)));
 $ok('scheme-relative pair added', in_array('//old.test', $from, true));
 $ok('url-encoded pair added', in_array(rawurlencode('https://old.test'), $from, true));
+$ok('JSON-escaped pair added', 'https:\\/\\/new.test\\/sub\\/x' === str_replace($from, $to, 'https:\\/\\/old.test\\/x'));
 $ok('a subfolder move is not applied twice', 'https://new.test/sub/x' === str_replace($from, $to, 'https://old.test/x'));
 
 $stub = (string) file_get_contents(dirname(__DIR__) . '/templates/installer-stub.txt');

@@ -324,7 +324,7 @@ class Mig_Replacer
 
 /**
  * The URL and path pairs to rewrite, in the order the plugin's importer uses:
- * full values first, then scheme-relative and URL-encoded leftovers.
+ * full values first, then scheme-relative, URL-encoded and JSON-escaped leftovers.
  */
 function mig_pairs(array $manifest, string $url, string $abspath): array
 {
@@ -362,6 +362,13 @@ function mig_pairs(array $manifest, string $url, string $abspath): array
         if (strpos($from[$i], '://') !== false && ! in_array(rawurlencode($from[$i]), $from, true)) {
             $from[] = rawurlencode($from[$i]);
             $to[]   = rawurlencode($to[$i]);
+        }
+    }
+    // Block attributes keep JSON's escaped slashes ("http:\/\/old.example").
+    for ($i = 0; $i < $full; $i++) {
+        if (strpos($from[$i], '://') !== false && ! in_array(str_replace('/', '\\/', $from[$i]), $from, true)) {
+            $from[] = str_replace('/', '\\/', $from[$i]);
+            $to[]   = str_replace('/', '\\/', $to[$i]);
         }
     }
 

@@ -501,7 +501,7 @@ final class Importer
      * alone. An INSERT keeps its row data byte for byte. A statement acting on a
      * table outside the archive's prefix is refused: on a shared database it
      * could drop another site's table. With $strict, so is any statement the
-     * dump does not write (only SET, DROP, CREATE and INSERT pass); routines are
+     * dump does not write (only SET, COMMIT, DROP, CREATE and INSERT pass); routines are
      * read with $strict off, as their bodies are free-form.
      *
      * @param array<string, string> $map From prefixMap().
@@ -529,7 +529,7 @@ final class Importer
             if (0 === stripos($sql, 'INSERT')) {
                 return $prefix . $start . $rest;
             }
-        } elseif (preg_match('/^SET\s/i', $sql) || '' === $sql) {
+        } elseif (preg_match('/^(?:SET\s|COMMIT$)/i', $sql) || '' === $sql) {
             return $prefix . $sql;
         } elseif (! $strict && preg_match('/^(?:CREATE|DROP)\s/i', $sql)) {
             $start = '';
@@ -831,14 +831,8 @@ final class Importer
         });
         fclose($handle);
 
-        // Stream the temp file statement-by-statement, never load the whole
-        // dump into memory.
-        $collation = Collation::forServer($this->db);
-        $transform = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql)
-            ? 'SET NAMES ' . $charset
-            : $collation->normalise(null === $rename ? $sql : $rename($sql, true));
         try {
-            $count = (new SqlExecutor($this->db, $transform))->runFile($tmp);
+            $count = $this->runSqlFile($tmp, $charset, $rename);
         } finally {
             // Removed on failure too: it is a full copy of the archive's
             // database, and nothing ever came back for it.
@@ -848,6 +842,58 @@ final class Importer
         $log(sprintf('Imported database (%d statements).', $count));
 
         return $count;
+    }
+
+    /**
+     * Stream a SQL file statement by statement, never loading the whole dump
+     * into memory.
+     *
+     * @param (\Closure(string, bool):string)|null $rename Moves table names to this site's prefix.
+     */
+    private function runSqlFile(string $path, string $charset, ?\Closure $rename): int
+    {
+        $collation = Collation::forServer($this->db);
+        $transform = static fn (string $sql): string => preg_match('/^SET\s+NAMES\s+\w+$/i', $sql)
+            ? 'SET NAMES ' . $charset
+            : $collation->normalise(null === $rename ? $sql : $rename($sql, true));
+
+        return (new SqlExecutor($this->db, $transform))->runFile($path);
+    }
+
+    /**
+     * Import a plain SQL dump written under another table prefix (the dump a
+     * pull downloads) the way a restore imports an archive: tables and prefixed
+     * keys move to this site's prefix, then the source's addresses and paths are
+     * rewritten. The caller keeps the safety backup and rolls back on a throw.
+     *
+     * @param list<string> $tables The dump's table names.
+     * @param array{home: string, siteurl: string, content: string, abspath: string} $source
+     * @param array{home: string, siteurl: string, content: string, abspath: string} $target
+     * @param callable(string):void $log
+     */
+    public function importDump(string $path, array $tables, string $from, array $source, array $target, callable $log): void
+    {
+        $to     = (string) $this->db->prefix;
+        $map    = self::prefixMap($tables, $from, $to);
+        $rename = static fn (string $sql, bool $strict = true): string => self::renameTables($sql, $map, $from, $to, $strict);
+        $log(sprintf('Tables move from prefix %s to %s.', $from, $to));
+
+        try {
+            $count = $this->runSqlFile($path, 'utf8mb4', $rename);
+        } finally {
+            // A dump may turn autocommit off; left off, every write after it on
+            // this connection (the rollback included) is lost when it closes.
+            $this->db->query('SET autocommit = 1'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        }
+        $log(sprintf('Imported database (%d statements).', $count));
+        $log(sprintf('Moved %d option and user meta keys to the new prefix.', $this->remapPrefixKeys($from, $to)));
+
+        [$old, $new] = $this->replacements($source, $target);
+        if ([] !== $old) {
+            $tables = array_map(static fn (string $t): string => $map[$t] ?? $t, $tables);
+            $result = (new SearchReplace($this->db, new SerializedReplacer($old, $new)))->run($tables);
+            $log(sprintf('Rewrote URLs/paths in %d rows across %d tables.', $result['changes'], $result['tables']));
+        }
     }
 
     /**
@@ -979,12 +1025,16 @@ final class Importer
         }
 
         // Page builders store links URL-encoded ("url:https%3A%2F%2Fold.example"
-        // in a WPBakery shortcode). No plain pair matches those bytes.
-        foreach (['home', 'siteurl'] as $key) {
-            $old = rawurlencode($source[$key]);
-            if ('' !== $source[$key] && $source[$key] !== $target[$key] && ! in_array($old, $from, true)) {
-                $from[] = $old;
-                $to[]   = rawurlencode($target[$key]);
+        // in a WPBakery shortcode), and block attributes keep JSON's escaped
+        // slashes ("http:\/\/old.example"). No plain pair matches those bytes.
+        $jsonSlashes = static fn (string $url): string => str_replace('/', '\\/', $url);
+        foreach (['rawurlencode', $jsonSlashes] as $encode) {
+            foreach (['home', 'siteurl'] as $key) {
+                $old = $encode($source[$key]);
+                if ('' !== $source[$key] && $source[$key] !== $target[$key] && ! in_array($old, $from, true)) {
+                    $from[] = $old;
+                    $to[]   = $encode($target[$key]);
+                }
             }
         }
 

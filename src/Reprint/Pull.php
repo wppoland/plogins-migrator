@@ -79,9 +79,11 @@ final class Pull
         $this->stopOn($code, 'preflight');
 
         $source = $this->sourceSite($url, $dirs, $auth);
-        if ($withDatabase && $source['tablePrefix'] !== $this->db->prefix) {
+        // Another prefix is moved on the way in, as a restore does, but a
+        // network keeps one set of tables per subsite, which a swap does not cover.
+        if ($withDatabase && $source['tablePrefix'] !== $this->db->prefix && is_multisite()) {
             throw new \RuntimeException(sprintf(
-                'Table prefix mismatch: the source uses "%1$s" and this site uses "%2$s". Set $table_prefix to "%1$s" in wp-config.php and run the pull again; nothing has been changed here.',
+                'Table prefix mismatch: the source uses "%1$s" and this network uses "%2$s", and a multisite cannot move tables to another prefix. Set $table_prefix to "%1$s" in wp-config.php and run the pull again; nothing has been changed here.',
                 $source['tablePrefix'],
                 $this->db->prefix,
             ));
@@ -105,7 +107,16 @@ final class Pull
             ($this->log)('Downloading the database…');
             $code = $this->client->run(array_merge(['db-pull', $url], $base, $auth));
             $this->stopOn($code, 'db-pull');
-            $this->applyDatabase($url, array_merge($base, [$hostFlag]), $auth, $source);
+            // A network source has wp_blogs; its subsite tables are not a prefix swap away from a single site.
+            if ($source['tablePrefix'] !== $this->db->prefix && in_array($source['tablePrefix'] . 'blogs', $this->dumpTables($dirs['state']), true)) {
+                $this->client->run(array_merge(['db-pull', $url, '--abort'], $base, $auth));
+                throw new \RuntimeException(sprintf(
+                    'Table prefix mismatch: the source is a multisite network using "%1$s" and this site uses "%2$s", and a network cannot move tables to another prefix. Set $table_prefix to "%1$s" in wp-config.php and run the pull again; nothing has been changed here.',
+                    $source['tablePrefix'],
+                    $this->db->prefix,
+                ));
+            }
+            $this->applyDatabase($url, array_merge($base, [$hostFlag]), $auth, $source, $dirs['state']);
         }
 
         $files = 0;
@@ -124,7 +135,7 @@ final class Pull
      * @param list<string> $auth
      * @param array{tablePrefix: string, contentDirectory: string, homeUrl: string, siteUrl: string} $source
      */
-    private function applyDatabase(string $url, array $base, array $auth, array $source): void
+    private function applyDatabase(string $url, array $base, array $auth, array $source, string $state): void
     {
         $importer = new Importer($this->workspace, $this->db);
         $rollback = $importer->backupDatabase($this->log);
@@ -158,13 +169,37 @@ final class Pull
         ($this->log)('Replacing the database and rewriting addresses…');
         // Through the environment, not --target-pass: an argument shows in the
         // process list to every user on the server (Reprint issue #24).
-        $code = $this->client->run($args, ['MYSQL_PASSWORD' => (string) DB_PASSWORD]);
-        if (0 !== $code) {
+        $error = null;
+        if ($source['tablePrefix'] === $this->db->prefix) {
+            $code  = $this->client->run($args, ['MYSQL_PASSWORD' => (string) DB_PASSWORD]);
+            $error = 0 === $code ? null : 'exit code ' . $code;
+        } else {
+            // db-apply writes the source's table names (and edits its options
+            // table, which here may belong to another install), so the dump goes
+            // through the restore's importer, which moves them to this prefix.
+            try {
+                $importer->importDump(
+                    $state . '/db.sql',
+                    $this->dumpTables($state),
+                    $source['tablePrefix'],
+                    ['home' => untrailingslashit($source['homeUrl']), 'siteurl' => untrailingslashit($source['siteUrl']), 'content' => untrailingslashit($source['contentDirectory']), 'abspath' => ''],
+                    ['home' => untrailingslashit($target['home']), 'siteurl' => untrailingslashit($target['siteurl']), 'content' => untrailingslashit((string) WP_CONTENT_DIR), 'abspath' => ''],
+                    $this->log,
+                );
+            } catch (\Throwable $e) {
+                $error = $e->getMessage();
+            }
+            // No db-apply ran to move the client past this download, so the next
+            // pull's db-pull would refuse to start. --abort also deletes the
+            // plain-text dump; the file index stays.
+            $this->client->run(array_merge(['db-pull', $url, '--abort'], $base, $auth));
+        }
+        if (null !== $error) {
             ($this->log)('The import failed, restoring the previous database…');
             if (! $importer->restoreDatabase($rollback)) {
                 throw new \RuntimeException('The database import failed AND the rollback failed. The previous database is kept at ' . $rollback . ' and must be imported by hand.');
             }
-            throw new \RuntimeException('The database import failed (exit code ' . $code . ') and the previous database was put back. Run the same command again to retry.');
+            throw new \RuntimeException('The database import failed (' . $error . ') and the previous database was put back. Run the same command again to retry.');
         }
 
         // home and siteurl are known exactly; with WordPress in a subfolder a
@@ -196,6 +231,24 @@ final class Pull
         }
 
         wp_delete_file($rollback);
+    }
+
+    /**
+     * The tables db-pull wrote, from the list it keeps beside db.sql.
+     *
+     * @return list<string>
+     */
+    private function dumpTables(string $state): array
+    {
+        $tables = [];
+        foreach ((array) file($state . '/db-tables.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $row = json_decode((string) $line, true);
+            if (is_array($row) && isset($row['name'])) {
+                $tables[] = (string) $row['name'];
+            }
+        }
+
+        return $tables;
     }
 
     /**

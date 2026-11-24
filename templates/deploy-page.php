@@ -99,4 +99,11 @@ $migrator_date = static fn (int $ts): string => wp_date(
 			</p>
 		<?php endif; ?>
 	</div>
+
+	<?php
+	/**
+	 * Fires at the end of the Deploy screen, where an add-on can add its own card.
+	 */
+	do_action('migrator/deploy_screen');
+	?>
 </div>
