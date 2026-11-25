@@ -2,9 +2,9 @@
 Contributors: motylanogha
 Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 8.1
-Stable tag: 1.13.1
+Stable tag: 1.13.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -248,6 +248,10 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.13.2 =
+* Tested with WordPress 7.2.
+* The plugin rollback screen no longer logs a PHP deprecation notice for its missing page title.
 
 = 1.13.1 =
 * Plugins list shows shortcuts to the settings screens.
