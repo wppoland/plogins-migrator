@@ -34,18 +34,25 @@ final class Page implements HasHooks
     }
 
     /**
-     * Add a quick "Settings" link to the plugin's row on the Plugins screen.
+     * Shortcuts to the plugin's screens on the Plugins list.
      *
      * @param array<int|string, string> $links Existing action links.
      * @return array<int|string, string>
      */
     public function actionLinks(array $links): array
     {
-        array_unshift($links, sprintf(
-            '<a href="%s">%s</a>',
-            esc_url(admin_url('admin.php?page=' . self::SLUG)),
-            esc_html__('Settings', 'plogins-migrator'),
-        ));
+        $screens = [
+            self::SLUG => __('Settings', 'plogins-migrator'),
+            \Migrator\Backup\Scheduler::PAGE_SLUG => __('Scheduled Backups', 'plogins-migrator'),
+            \Migrator\Reprint\Source::PAGE_SLUG => __('Pull and Push', 'plogins-migrator'),
+            DeployPage::PAGE_SLUG => __('Deploy', 'plogins-migrator'),
+        ];
+
+        $ours = [];
+        foreach ($screens as $slug => $label) {
+            $ours[] = sprintf('<a href="%s">%s</a>', esc_url(admin_url('admin.php?page=' . $slug)), esc_html($label));
+        }
+        array_unshift($links, ...$ours);
 
         return $links;
     }
