@@ -64,7 +64,7 @@ final class Rollback implements HasHooks
     public function registerPage(): void
     {
         // No parent: reached only from the Plugins screen link.
-        add_submenu_page(
+        $hook = add_submenu_page(
             '',
             __('Roll back a plugin', 'plogins-migrator'),
             '',
@@ -72,6 +72,10 @@ final class Rollback implements HasHooks
             self::PAGE_SLUG,
             [$this, 'render'],
         );
+        // A page without a parent has no menu title, so admin-header.php passes null to strip_tags().
+        add_action('load-' . $hook, static function (): void {
+            $GLOBALS['title'] = __('Roll back a plugin', 'plogins-migrator');
+        });
     }
 
     public function render(): void
