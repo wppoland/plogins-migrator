@@ -104,7 +104,7 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
 
 **Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and put back automatically if the database import fails. No other free tier here documents that rollback. Automation is not the paid tier here: a site that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
 
-**What PRO adds.** Cloud destinations (S3, R2, Backblaze, Wasabi, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, Table Sync, multisite restore, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
+**What PRO adds.** Cloud destinations (S3-compatible storage set by its endpoint URL, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, Table Sync, multisite restore, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
 
 = All-in-One WP Migration =
 
