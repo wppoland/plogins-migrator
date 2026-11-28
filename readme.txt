@@ -4,7 +4,7 @@ Tags: backup, migration, migrate, clone, restore
 Requires at least: 6.5
 Tested up to: 7.2
 Requires PHP: 8.1
-Stable tag: 1.13.3
+Stable tag: 1.13.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ WordPress backup and migration in one file. Free scheduled backups, FTP off-site
 
 Migrator packs your database and everything in `wp-content` into a single file you can download, keep as a backup, and restore, on the same site or on a brand-new install somewhere else. When you restore onto a different address, Migrator rewrites the old URLs and file paths to the new ones for you, so the site just works.
 
-Everything happens on your own server. There is no account to create and no file size sold back to you, and nothing leaves your server unless you add an off-site destination you own or switch on Pull and Push. The source lives at [github.com/wppoland/plogins-migrator](https://github.com/wppoland/plogins-migrator), which is also where to file a bug or request a feature.
+Everything happens on your own server. There is no account to create and no file size sold back to you, and nothing leaves your server unless you add an off-site destination you own or switch on Pull and Push.
 
 **How it works**
 
@@ -72,7 +72,6 @@ For large sites where a browser request would time out, every job also runs from
 * Safe mode restore: every plugin except Migrator stays off after the restore, and one click switches the previous ones back on
 * Set a new admin password as part of a restore
 * Warnings before a backup: files such as .env, private keys and SQL dumps inside wp-content, files over 100 MB, very long paths and file names that are not UTF-8. Cache folders, other backup plugins' folders, node_modules, .git and large log files are left out by default
-* No account and no service of ours: nothing leaves your server unless you add an off-site destination you own
 
 **Documentation and links**
 
@@ -102,7 +101,7 @@ The columns, left to right: **Migrator**, **AIO** is All-in-One WP Migration, **
     Imports chosen tables          paid     ?     no     paid     paid    paid
     Paid plan, from               EUR49   $69    $79      $49      $70     $49
 
-**Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and put back automatically if the database import fails. No other free tier here documents that rollback. Automation is not the paid tier here: a site that wants a nightly backup landing somewhere other than the server it protects needs nothing beyond the free plugin.
+**Where Migrator is ahead in free.** Scheduled backups with a retention rule, an off-site copy over FTP/FTPS or to a folder outside the web root, no size limit beyond what your own server allows, and a database snapshot taken before every import and put back automatically if the database import fails. No other free tier here documents that rollback.
 
 **What PRO adds.** Cloud destinations (S3-compatible storage set by its endpoint URL, SFTP, WebDAV), incremental backups, encrypted archives, recovery points, Table Sync, multisite restore, resetting a staging site to a clean install, and a white-label mode that puts an agency's own name on the plugin. From 49 EUR per year.
 
@@ -126,7 +125,7 @@ Free scheduling from every 2 hours up to monthly, with Google Drive, Dropbox, S3
 
 Lite exports a ZIP and does not import at all. Moving files between live sites, and push and pull, are paid, $49 to $219 for the first year. No tier offers a cloud or FTP destination.
 
-Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion is implied. List prices and tier limits change without notice, so confirm on the vendor's own page before you buy. Migrator itself is free under GPLv2 with no account to create; PRO is 49 to 149 EUR per year.
+Competitor prices are in USD, Migrator PRO is priced in EUR, and no conversion is implied. List prices and tier limits change without notice, so confirm on the vendor's own page before you buy.
 
 == Migrator Pro ==
 
@@ -248,6 +247,10 @@ See the grid above for all five competitors. Vendor details as of July 2026.
 Plogins Migrator is fully translatable and ships the `plogins-migrator.pot` template. Translations are delivered by WordPress.org language packs from translate.wordpress.org, which is where Polish, German and Spanish are being contributed; the package itself carries no compiled translation files.
 
 == Changelog ==
+
+= 1.13.4 =
+* The PRO notice on the settings screen describes each PRO feature the way the PRO plugin ships it.
+* Readme description shortened to stay within the WordPress.org length limit.
 
 = 1.13.3 =
 * Readme: the PRO cloud destinations are named as the code has them (S3-compatible storage set by its endpoint URL, SFTP, WebDAV). No code change.
