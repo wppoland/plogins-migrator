@@ -31,8 +31,8 @@ return [
             'pl' => ['title' => 'Punkty przywracania', 'desc' => 'Lista sprawdzonych kopii z rollbackiem jednym kliknięciem. Punkt tworzy się automatycznie po każdej udanej kopii lub na żądanie i zapamiętuje adres oraz prefiks bazy.'],
         ],
         [
-            'en' => ['title' => 'Cloud destinations', 'desc' => 'S3-compatible storage with presets (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), SFTP and WebDAV (Nextcloud, ownCloud), on top of the FTP/FTPS and folder copies in the free plugin.'],
-            'pl' => ['title' => 'Kopie w chmurze', 'desc' => 'Storage zgodny z S3 z presetami (S3, R2, Backblaze B2, Wasabi, DigitalOcean Spaces), SFTP i WebDAV (Nextcloud, ownCloud), obok kopii na FTP/FTPS i do folderu z darmowej wtyczki.'],
+            'en' => ['title' => 'Cloud destinations', 'desc' => 'S3-compatible storage (any service with an S3 API, set by its endpoint URL), SFTP and WebDAV (Nextcloud, ownCloud), on top of the FTP/FTPS and folder copies in the free plugin.'],
+            'pl' => ['title' => 'Kopie w chmurze', 'desc' => 'Storage zgodny z S3 (każda usługa z API S3, wskazana adresem endpointu), SFTP i WebDAV (Nextcloud, ownCloud), obok kopii na FTP/FTPS i do folderu z darmowej wtyczki.'],
         ],
         [
             'en' => ['title' => 'Server-to-server transfer from wp-admin', 'desc' => 'Pull a site from one server to another from the Site Transfer screen in wp-admin, with a key generated on the old site and no manual download. The free Migrator moves a site between servers from WP-CLI; PRO adds a button in the admin for it.'],
